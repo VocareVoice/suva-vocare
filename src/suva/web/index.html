@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suva BGer Triage</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1>Suva BGer Triage</h1>
+  <p>Placeholder UI. JSON API: <a href="/docs">/docs</a></p>
+  <table>
+    <thead><tr><th>Docket</th><th>Date</th><th>Title</th><th>Score</th></tr></thead>
+    <tbody id="rulings"></tbody>
+  </table>
+  <script>
+    fetch("/api/rulings").then(r => r.json()).then(({ items }) => {
+      const body = document.getElementById("rulings");
+      for (const r of items) {
+        const tr = body.insertRow();
+        for (const v of [r.docket, r.decision_date, r.title, r.score]) tr.insertCell().textContent = v ?? "";
+      }
+    });
+  </script>
+</body>
+</html>
