@@ -177,6 +177,11 @@ def _body(article: Tag) -> str:
     for footnotes in body.find_all("div", class_="footnotes"):
         footnotes.decompose()
     _drop_footnote_refs(body)
+    # Inline markup is part of the word: "Art. 67<i>a</i>", "a<sup>bis</sup>.", "1<sup>er</sup>"
+    # must not come out as "Art. 67 a", "a bis ." and "1 er" from get_text(" ").
+    for tag in body.find_all(["sup", "i"]):
+        tag.unwrap()
+    body.smooth()
     lines = []
     for node in body.find_all(["p", "dt", "dd"]):
         if node.find_parent(["dd", "p"]) is not None:
