@@ -98,6 +98,41 @@ CREATE TABLE IF NOT EXISTS classification (
 CREATE INDEX IF NOT EXISTS classification_docket ON classification(docket);
 """
 
+# The agent side panel: one chat per browser, its messages (user turns, tool steps, answers)
+# and the summary changes the agent proposed, which only take effect when the user applies them.
+AGENT_SCHEMA = """
+CREATE TABLE IF NOT EXISTS chats (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY,
+    chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'tool')),
+    content TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS chat_messages_chat ON chat_messages(chat_id, id);
+
+CREATE TABLE IF NOT EXISTS summary_proposals (
+    id INTEGER PRIMARY KEY,
+    chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    docket TEXT NOT NULL REFERENCES rulings(docket) ON DELETE CASCADE,
+    lang TEXT NOT NULL CHECK (lang IN ('de', 'fr')),
+    text TEXT NOT NULL,
+    rationale TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'discarded')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
+# prompt_version of a summary a user applied from an agent proposal. The summary pipeline never
+# overwrites these (see `dockets_to_summarize`).
+EDITED_VERSION = "edited"
+
 RULING_FIELDS = (
     "docket",
     "decision_date",
@@ -110,7 +145,8 @@ RULING_FIELDS = (
     "source",
 )
 
-# Latest triage row per ruling; triage and summaries keep history, newest id wins.
+# Latest triage row per ruling; triage keeps history, newest id wins. Summaries keep one row per
+# ruling and language (`save_summary` replaces).
 _LATEST_TRIAGE = "t.id = (SELECT MAX(id) FROM triage WHERE docket = r.docket)"
 _HAS_SUMMARY = "(SELECT 1 FROM summaries s WHERE s.docket = r.docket)"
 _LATEST_CLASSIFICATION = "c.id = (SELECT MAX(id) FROM classification WHERE docket = r.docket)"
@@ -125,6 +161,7 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
     conn.executescript(CLASSIFICATION_SCHEMA)
+    conn.executescript(AGENT_SCHEMA)
     _migrate(conn)
     return conn
 
@@ -507,12 +544,13 @@ def dockets_to_summarize(
     date_to: str | None = None,
 ) -> list[str]:
     """Rulings whose latest triage score is at least `min_score` and that have no summary of
-    `prompt_version`, highest score first."""
+    `prompt_version` and none a user edited, highest score first."""
     where = [
         "t.score >= ?",
-        "NOT EXISTS (SELECT 1 FROM summaries s WHERE s.docket = r.docket AND s.prompt_version = ?)",
+        "NOT EXISTS (SELECT 1 FROM summaries s WHERE s.docket = r.docket "
+        "AND s.prompt_version IN (?, ?))",
     ]
-    params: list[Any] = [min_score, prompt_version]
+    params: list[Any] = [min_score, prompt_version, EDITED_VERSION]
     date = "COALESCE(r.publication_date, r.decision_date)"
     if date_from:
         where.append(f"{date} >= ?")
@@ -720,7 +758,9 @@ def save_summary(
     model: str | None,
     prompt_version: str | None,
 ) -> None:
+    """Store the summary of `docket` in `lang`, replacing the previous one (no history)."""
     with conn:
+        conn.execute("DELETE FROM summaries WHERE docket = ? AND lang = ?", (docket, lang))
         conn.execute(
             "INSERT INTO summaries (docket, lang, text, model, prompt_version) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -741,3 +781,95 @@ def save_feedback(
             "INSERT INTO feedback (docket, verdict, corrected_score, comment) VALUES (?, ?, ?, ?)",
             (docket, verdict, corrected_score, comment),
         )
+
+
+# ---------------------------------------------------------------- agent chats
+
+
+def create_chat(conn: sqlite3.Connection, chat_id: str) -> None:
+    with conn:
+        conn.execute("INSERT INTO chats (id) VALUES (?)", (chat_id,))
+
+
+def chat_exists(conn: sqlite3.Connection, chat_id: str) -> bool:
+    return conn.execute("SELECT 1 FROM chats WHERE id = ?", (chat_id,)).fetchone() is not None
+
+
+def delete_chat(conn: sqlite3.Connection, chat_id: str) -> None:
+    """Delete the chat with its messages and proposals."""
+    with conn:
+        conn.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
+
+
+def add_chat_message(
+    conn: sqlite3.Connection, chat_id: str, role: str, content: str, data: dict[str, Any] | None
+) -> int:
+    with conn:
+        cursor = conn.execute(
+            "INSERT INTO chat_messages (chat_id, role, content, data) VALUES (?, ?, ?, ?)",
+            (chat_id, role, content, json.dumps(data or {}, ensure_ascii=False)),
+        )
+        conn.execute("UPDATE chats SET updated_at = datetime('now') WHERE id = ?", (chat_id,))
+    return cursor.lastrowid
+
+
+def get_chat_message(conn: sqlite3.Connection, message_id: int) -> dict[str, Any]:
+    row = conn.execute(
+        "SELECT id, role, content, data, created_at FROM chat_messages WHERE id = ?",
+        (message_id,),
+    ).fetchone()
+    return {**dict(row), "data": json.loads(row["data"])}
+
+
+def chat_messages(conn: sqlite3.Connection, chat_id: str) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id, role, content, data, created_at FROM chat_messages WHERE chat_id = ? "
+        "ORDER BY id",
+        (chat_id,),
+    )
+    return [{**dict(row), "data": json.loads(row["data"])} for row in rows]
+
+
+def add_proposal(
+    conn: sqlite3.Connection, chat_id: str, docket: str, *, lang: str, text: str, rationale: str
+) -> int:
+    with conn:
+        cursor = conn.execute(
+            "INSERT INTO summary_proposals (chat_id, docket, lang, text, rationale) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (chat_id, docket, lang, text, rationale),
+        )
+    return cursor.lastrowid
+
+
+def get_proposal(conn: sqlite3.Connection, proposal_id: int) -> dict[str, Any] | None:
+    row = conn.execute(
+        "SELECT p.id, p.chat_id, p.docket, p.lang, p.text, p.rationale, p.status, "
+        "(SELECT s.text FROM summaries s WHERE s.docket = p.docket AND s.lang = p.lang "
+        " ORDER BY s.id DESC LIMIT 1) AS current "
+        "FROM summary_proposals p WHERE p.id = ?",
+        (proposal_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def set_proposal_status(conn: sqlite3.Connection, proposal_id: int, status: str) -> None:
+    with conn:
+        conn.execute("UPDATE summary_proposals SET status = ? WHERE id = ?", (status, proposal_id))
+
+
+def apply_proposal(conn: sqlite3.Connection, proposal_id: int) -> dict[str, Any]:
+    """Make an open proposal the ruling's summary in its language, replacing the old one."""
+    proposal = get_proposal(conn, proposal_id)
+    if proposal is None or proposal["status"] != "open":
+        raise ValueError(f"proposal {proposal_id} is not open")
+    save_summary(
+        conn,
+        proposal["docket"],
+        lang=proposal["lang"],
+        text=proposal["text"],
+        model="agent",
+        prompt_version=EDITED_VERSION,
+    )
+    set_proposal_status(conn, proposal_id, "applied")
+    return {**proposal, "status": "applied"}

@@ -1,0 +1,2009 @@
+{
+ "law": "ATSG",
+ "sr": "830.1",
+ "eli": "cc/2002/510",
+ "languages": {
+  "de": {
+   "in_force": "2024-01-01",
+   "source": "https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/2002/510/20240101/de/html/fedlex-data-admin-ch-eli-cc-2002-510-20240101-de-html-4.html",
+   "articles": [
+    {
+     "id": "art_1",
+     "number": "1",
+     "title": "Zweck und Gegenstand",
+     "path": [
+      "1. Kapitel: Anwendungsbereich"
+     ],
+     "text": "Dieses Gesetz koordiniert das Sozialversicherungsrecht des Bundes, indem es:\na. Grundsätze, Begriffe und Institute des Sozialversicherungsrechts definiert;\nb. ein einheitliches Sozialversicherungsverfahren festlegt und die Rechtspflege regelt;\nc. die Leistungen aufeinander abstimmt;\nd. den Rückgriff der Sozialversicherungen auf Dritte ordnet.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_1"
+    },
+    {
+     "id": "art_2",
+     "number": "2",
+     "title": "Geltungsbereich und Verhältnis zu den einzelnen Sozialversicherungsgesetzen",
+     "path": [
+      "1. Kapitel: Anwendungsbereich"
+     ],
+     "text": "Die Bestimmungen dieses Gesetzes sind auf die bundesgesetzlich geregelten Sozialversicherungen anwendbar, wenn und soweit die einzelnen Sozialversicherungsgesetze es vorsehen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_2"
+    },
+    {
+     "id": "art_3",
+     "number": "3",
+     "title": "Krankheit",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Krankheit ist jede Beeinträchtigung der körperlichen, geistigen oder psychischen Gesundheit, die nicht Folge eines Unfalles ist und die eine medizinische Untersuchung oder Behandlung erfordert oder eine Arbeitsunfähigkeit zur Folge hat.\n2 Als Geburtsgebrechen gelten diejenigen Krankheiten, die bei vollendeter Geburt bestehen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_3"
+    },
+    {
+     "id": "art_4",
+     "number": "4",
+     "title": "Unfall",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Unfall ist die plötzliche, nicht beabsichtigte schädigende Einwirkung eines ungewöhnlichen äusseren Faktors auf den menschlichen Körper, die eine Beeinträchtigung der körperlichen, geistigen oder psychischen Gesundheit oder den Tod zur Folge hat.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_4"
+    },
+    {
+     "id": "art_5",
+     "number": "5",
+     "title": "Mutterschaft",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Mutterschaft umfasst Schwangerschaft und Niederkunft sowie die nachfolgende Erholungszeit der Mutter.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_5"
+    },
+    {
+     "id": "art_6",
+     "number": "6",
+     "title": "Arbeitsunfähigkeit",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Arbeitsunfähigkeit ist die durch eine Beeinträchtigung der körperlichen, geistigen oder psychischen Gesundheit bedingte, volle oder teilweise Unfähigkeit, im bisherigen Beruf oder Aufgabenbereich zumutbare Arbeit zu leisten. Bei langer Dauer wird auch die zumutbare Tätigkeit in einem anderen Beruf oder Aufgabenbereich berücksichtigt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_6"
+    },
+    {
+     "id": "art_7",
+     "number": "7",
+     "title": "Erwerbsunfähigkeit",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Erwerbsunfähigkeit ist der durch Beeinträchtigung der körperlichen, geistigen oder psychischen Gesundheit verursachte und nach zumutbarer Behandlung und Eingliederung verbleibende ganze oder teilweise Verlust der Erwerbsmöglichkeiten auf dem in Betracht kommenden ausgeglichenen Arbeitsmarkt.\n2 Für die Beurteilung des Vorliegens einer Erwerbsunfähigkeit sind ausschliesslich die Folgen der gesundheitlichen Beeinträchtigung zu berücksichtigen. Eine Erwerbsunfähigkeit liegt zudem nur vor, wenn sie aus objektiver Sicht nicht überwindbar ist.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_7"
+    },
+    {
+     "id": "art_8",
+     "number": "8",
+     "title": "Invalidität",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Invalidität ist die voraussichtlich bleibende oder längere Zeit dauernde ganze oder teilweise Erwerbsunfähigkeit.\n2 Nicht erwerbstätige Minderjährige gelten als invalid, wenn die Beeinträchtigung ihrer körperlichen, geistigen oder psychischen Gesundheit voraussichtlich eine ganze oder teilweise Erwerbsunfähigkeit zur Folge haben wird.\n3 Volljährige, die vor der Beeinträchtigung ihrer körperlichen, geistigen oder psychischen Gesundheit nicht erwerbstätig waren und denen eine Erwerbstätigkeit nicht zugemutet werden kann, gelten als invalid, wenn eine Unmöglichkeit vorliegt, sich im bisherigen Aufgabenbereich zu betätigen. Artikel 7 Absatz 2 ist sinngemäss anwendbar.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_8"
+    },
+    {
+     "id": "art_9",
+     "number": "9",
+     "title": "Hilflosigkeit",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Als hilflos gilt eine Person, die wegen der Beeinträchtigung der Gesundheit für alltägliche Lebensverrichtungen dauernd der Hilfe Dritter oder der persönlichen Überwachung bedarf.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_9"
+    },
+    {
+     "id": "art_10",
+     "number": "10",
+     "title": "Arbeitnehmerinnen und Arbeitnehmer",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Als Arbeitnehmerinnen und Arbeitnehmer gelten Personen, die in unselbstständiger Stellung Arbeit leisten und dafür massgebenden Lohn nach dem jeweiligen Einzelgesetz beziehen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_10"
+    },
+    {
+     "id": "art_11",
+     "number": "11",
+     "title": "Arbeitgeber",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "Arbeitgeber ist, wer Arbeitnehmerinnen und Arbeitnehmer beschäftigt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_11"
+    },
+    {
+     "id": "art_12",
+     "number": "12",
+     "title": "Selbstständigerwerbende",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Selbstständigerwerbend ist, wer Erwerbseinkommen erzielt, das nicht Entgelt für eine als Arbeitnehmerin oder Arbeitnehmer geleistete Arbeit darstellt.\n2 Selbstständigerwerbende können gleichzeitig auch Arbeitnehmerinnen oder Arbeitnehmer sein, wenn sie entsprechendes Erwerbseinkommen erzielen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_12"
+    },
+    {
+     "id": "art_13",
+     "number": "13",
+     "title": "Wohnsitz und gewöhnlicher Aufenthalt",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Der Wohnsitz einer Person bestimmt sich nach den Artikeln 23–26 des Zivilgesetzbuches .\n2 Ihren gewöhnlichen Aufenthalt hat eine Person an dem Ort, an dem sie während längerer Zeit lebt, selbst wenn diese Zeit zum Vornherein befristet ist.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_13"
+    },
+    {
+     "id": "art_13_a",
+     "number": "13a",
+     "title": "Eingetragene Partnerschaft",
+     "path": [
+      "2. Kapitel: Definitionen allgemeiner Begriffe"
+     ],
+     "text": "1 Solange eine eingetragene Partnerschaft dauert, ist sie im Sozialversicherungsrecht einer Ehe gleichgestellt.\n2 Stirbt eine Partnerin oder ein Partner, so ist die überlebende Person einem Witwer gleichgestellt.\n3 Die gerichtliche Auflösung einer eingetragenen Partnerschaft ist einer Scheidung gleichgestellt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_13_a"
+    },
+    {
+     "id": "art_14",
+     "number": "14",
+     "title": "",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "1. Abschnitt: Sachleistungen"
+     ],
+     "text": "Sachleistungen sind insbesondere die Heilbehandlung (Krankenpflege), die Hilfsmittel, die individuellen Vorsorge- und Eingliederungsmassnahmen sowie Aufwendungen für Transporte und ähnliche Leistungen, die von den einzelnen Sozialversicherungen geschuldet oder erstattet werden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_14"
+    },
+    {
+     "id": "art_15",
+     "number": "15",
+     "title": "Allgemeines",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "Geldleistungen sind insbesondere Taggelder, Renten, jährliche Ergänzungsleistungen, Hilflosenentschädigungen und Zulagen zu solchen, nicht aber der Ersatz für eine von der Versicherung zu erbringende Sachleistung.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_15"
+    },
+    {
+     "id": "art_16",
+     "number": "16",
+     "title": "Grad der Invalidität",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "Für die Bestimmung des Invaliditätsgrades wird das Erwerbseinkommen, das die versicherte Person nach Eintritt der Invalidität und nach Durchführung der medizinischen Behandlung und allfälliger Eingliederungsmassnahmen durch eine ihr zumutbare Tätigkeit bei ausgeglichener Arbeitsmarktlage erzielen könnte, in Beziehung gesetzt zum Erwerbseinkommen, das sie erzielen könnte, wenn sie nicht invalid geworden wäre.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_16"
+    },
+    {
+     "id": "art_17",
+     "number": "17",
+     "title": "Revision der Invalidenrente und anderer Dauerleistungen",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "1 Die Invalidenrente wird von Amtes wegen oder auf Gesuch hin für die Zukunft erhöht, herabgesetzt oder aufgehoben, wenn der Invaliditätsgrad einer Rentenbezügerin oder eines Rentenbezügers sich:\na. um mindestens fünf Prozentpunkte ändert; oder\nb. auf 100 Prozent erhöht.\n2 Auch jede andere formell rechtskräftig zugesprochene Dauerleistung wird von Amtes wegen oder auf Gesuch hin erhöht, herabgesetzt oder aufgehoben, wenn sich der ihr zu Grunde liegende Sachverhalt nachträglich erheblich verändert hat.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_17"
+    },
+    {
+     "id": "art_18",
+     "number": "18",
+     "title": "Höchstbetrag des versicherten Verdienstes",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "Für Sozialversicherungen mit Geldleistungen, die gesetzlich in Prozenten des versicherten Verdienstes festgesetzt sind, bestimmt der Bundesrat dessen Höchstbetrag.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_18"
+    },
+    {
+     "id": "art_19",
+     "number": "19",
+     "title": "Auszahlung von Geldleistungen",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "1 Die periodischen Geldleistungen werden in der Regel monatlich ausbezahlt.\n2 Taggelder und ähnliche Entschädigungen kommen in dem Ausmass dem Arbeitgeber zu, als er der versicherten Person trotz der Taggeldberechtigung Lohn zahlt.\n3 Renten und Hilflosenentschädigungen werden stets für den ganzen Kalendermonat im Voraus ausbezahlt. Eine Leistung, die eine vorangehende ablöst, wird erst für den Folgemonat ausgerichtet.\n4 Erscheint der Anspruch auf Leistungen nachgewiesen und verzögert sich deren Ausrichtung, so können Vorschusszahlungen ausgerichtet werden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_19"
+    },
+    {
+     "id": "art_20",
+     "number": "20",
+     "title": "Gewährleistung zweckgemässer Verwendung",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "2. Abschnitt: Geldleistungen"
+     ],
+     "text": "1 Geldleistungen können ganz oder teilweise einem geeigneten Dritten oder einer Behörde ausbezahlt werden, der oder die der berechtigten Person gegenüber gesetzlich oder sittlich unterstützungspflichtig ist oder diese dauernd fürsorgerisch betreut, sofern:\na. die berechtigte Person die Geldleistungen nicht für den eigenen Unterhalt oder für den Unterhalt von Personen, für die sie zu sorgen hat, verwendet oder dazu nachweisbar nicht im Stande ist; und\nb. die berechtigte Person oder Personen, für die sie zu sorgen hat, aus einem Grund nach Buchstabe a auf die Hilfe der öffentlichen oder privaten Fürsorge angewiesen sind.\n2 Diese Dritten oder diese Behörde können die Leistungen, die ihnen ausbezahlt werden, nicht mit Forderungen gegenüber der berechtigten Person verrechnen. Ausgenommen ist die Verrechnung bei Nachzahlungen von Leistungen im Sinne von Artikel 22 Absatz 2.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_20"
+    },
+    {
+     "id": "art_21",
+     "number": "21",
+     "title": "",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "3. Abschnitt: Kürzung und Verweigerung von Leistungen"
+     ],
+     "text": "1 Hat die versicherte Person den Versicherungsfall vorsätzlich oder bei vorsätzlicher Ausübung eines Verbrechens oder Vergehens herbeigeführt oder verschlimmert, so können ihr die Geldleistungen vorübergehend oder dauernd gekürzt oder in schweren Fällen verweigert werden.\n2 Geldleistungen für Angehörige oder Hinterlassene werden nur gekürzt oder verweigert, wenn diese den Versicherungsfall vorsätzlich oder bei vorsätzlicher Ausübung eines Verbrechens oder Vergehens herbeigeführt haben.\n3 Soweit Sozialversicherungen mit Erwerbsersatzcharakter keine Geldleistungen für Angehörige vorsehen, kann höchstens die Hälfte der Geldleistungen nach Absatz 1 gekürzt werden. Für die andere Hälfte bleibt die Kürzung nach Absatz 2 vorbehalten.\n4 Entzieht oder widersetzt sich eine versicherte Person einer zumutbaren Behandlung oder Eingliederung ins Erwerbsleben, die eine wesentliche Verbesserung der Erwerbsfähigkeit oder eine neue Erwerbsmöglichkeit verspricht, oder trägt sie nicht aus eigenem Antrieb das ihr Zumutbare dazu bei, so können ihr die Leistungen vorübergehend oder dauernd gekürzt oder verweigert werden. Sie muss vorher schriftlich gemahnt und auf die Rechtsfolgen hingewiesen werden; ihr ist eine angemessene Bedenkzeit einzuräumen. Behandlungs- oder Eingliederungsmassnahmen, die eine Gefahr für Leben und Gesundheit darstellen, sind nicht zumutbar.\n5 Befindet sich die versicherte Person im Straf- oder Massnahmenvollzug, so kann während dieser Zeit die Auszahlung von Geldleistungen mit Erwerbsersatzcharakter ganz oder teilweise eingestellt werden. Entzieht sich die versicherte Person dem Straf- oder Massnahmenvollzug, so wird die Auszahlung ab dem Zeitpunkt eingestellt, in dem der Straf- oder Massnahmenvollzug hätte beginnen sollen. Ausgenommen sind die Geldleistungen für Angehörige im Sinne von Absatz 3.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_21"
+    },
+    {
+     "id": "art_22",
+     "number": "22",
+     "title": "Sicherung der Leistung",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "4. Abschnitt: Spezielle Bestimmungen"
+     ],
+     "text": "1 Der Anspruch auf Leistungen ist weder abtretbar noch verpfändbar. Jede Abtretung oder Verpfändung ist nichtig.\n2 Nachzahlungen von Leistungen des Sozialversicherers können jedoch abgetreten werden:\na. dem Arbeitgeber oder der öffentlichen oder privaten Fürsorge, soweit diese Vorschusszahlungen leisten;\nb. einer Versicherung, die Vorleistungen erbringt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_22"
+    },
+    {
+     "id": "art_23",
+     "number": "23",
+     "title": "Verzicht auf Leistungen",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "4. Abschnitt: Spezielle Bestimmungen"
+     ],
+     "text": "1 Die berechtigte Person kann auf Versicherungsleistungen verzichten. Sie kann den Verzicht jederzeit mit Wirkung für die Zukunft widerrufen. Verzicht und Widerruf sind schriftlich zu erklären.\n2 Verzicht und Widerruf sind nichtig, wenn die schutzwürdigen Interessen von andern Personen, von Versicherungen oder Fürsorgestellen beeinträchtigt werden oder wenn damit eine Umgehung gesetzlicher Vorschriften bezweckt wird.\n3 Der Versicherer hat der berechtigten Person Verzicht und Widerruf schriftlich zu bestätigen. In der Bestätigung sind Gegenstand, Umfang und Folgen des Verzichts und des Widerrufs festzuhalten.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_23"
+    },
+    {
+     "id": "art_24",
+     "number": "24",
+     "title": "Erlöschen des Anspruchs",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "4. Abschnitt: Spezielle Bestimmungen"
+     ],
+     "text": "1 Der Anspruch auf ausstehende Leistungen oder Beiträge erlischt fünf Jahre nach dem Ende des Monats, für welchen die Leistung, und fünf Jahre nach dem Ende des Kalenderjahres, für welches der Beitrag geschuldet war.\n2 Hat sich eine beitragspflichtige Person ihren Verpflichtungen durch eine strafbare Handlung entzogen, für die das Strafrecht eine längere Verjährungsfrist festsetzt, so ist für das Erlöschen der Beitragsforderung diese Frist massgebend.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_24"
+    },
+    {
+     "id": "art_25",
+     "number": "25",
+     "title": "Rückerstattung",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "4. Abschnitt: Spezielle Bestimmungen"
+     ],
+     "text": "1 Unrechtmässig bezogene Leistungen sind zurückzuerstatten. Wer Leistungen in gutem Glauben empfangen hat, muss sie nicht zurückerstatten, wenn eine grosse Härte vorliegt.\n2 Der Rückforderungsanspruch erlischt drei Jahre, nachdem die Versicherungseinrichtung davon Kenntnis erhalten hat, spätestens aber fünf Jahre seit der Auszahlung der einzelnen Leistung. Wird der Rückerstattungsanspruch aus einer strafbaren Handlung hergeleitet, für welche das Strafrecht eine längere Verjährungsfrist vorsieht, so ist diese Frist massgebend.\n3 Zuviel bezahlte Beiträge können zurückgefordert werden. Der Anspruch erlischt mit dem Ablauf eines Jahres, nachdem der Beitragspflichtige von seinen zu hohen Zahlungen Kenntnis erhalten hat, spätestens aber fünf Jahre nach Ablauf des Kalenderjahres, in dem die Beiträge bezahlt wurden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_25"
+    },
+    {
+     "id": "art_26",
+     "number": "26",
+     "title": "Verzugs- und Vergütungszinsen",
+     "path": [
+      "3. Kapitel: Allgemeine Bestimmungen über Leistungen und Beiträge",
+      "4. Abschnitt: Spezielle Bestimmungen"
+     ],
+     "text": "1 Für fällige Beitragsforderungen und Beitragsrückerstattungsansprüche sind Verzugs- und Vergütungszinsen zu leisten. Der Bundesrat kann für geringe Beträge und kurzfristige Ausstände Ausnahmen vorsehen.\n2 Sofern die versicherte Person ihrer Mitwirkungspflicht vollumfänglich nachgekommen ist, werden die Sozialversicherungen für ihre Leistungen nach Ablauf von 24 Monaten nach der Entstehung des Anspruchs, frühestens aber 12 Monate nach dessen Geltendmachung verzugszinspflichtig.\n3 Keine Verzugszinspflicht entsteht durch Verzögerungen, die von ausländischen Versicherungsträgern verursacht werden.\n4 Keinen Anspruch auf Verzugszinsen haben:\na. die berechtigte Person oder deren Erben, wenn die Nachzahlung an Dritte erfolgt;\nb. Dritte, welche Vorschusszahlungen oder Vorleistungen nach Artikel 22 Absatz 2 erbracht haben und denen die Nachzahlungen abgetreten worden sind;\nc. andere Sozialversicherungen, welche Vorleistungen nach Artikel 70 erbracht haben.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_26"
+    },
+    {
+     "id": "art_27",
+     "number": "27",
+     "title": "Aufklärung und Beratung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "1 Die Versicherungsträger und Durchführungsorgane der einzelnen Sozialversicherungen sind verpflichtet, im Rahmen ihres Zuständigkeitsbereiches die interessierten Personen über ihre Rechte und Pflichten aufzuklären.\n2 Jede Person hat Anspruch auf grundsätzlich unentgeltliche Beratung über ihre Rechte und Pflichten. Dafür zuständig sind die Versicherungsträger, denen gegenüber die Rechte geltend zu machen oder die Pflichten zu erfüllen sind. Für Beratungen, die aufwendige Nachforschungen erfordern, kann der Bundesrat die Erhebung von Gebühren vorsehen und den Gebührentarif festlegen.\n3 Stellt ein Versicherungsträger fest, dass eine versicherte Person oder ihre Angehörigen Leistungen anderer Sozialversicherungen beanspruchen können, so gibt er ihnen unverzüglich davon Kenntnis.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_27"
+    },
+    {
+     "id": "art_28",
+     "number": "28",
+     "title": "Mitwirkung beim Vollzug",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "1 Die Versicherten und ihre Arbeitgeber haben beim Vollzug der Sozialversicherungsgesetze unentgeltlich mitzuwirken.\n2 Wer Versicherungsleistungen beansprucht, muss unentgeltlich alle Auskünfte erteilen, die zur Abklärung des Anspruchs, zur Festsetzung der Versicherungsleistungen und zur Durchsetzung des Regressanspruchs erforderlich sind.\n3 Personen, die Versicherungsleistungen beanspruchen, haben alle betroffenen Personen und Stellen, namentlich Arbeitgeber, Ärztinnen und Ärzte, Versicherungen sowie Amtsstellen im Einzelfall zu ermächtigen, die Auskünfte zu erteilen, die für die Abklärung des Leistungsanspruchs und für die Durchsetzung des Regressanspruchs erforderlich sind. Diese Personen und Stellen sind zur Auskunft verpflichtet.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_28"
+    },
+    {
+     "id": "art_29",
+     "number": "29",
+     "title": "Geltendmachung des Leistungsanspruchs",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "1 Wer eine Versicherungsleistung beansprucht, hat sich beim zuständigen Versicherungsträger in der für die jeweilige Sozialversicherung gültigen Form anzumelden.\n2 Für die Anmeldung und zur Abklärung des Anspruches auf Leistungen geben die Versicherungsträger unentgeltlich Formulare ab, die vom Ansprecher oder seinem Arbeitgeber und allenfalls vom behandelnden Arzt vollständig und wahrheitsgetreu auszufüllen und dem zuständigen Versicherungsträger zuzustellen sind.\n3 Wird eine Anmeldung nicht formgerecht oder bei einer unzuständigen Stelle eingereicht, so ist für die Einhaltung der Fristen und für die an die Anmeldung geknüpften Rechtswirkungen trotzdem der Zeitpunkt massgebend, in dem sie der Post übergeben oder bei der unzuständigen Stelle eingereicht wird.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_29"
+    },
+    {
+     "id": "art_30",
+     "number": "30",
+     "title": "Weiterleitungspflicht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "Alle Stellen, die mit der Durchführung der Sozialversicherung betraut sind, haben versehentlich an sie gelangte Anmeldungen, Gesuche und Eingaben entgegenzunehmen. Sie halten das Datum der Einreichung fest und leiten die entsprechenden Unterlagen an die zuständige Stelle weiter.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_30"
+    },
+    {
+     "id": "art_31",
+     "number": "31",
+     "title": "Meldung bei veränderten Verhältnissen",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "1 Jede wesentliche Änderung in den für eine Leistung massgebenden Verhältnissen ist von den Bezügerinnen und Bezügern, ihren Angehörigen oder Dritten, denen die Leistung zukommt, dem Versicherungsträger oder dem jeweils zuständigen Durchführungsorgan zu melden.\n2 Erhält eine an der Durchführung der Sozialversicherung beteiligte Person oder Stelle Kenntnis davon, dass sich die für die Leistung massgebenden Verhältnisse geändert haben, so ist dies dem Versicherungsträger zu melden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_31"
+    },
+    {
+     "id": "art_32",
+     "number": "32",
+     "title": "Amts- und Verwaltungshilfe",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "1 Die Verwaltungs- und Rechtspflegebehörden des Bundes, der Kantone, Bezirke, Kreise und Gemeinden geben den Organen der einzelnen Sozialversicherungen auf schriftliche und begründete Anfrage im Einzelfall kostenlos diejenigen Daten bekannt, die erforderlich sind für:\na. die Festsetzung, Änderung oder Rückforderung von Leistungen;\nb. die Verhinderung ungerechtfertigter Bezüge;\nc. die Festsetzung und den Bezug der Beiträge;\nd. den Rückgriff auf haftpflichtige Dritte.\n2 Unter den gleichen Bedingungen leisten die Organe der einzelnen Sozialversicherungen einander Verwaltungshilfe.\n2bis Erfahren die Organe einer Sozialversicherung, die Verwaltungs- und Rechtspflegebehörden des Bundes, der Kantone, Bezirke, Kreise oder Gemeinden im Rahmen ihrer Funktionen, dass eine versicherte Person ungerechtfertigte Leistungen bezieht, so können sie die Organe der betroffenen Sozialversicherung sowie der betroffenen Vorsorgeeinrichtungen darüber informieren.\n3 Die Stellen nach Artikel 75 a geben sich gegenseitig diejenigen Daten bekannt, die zur Erfüllung ihrer Aufgaben nach Anhang II des Abkommens vom 21. Juni 1999 zwischen der Schweizerischen Eidgenossenschaft einerseits und der Europäischen Gemeinschaft und ihren Mitgliedstaaten andererseits über die Freizügigkeit (Freizügigkeitsabkommen) sowie anderer internationaler Abkommen über die soziale Sicherheit notwendig sind.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_32"
+    },
+    {
+     "id": "art_33",
+     "number": "33",
+     "title": "Schweigepflicht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "1. Abschnitt: Auskunft, Verwaltungshilfe, Schweigepflicht"
+     ],
+     "text": "Personen, die an der Durchführung sowie der Kontrolle oder der Beaufsichtigung der Durchführung der Sozialversicherungsgesetze beteiligt sind, haben gegenüber Dritten Verschwiegenheit zu bewahren.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_33"
+    },
+    {
+     "id": "art_34",
+     "number": "34",
+     "title": "Parteien",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Als Parteien gelten Personen, die aus der Sozialversicherung Rechte oder Pflichten ableiten, sowie Personen, Organisationen oder Behörden, denen ein Rechtsmittel gegen die Verfügung eines Versicherungsträgers oder eines ihm gleichgestellten Durchführungsorgans zusteht.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_34"
+    },
+    {
+     "id": "art_35",
+     "number": "35",
+     "title": "Zuständigkeit",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Der Versicherungsträger prüft seine Zuständigkeit von Amtes wegen.\n2 Der Versicherungsträger, der sich als zuständig erachtet, stellt dies durch Verfügung fest, wenn eine Partei die Zuständigkeit bestreitet.\n3 Der Versicherungsträger, der sich als unzuständig erachtet, tritt durch Verfügung auf die Sache nicht ein, wenn eine Partei die Zuständigkeit behauptet.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_35"
+    },
+    {
+     "id": "art_36",
+     "number": "36",
+     "title": "Ausstand",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Personen, die Entscheidungen über Rechte und Pflichten zu treffen oder vorzubereiten haben, treten in Ausstand, wenn sie in der Sache ein persönliches Interesse haben oder aus anderen Gründen in der Sache befangen sein könnten.\n2 Ist der Ausstand streitig, so entscheidet die Aufsichtsbehörde. Handelt es sich um den Ausstand eines Mitgliedes eines Kollegiums, so entscheidet das Kollegium unter Ausschluss des betreffenden Mitgliedes.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_36"
+    },
+    {
+     "id": "art_37",
+     "number": "37",
+     "title": "Vertretung und Verbeiständung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Die Partei kann sich, wenn sie nicht persönlich zu handeln hat, jederzeit vertreten oder, soweit die Dringlichkeit einer Untersuchung es nicht ausschliesst, verbeiständen lassen.\n2 Der Versicherungsträger kann die Vertretung auffordern, sich durch schriftliche Vollmacht auszuweisen.\n3 Solange die Partei die Vollmacht nicht widerruft, macht der Versicherungsträger seine Mitteilungen an die Vertretung.\n4 Wo die Verhältnisse es erfordern, wird der gesuchstellenden Person ein unentgeltlicher Rechtsbeistand bewilligt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_37"
+    },
+    {
+     "id": "art_38",
+     "number": "38",
+     "title": "Berechnung und Stillstand der Fristen",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Berechnet sich eine Frist nach Tagen oder Monaten und bedarf sie der Mitteilung an die Parteien, so beginnt sie am Tag nach ihrer Mitteilung zu laufen.\n2 Bedarf sie nicht der Mitteilung an die Parteien, so beginnt sie am Tag nach ihrer Auslösung zu laufen.\n2bis Eine Mitteilung, die nur gegen Unterschrift des Adressaten beziehungsweise der Adressatin oder einer anderen berechtigten Person überbracht wird, gilt spätestens am siebenten Tag nach dem ersten erfolglosen Zustellungsversuch als erfolgt.\n3 Ist der letzte Tag der Frist ein Samstag, ein Sonntag oder ein vom Bundesrecht oder vom kantonalen Recht anerkannter Feiertag, so endet sie am nächstfolgenden Werktag. Massgebend ist das Recht des Kantons, in dem die Partei oder ihr Vertreter beziehungsweise ihre Vertreterin Wohnsitz oder Sitz hat.\n4 Gesetzliche oder behördliche Fristen, die nach Tagen oder Monaten bestimmt sind, stehen still:\na. vom siebten Tag vor Ostern bis und mit dem siebten Tag nach Ostern;\nb. vom 15. Juli bis und mit dem 15. August;\nc. vom 18. Dezember bis und mit dem 2. Januar.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_38"
+    },
+    {
+     "id": "art_39",
+     "number": "39",
+     "title": "Einhaltung der Fristen",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Schriftliche Eingaben müssen spätestens am letzten Tag der Frist dem Versicherungsträger eingereicht oder zu dessen Handen der Schweizerischen Post oder einer schweizerischen diplomatischen oder konsularischen Vertretung übergeben werden.\n2 Gelangt die Partei rechtzeitig an einen unzuständigen Versicherungsträger, so gilt die Frist als gewahrt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_39"
+    },
+    {
+     "id": "art_40",
+     "number": "40",
+     "title": "Fristerstreckung und Säumnisfolgen",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Eine gesetzliche Frist kann nicht erstreckt werden.\n2 Setzt der Versicherungsträger eine Frist für eine bestimmte Handlung an, so droht er gleichzeitig die Folgen eines Versäumnisses an. Andere als die angedrohten Folgen treten nicht ein.\n3 Eine vom Versicherungsträger angesetzte Frist kann aus zureichenden Gründen erstreckt werden, wenn die Partei vor Ablauf der Frist darum nachsucht.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_40"
+    },
+    {
+     "id": "art_41",
+     "number": "41",
+     "title": "Wiederherstellung der Frist",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Ist die gesuchstellende Person oder ihre Vertretung unverschuldeterweise abgehalten worden, binnen Frist zu handeln, so wird diese wieder hergestellt, sofern sie unter Angabe des Grundes innert 30 Tagen nach Wegfall des Hindernisses darum ersucht und die versäumte Rechtshandlung nachholt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_41"
+    },
+    {
+     "id": "art_42",
+     "number": "42",
+     "title": "Rechtliches Gehör",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Die Parteien haben Anspruch auf rechtliches Gehör. Sie müssen nicht angehört werden vor Verfügungen, die durch Einsprache anfechtbar sind.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_42"
+    },
+    {
+     "id": "art_43",
+     "number": "43",
+     "title": "Abklärung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Der Versicherungsträger prüft die Begehren, nimmt die notwendigen Abklärungen von Amtes wegen vor und holt die erforderlichen Auskünfte ein. Mündlich erteilte Auskünfte sind schriftlich festzuhalten.\n1bis Der Versicherungsträger bestimmt die Art und den Umfang der notwendigen Abklärungen.\n2 Soweit ärztliche oder fachliche Untersuchungen für die Beurteilung notwendig und zumutbar sind, hat sich die versicherte Person diesen zu unterziehen.\n3 Kommen die versicherte Person oder andere Personen, die Leistungen beanspruchen, den Auskunfts- oder Mitwirkungspflichten in unentschuldbarer Weise nicht nach, so kann der Versicherungsträger auf Grund der Akten verfügen oder die Erhebungen einstellen und Nichteintreten beschliessen. Er muss diese Personen vorher schriftlich mahnen und auf die Rechtsfolgen hinweisen; ihnen ist eine angemessene Bedenkzeit einzuräumen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_43"
+    },
+    {
+     "id": "art_43_a",
+     "number": "43a",
+     "title": "Observation",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Der Versicherungsträger kann eine versicherte Person verdeckt observieren und dabei Bild- und Tonaufzeichnungen machen und technische Instrumente zur Standortbestimmung einsetzen, wenn:\na. aufgrund konkreter Anhaltspunkte anzunehmen ist, dass die versicherte Person unrechtmässig Leistungen bezieht oder zu erhalten versucht; und\nb. die Abklärungen sonst aussichtslos wären oder unverhältnismässig erschwert würden.\n2 Für die Anordnung der Observation ist eine Person mit Direktionsfunktion im fallbearbeitenden Bereich oder im Bereich Leistungen des Versicherungsträgers zuständig.\n3 Der Einsatz von technischen Instrumenten zur Standortbestimmung ist genehmigungspflichtig.\n4 Die versicherte Person darf nur observiert werden, wenn sie sich:\na. an einem allgemein zugänglichen Ort befindet; oder\nb. an einem Ort befindet, der von einem allgemein zugänglichen Ort aus frei einsehbar ist.\n5 Eine Observation darf an höchstens 30 Tagen innerhalb von sechs Monaten ab dem ersten Observationstag stattfinden. Dieser Zeitraum kann um höchstens weitere sechs Monate verlängert werden, wenn hinreichende Gründe dafür bestehen.\n6 Der Versicherungsträger kann externe Spezialistinnen und Spezialisten mit der Observation beauftragen. Diese unterliegen der Schweigepflicht nach Artikel 33 und dürfen die gesammelten Informationen ausschliesslich im Rahmen ihres Auftrags verwenden. Der Versicherungsträger kann das Material einer Observation, die von einem anderen Versicherungsträger oder einem Versicherer nach dem Versicherungsaufsichtsgesetz vom 17. Dezember 2004 selbst oder in deren Auftrag durchgeführt wurde, verwenden, wenn bei der Observation die Voraussetzungen nach den Absätzen 1 – 5 erfüllt waren.\n7 Spätestens vor Erlass der Verfügung über die Leistung informiert der Versicherungsträger die betroffene Person über den Grund, die Art und die Dauer der erfolgten Observation.\n8 Konnten die Anhaltspunkte nach Absatz 1 Buchstabe a durch die Observation nicht bestätigt werden, so:\na. erlässt der Versicherungsträger eine Verfügung über den Grund, die Art und die Dauer der erfolgten Observation;\nb. vernichtet der Versicherungsträger nach Rechtskraft der Verfügung das Observationsmaterial, sofern die versicherte Person nicht ausdrücklich beantragt hat, dass das Observationsmaterial in den Akten verbleibt.\n9 Der Bundesrat regelt:\na. das Verfahren zur Einsichtnahme des vollständigen Observationsmaterials durch die versicherte Person;\nb. die Aufbewahrung und Vernichtung des Observationsmaterials;\nc. die Anforderungen an die Spezialistinnen und Spezialisten, die mit der Observation beauftragt werden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_43_a"
+    },
+    {
+     "id": "art_43_b",
+     "number": "43b",
+     "title": "Observation: Genehmigung des Einsatzes von technischen Instrumenten zur Standortbestimmung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Beabsichtigt der Versicherungsträger, eine Observation mit technischen Instrumenten zur Standortbestimmung anzuordnen, so unterbreitet er dem zuständigen Gericht einen Antrag mit:\na. der Angabe des spezifischen Ziels der Observation;\nb. den Angaben zu den von der Observation betroffenen Personen;\nc. den vorgesehenen Observationsmodalitäten;\nd. der Begründung der Notwendigkeit des Einsatzes technischer Instrumente zur Standortbestimmung und der Erläuterung, warum bisherige Abklärungen ohne diese Instrumente erfolglos waren, aussichtslos wären oder unverhältnismässig erschwert würden;\ne. der Angabe von Beginn und Ende der Observation sowie der Frist, innerhalb deren sie durchzuführen ist;\nf. den für die Genehmigung wesentlichen Akten.\n2 Die Präsidentin oder der Präsident der zuständigen Abteilung des zuständigen Gerichts entscheidet als Einzelrichterin beziehungsweise als Einzelrichter innerhalb von fünf Arbeitstagen nach Erhalt mit kurzer Begründung über den Antrag des Versicherungsträgers; sie oder er kann die Aufgabe an eine andere Richterin oder einen anderen Richter übertragen.\n3 Sie oder er kann die Genehmigung befristet oder mit Auflagen erteilen oder eine Ergänzung der Akten oder weitere Informationen verlangen.\n4 Zuständiges Gericht ist:\na. das kantonale Versicherungsgericht des Wohnkantons der versicherten Person;\nb. das Bundesverwaltungsgericht, falls die versicherte Person ihren Wohnsitz im Ausland hat.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_43_b"
+    },
+    {
+     "id": "art_44",
+     "number": "44",
+     "title": "Gutachten",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Erachtet der Versicherungsträger im Rahmen von medizinischen Abklärungen ein Gutachten als notwendig, so legt er je nach Erfordernis eine der folgenden Arten fest:\na. monodisziplinäres Gutachten;\nb. bidisziplinäres Gutachten;\nc. polydisziplinäres Gutachten.\n2 Muss der Versicherungsträger zur Abklärung des Sachverhaltes ein Gutachten bei einem oder mehreren unabhängigen Sachverständigen einholen, so gibt er der Partei deren Namen bekannt. Diese kann innert zehn Tagen aus den Gründen nach Artikel 36 Absatz 1 Sachverständige ablehnen und Gegenvorschläge machen.\n3 Mit der Bekanntgabe der Namen stellt der Versicherungsträger der Partei auch die Fragen an den oder die Sachverständigen zu und weist sie auf die Möglichkeit hin, innert der gleichen Frist Zusatzfragen in schriftlicher Form einzureichen. Der Versicherungsträger entscheidet abschliessend über die Fragen an den oder die Sachverständigen.\n4 Hält der Versicherungsträger trotz Ablehnungsantrag an den vorgesehenen Sachverständigen fest, so teilt er dies der Partei durch Zwischenverfügung mit.\n5 Bei Gutachten nach Absatz 1 Buchstaben a und b werden die Fachdisziplinen vom Versicherungsträger, bei Gutachten nach Absatz 1 Buchstabe c von der Gutachterstelle abschliessend festgelegt.\n6 Sofern die versicherte Person es nicht anders bestimmt, werden die Interviews in Form von Tonaufnahmen zwischen der versicherten Person und dem Sachverständigen erstellt und in die Akten des Versicherungsträgers aufgenommen.\n7 Der Bundesrat:\na. kann für Gutachten nach Absatz 1 die Art der Vergabe des Auftrages an eine Gutachterstelle regeln;\nb. erlässt Kriterien für die Zulassung von medizinischen und neuropsychologischen Sachverständigen für alle Gutachten nach Absatz 1;\nc. schafft eine Kommission mit Vertreterinnen und Vertretern der verschiedenen Sozialversicherungen, der Gutachterstellen, der Ärzteschaft, der Neuropsychologinnen und Neuropsychologen, der Wissenschaft sowie der Patienten- und Behindertenorganisationen, welche die Zulassung als Gutachterstelle, das Verfahren zur Gutachtenerstellung und die Ergebnisse der medizinischen Gutachten überwacht. Die Kommission spricht öffentliche Empfehlungen aus .",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_44"
+    },
+    {
+     "id": "art_45",
+     "number": "45",
+     "title": "Kosten der Abklärung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Der Versicherungsträger übernimmt die Kosten der Abklärung, soweit er die Massnahmen angeordnet hat. Hat er keine Massnahmen angeordnet, so übernimmt er deren Kosten dennoch, wenn die Massnahmen für die Beurteilung des Anspruchs unerlässlich waren oder Bestandteil nachträglich zugesprochener Leistungen bilden.\n2 Der Versicherungsträger entschädigt die Partei und die Auskunftspersonen für Erwerbsausfall und Spesen.\n3 Die Kosten können der Partei auferlegt werden, wenn sie trotz Aufforderung und Androhung der Folgen die Abklärung in unentschuldbarer Weise verhindert oder erschwert hat.\n4 Hat eine versicherte Person wissentlich mit unwahren Angaben oder in anderer rechtswidriger Weise eine Versicherungsleistung erwirkt oder zu erwirken versucht, so kann ihr der Versicherungsträger die Mehrkosten auferlegen, die ihm durch den Beizug von Spezialistinnen und Spezialisten, die zur Bekämpfung des unrechtmässigen Leistungsbezugs mit der Durchführung der Observationen beauftragt wurden, entstanden sind.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_45"
+    },
+    {
+     "id": "art_46",
+     "number": "46",
+     "title": "Aktenführung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Für jedes Sozialversicherungsverfahren sind alle Unterlagen, die massgeblich sein können, vom Versicherungsträger systematisch zu erfassen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_46"
+    },
+    {
+     "id": "art_47",
+     "number": "47",
+     "title": "Akteneinsicht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Sofern überwiegende Privatinteressen gewahrt bleiben, steht die Akteneinsicht zu:\na. der versicherten Person für die sie betreffenden Daten;\nb. den Parteien für die Daten, die sie benötigen, um einen Anspruch oder eine Verpflichtung nach einem Sozialversicherungsgesetz zu wahren oder zu erfüllen oder um ein Rechtsmittel gegen eine auf Grund desselben Gesetzes erlassene Verfügung geltend zu machen;\nc. Behörden, die zuständig sind für Beschwerden gegen auf Grund eines Sozialversicherungsgesetzes erlassene Verfügungen, für die zur Erfüllung dieser Aufgabe erforderlichen Daten;\nd. der haftpflichtigen Person und ihrem Versicherer für die Daten, die sie benötigen, um eine Rückgriffsforderung der Sozialversicherung zu beurteilen.\n2 Handelt es sich um Gesundheitsdaten, deren Bekanntgabe sich für die zur Einsicht berechtigte Person gesundheitlich nachteilig auswirken könnte, so kann von ihr verlangt werden, dass sie einen Arzt oder eine Ärztin bezeichnet, der oder die ihr diese Daten bekannt gibt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_47"
+    },
+    {
+     "id": "art_48",
+     "number": "48",
+     "title": "Massgeblichkeit geheimer Akten",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Wird einer Partei die Einsichtnahme in ein Aktenstück verweigert, so darf auf dieses zum Nachteil der Partei nur abgestellt werden, wenn ihr der Versicherungsträger von seinem für die Sache wesentlichen Inhalt mündlich oder schriftlich Kenntnis und ihr ausserdem Gelegenheit gegeben hat, sich zu äussern und Gegenbeweismittel zu bezeichnen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_48"
+    },
+    {
+     "id": "art_49",
+     "number": "49",
+     "title": "Verfügung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Über Leistungen, Forderungen und Anordnungen, die erheblich sind oder mit denen die betroffene Person nicht einverstanden ist, hat der Versicherungsträger schriftlich Verfügungen zu erlassen.\n2 Dem Begehren um Erlass einer Feststellungsverfügung ist zu entsprechen, wenn die gesuchstellende Person ein schützenswertes Interesse glaubhaft macht.\n3 Die Verfügungen werden mit einer Rechtsmittelbelehrung versehen. Sie sind zu begründen, wenn sie den Begehren der Parteien nicht voll entsprechen. Aus einer mangelhaften Eröffnung einer Verfügung darf der betroffenen Person kein Nachteil erwachsen.\n4 Erlässt ein Versicherungsträger eine Verfügung, welche die Leistungspflicht eines anderen Trägers berührt, so hat er auch ihm die Verfügung zu eröffnen. Dieser kann die gleichen Rechtsmittel ergreifen wie die versicherte Person.\n5 Der Versicherungsträger kann in seiner Verfügung einer Einsprache oder Beschwerde die aufschiebende Wirkung entziehen, auch wenn die Verfügung eine Geldleistung zum Gegenstand hat. Ausgenommen sind Verfügungen über die Rückerstattung unrechtmässig bezogener Leistungen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_49"
+    },
+    {
+     "id": "art_50",
+     "number": "50",
+     "title": "Vergleich",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Streitigkeiten über sozialversicherungsrechtliche Leistungen können durch Vergleich erledigt werden.\n2 Der Versicherungsträger hat den Vergleich in Form einer anfechtbaren Verfügung zu eröffnen.\n3 Die Absätze 1 und 2 gelten sinngemäss im Einsprache- und in den Beschwerdeverfahren.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_50"
+    },
+    {
+     "id": "art_51",
+     "number": "51",
+     "title": "Formloses Verfahren",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Leistungen, Forderungen und Anordnungen, die nicht unter Artikel 49 Absatz 1 fallen, können in einem formlosen Verfahren behandelt werden.\n2 Die betroffene Person kann den Erlass einer Verfügung verlangen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_51"
+    },
+    {
+     "id": "art_52",
+     "number": "52",
+     "title": "Einsprache",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Gegen Verfügungen kann innerhalb von 30 Tagen bei der verfügenden Stelle Einsprache erhoben werden; davon ausgenommen sind prozess- und verfahrensleitende Verfügungen.\n2 Die Einspracheentscheide sind innert angemessener Frist zu erlassen. Sie werden begründet und mit einer Rechtsmittelbelehrung versehen.\n3 Das Einspracheverfahren ist kostenlos. Parteientschädigungen werden in der Regel nicht ausgerichtet.\n4 Der Versicherungsträger kann in seinem Einspracheentscheid einer allfälligen Beschwerde die aufschiebende Wirkung entziehen, auch wenn der Einspracheentscheid eine Geldleistung zum Gegenstand hat. Ausgenommen sind Einspracheentscheide über die Rückerstattung unrechtmässig bezogener Leistungen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_52"
+    },
+    {
+     "id": "art_52_a",
+     "number": "52a",
+     "title": "Vorsorgliche Einstellung von Leistungen",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "Der Versicherungsträger kann die Ausrichtung von Leistungen vorsorglich einstellen, wenn die versicherte Person die Meldepflicht nach Artikel 31 Absatz 1 verletzt hat, einer Lebens- oder Zivilstandskontrolle nicht fristgerecht nachgekommen ist oder der begründete Verdacht besteht, dass sie die Leistungen unrechtmässig erwirkt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_52_a"
+    },
+    {
+     "id": "art_53",
+     "number": "53",
+     "title": "Revision und Wiedererwägung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Formell rechtskräftige Verfügungen und Einspracheentscheide müssen in Revision gezogen werden, wenn die versicherte Person oder der Versicherungsträger nach deren Erlass erhebliche neue Tatsachen entdeckt oder Beweismittel auffindet, deren Beibringung zuvor nicht möglich war.\n2 Der Versicherungsträger kann auf formell rechtskräftige Verfügungen oder Einspracheentscheide zurückkommen, wenn diese zweifellos unrichtig sind und wenn ihre Berichtigung von erheblicher Bedeutung ist.\n3 Der Versicherungsträger kann eine Verfügung oder einen Einspracheentscheid, gegen die Beschwerde erhoben wurde, so lange wiedererwägen, bis er gegenüber der Beschwerdebehörde Stellung nimmt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_53"
+    },
+    {
+     "id": "art_54",
+     "number": "54",
+     "title": "Vollstreckung",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 Verfügungen und Einspracheentscheide sind vollstreckbar, wenn:\na. sie nicht mehr durch Einsprache oder Beschwerde angefochten werden können;\nb. sie zwar noch angefochten werden können, die zulässige Einsprache oder Beschwerde aber keine aufschiebende Wirkung hat;\nc. einer Einsprache oder Beschwerde die aufschiebende Wirkung entzogen wird.\n2 Vollstreckbare Verfügungen und Einspracheentscheide, die auf Geldzahlung oder Sicherheitsleistung gerichtet sind, stehen vollstreckbaren Urteilen im Sinne von Artikel 80 des Bundesgesetzes vom 11. April 1889 über Schuldbetreibung und Konkurs gleich.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_54"
+    },
+    {
+     "id": "art_55",
+     "number": "55",
+     "title": "Besondere Verfahrensregeln",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "2. Abschnitt: Sozialversicherungsverfahren"
+     ],
+     "text": "1 In den Artikeln 27–54 oder in den Einzelgesetzen nicht abschliessend geregelte Verfahrensbereiche bestimmen sich nach dem Verwaltungsverfahrensgesetz vom 20. Dezember 1968 .\n1bis Der Bundesrat kann vorsehen, dass die Bestimmungen des Verwaltungsverfahrensgesetzes vom 20. Dezember 1968 über den elektronischen Verkehr mit Behörden auch für Verfahren nach diesem Gesetz gelten.\n2 Das Verfahren vor einer Bundesbehörde richtet sich nach dem Verwaltungsverfahrensgesetz vom 20. Dezember 1968, ausser wenn sie über sozialversicherungsrechtliche Leistungen, Forderungen und Anordnungen entscheidet.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_55"
+    },
+    {
+     "id": "art_56",
+     "number": "56",
+     "title": "Beschwerderecht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "1 Gegen Einspracheentscheide oder Verfügungen, gegen welche eine Einsprache ausgeschlossen ist, kann Beschwerde erhoben werden.\n2 Beschwerde kann auch erhoben werden, wenn der Versicherungsträger entgegen dem Begehren der betroffenen Person keine Verfügung oder keinen Einspracheentscheid erlässt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_56"
+    },
+    {
+     "id": "art_57",
+     "number": "57",
+     "title": "Kantonales Versicherungsgericht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "Jeder Kanton bestellt ein Versicherungsgericht als einzige Instanz zur Beurteilung von Beschwerden aus dem Bereich der Sozialversicherung.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_57"
+    },
+    {
+     "id": "art_58",
+     "number": "58",
+     "title": "Zuständigkeit",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "1 Zuständig ist das Versicherungsgericht desjenigen Kantons, in dem die versicherte Person oder der Beschwerde führende Dritte zur Zeit der Beschwerdeerhebung Wohnsitz hat.\n2 Befindet sich der Wohnsitz der versicherten Person oder des Beschwerde führenden Dritten im Ausland, so ist das Versicherungsgericht desjenigen Kantons zuständig, in dem sich ihr letzter schweizerischer Wohnsitz befand oder in dem ihr letzter schweizerischer Arbeitgeber Wohnsitz hat; lässt sich keiner dieser Orte ermitteln, so ist das Versicherungsgericht desjenigen Kantons zuständig, in dem das Durchführungsorgan seinen Sitz hat.\n3 Die Behörde, die sich als unzuständig erachtet, überweist die Beschwerde ohne Verzug dem zuständigen Versicherungsgericht.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_58"
+    },
+    {
+     "id": "art_59",
+     "number": "59",
+     "title": "Legitimation",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "Zur Beschwerde ist berechtigt, wer durch die angefochtene Verfügung oder den Einspracheentscheid berührt ist und ein schutzwürdiges Interesse an deren Aufhebung oder Änderung hat.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_59"
+    },
+    {
+     "id": "art_60",
+     "number": "60",
+     "title": "Beschwerdefrist",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "1 Die Beschwerde ist innerhalb von 30 Tagen nach der Eröffnung des Einspracheentscheides oder der Verfügung, gegen welche eine Einsprache ausgeschlossen ist, einzureichen.\n2 Die Artikel 38–41 sind sinngemäss anwendbar.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_60"
+    },
+    {
+     "id": "art_61",
+     "number": "61",
+     "title": "Verfahrensregeln",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "Das Verfahren vor dem kantonalen Versicherungsgericht bestimmt sich unter Vorbehalt von Artikel 1 Absatz 3 des Verwaltungsverfahrensgesetzes vom 20. Dezember 1968 nach kantonalem Recht. Es hat folgenden Anforderungen zu genügen:\na. Das Verfahren muss einfach, rasch und in der Regel öffentlich sein.\nb. Die Beschwerde muss eine gedrängte Darstellung des Sachverhaltes, ein Rechtsbegehren und eine kurze Begründung enthalten. Genügt sie diesen Anforderungen nicht, so setzt das Versicherungsgericht der Beschwerde führenden Person eine angemessene Frist zur Verbesserung und verbindet damit die Androhung, dass sonst auf die Beschwerde nicht eingetreten wird.\nc. Das Versicherungsgericht stellt unter Mitwirkung der Parteien die für den Entscheid erheblichen Tatsachen fest; es erhebt die notwendigen Beweise und ist in der Beweiswürdigung frei.\nd. Das Versicherungsgericht ist an die Begehren der Parteien nicht gebunden. Es kann eine Verfügung oder einen Einspracheentscheid zu Ungunsten der Beschwerde führenden Person ändern oder dieser mehr zusprechen, als sie verlangt hat, wobei den Parteien vorher Gelegenheit zur Stellungnahme sowie zum Rückzug der Beschwerde zu geben ist.\ne. Rechtfertigen es die Umstände, so können die Parteien zur Verhandlung vorgeladen werden.\nf. Das Recht, sich verbeiständen zu lassen, muss gewährleistet sein. Wo die Verhältnisse es rechtfertigen, wird der Beschwerde führenden Person ein unentgeltlicher Rechtsbeistand bewilligt.\nf bis .\nBei Streitigkeiten über Leistungen ist das Verfahren kostenpflichtig, wenn dies im jeweiligen Einzelgesetz vorgesehen ist; sieht das Einzelgesetz keine Kostenpflicht bei solchen Streitigkeiten vor, so kann das Gericht einer Partei, die sich mutwillig oder leichtsinnig verhält, Gerichtskosten auferlegen.\ng. Die obsiegende Beschwerde führende Person hat Anspruch auf Ersatz der Parteikosten. Diese werden vom Versicherungsgericht festgesetzt und ohne Rücksicht auf den Streitwert nach der Bedeutung der Streitsache und nach der Schwierigkeit des Prozesses bemessen.\nh. Die Entscheide werden, versehen mit einer Begründung und einer Rechtsmittelbelehrung sowie mit den Namen der Mitglieder des Versicherungsgerichts schriftlich eröffnet.\ni. Die Revision von Entscheiden wegen Entdeckung neuer Tatsachen oder Beweismittel oder wegen Einwirkung durch Verbrechen oder Vergehen muss gewährleistet sein.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_61"
+    },
+    {
+     "id": "art_62",
+     "number": "62",
+     "title": "Bundesgericht",
+     "path": [
+      "4. Kapitel: Allgemeine Verfahrensbestimmungen",
+      "3. Abschnitt: Rechtspflegeverfahren"
+     ],
+     "text": "1 Gegen Entscheide der kantonalen Versicherungsgerichte kann nach Massgabe des Bundesgerichtsgesetzes vom 17. Juni 2005 beim Bundesgericht Beschwerde geführt werden.\n1bis Der Bundesrat regelt das Beschwerderecht der Durchführungsorgane der einzelnen Sozialversicherungen vor dem Bundesgericht.\n2 Für die Vollstreckbarkeit der vorinstanzlichen Beschwerdeentscheide ist Artikel 54 sinngemäss anwendbar.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_62"
+    },
+    {
+     "id": "art_63",
+     "number": "63",
+     "title": "Allgemeines",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Die Koordinationsbestimmungen dieses Abschnitts beziehen sich auf Leistungen verschiedener Sozialversicherungen.\n2 Die Alters- und Hinterlassenenversicherung und die Invalidenversicherung gelten zusammen als eine Sozialversicherung.\n3 Die Koordination von Leistungen innerhalb einer Sozialversicherung richtet sich nach dem jeweiligen Einzelgesetz.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_63"
+    },
+    {
+     "id": "art_64",
+     "number": "64",
+     "title": "Heilbehandlung",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Die Heilbehandlung wird, soweit die Leistungen gesetzlich vorgeschrieben sind, ausschliesslich von einer einzigen Sozialversicherung übernommen.\n2 Sind die Voraussetzungen des jeweiligen Einzelgesetzes erfüllt, so geht die Heilbehandlung im gesetzlichen Umfang und in nachstehender Reihenfolge zu Lasten:\na. der Militärversicherung;\nb. der Unfallversicherung;\nc. der Invalidenversicherung;\nd. der Krankenversicherung.\n3 Der leistungspflichtige Sozialversicherungsträger übernimmt auch dann allein und uneingeschränkt die Heilungskosten bei stationärer Behandlung, wenn der Gesundheitsschaden nur zum Teil auf einen von ihm zu deckenden Versicherungsfall zurückzuführen ist.\n4 Der leistungspflichtige Sozialversicherungsträger kommt ferner für ausserhalb seines Leistungsbereichs liegende Gesundheitsschäden auf, die während einer stationären Heilbehandlung auftreten und nicht getrennt behandelt werden können.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_64"
+    },
+    {
+     "id": "art_65",
+     "number": "65",
+     "title": "Andere Sachleistungen",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "Andere Sachleistungen, namentlich Hilfsmittel oder Eingliederungsmassnahmen, gehen nach den Bestimmungen des jeweiligen Einzelgesetzes und in nachstehender Reihenfolge zu Lasten:\na. der Militärversicherung oder der Unfallversicherung;\nb. der Invalidenversicherung oder der Alters- und Hinterlassenenversicherung;\nc. der Krankenversicherung.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_65"
+    },
+    {
+     "id": "art_66",
+     "number": "66",
+     "title": "Renten und Hilflosenentschädigungen",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Renten und Abfindungen verschiedener Sozialversicherungen werden unter Vorbehalt der Überentschädigung kumulativ gewährt.\n2 Renten und Abfindungen werden nach den Bestimmungen des jeweiligen Einzelgesetzes und in nachstehender Reihenfolge gewährt:\na. von der Alters- und Hinterlassenenversicherung oder der Invalidenversicherung;\nb. von der Militärversicherung oder der Unfallversicherung;\nc. von der beruflichen Alters-, Hinterlassenen- und Invalidenvorsorge nach dem Bundesgesetz vom 25. Juni 1982 über die berufliche Alters‑, Hinterlassenen- und Invalidenvorsorge (BVG).\n3 Hilflosenentschädigungen werden nach den Bestimmungen des jeweiligen Einzelgesetzes und in nachstehender Reihenfolge ausschliesslich gewährt:\na. von der Militärversicherung oder der Unfallversicherung;\nb. von der Invalidenversicherung oder der Alters- und Hinterlassenenversicherung.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_66"
+    },
+    {
+     "id": "art_67",
+     "number": "67",
+     "title": "Heilbehandlung und Geldleistungen",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Hält sich eine taggeld- oder rentenberechtigte Person zu Lasten der Sozialversicherung in einer Heilanstalt auf, so kann der für die Heilbehandlung leistungspflichtige Sozialversicherungsträger je nach den Familienlasten der versicherten Person die Vergütung für die Unterhaltskosten in der Heilanstalt um einen festen Betrag herabsetzen. Dieser Abzug kann auf dem Taggeld oder der Rente einbehalten werden.\n2 Hält sich eine Bezügerin oder ein Bezüger einer Hilflosenentschädigung zu Lasten der Sozialversicherung in einer Heilanstalt auf, so entfällt der Anspruch auf die Entschädigung für jeden vollen Kalendermonat des Aufenthalts in der Heilanstalt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_67"
+    },
+    {
+     "id": "art_68",
+     "number": "68",
+     "title": "Taggelder und Renten",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "Taggelder werden unter Vorbehalt der Überentschädigung kumulativ zu Renten anderer Sozialversicherungen gewährt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_68"
+    },
+    {
+     "id": "art_69",
+     "number": "69",
+     "title": "Überentschädigung",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Das Zusammentreffen von Leistungen verschiedener Sozialversicherungen darf nicht zu einer Überentschädigung der berechtigten Person führen. Bei der Berechnung der Überentschädigung werden nur Leistungen gleicher Art und Zweckbestimmung berücksichtigt, die der anspruchsberechtigten Person auf Grund des schädigenden Ereignisses gewährt werden.\n2 Eine Überentschädigung liegt in dem Masse vor, als die gesetzlichen Sozialversicherungsleistungen den wegen des Versicherungsfalls mutmasslich entgangenen Verdienst zuzüglich der durch den Versicherungsfall verursachten Mehrkosten und allfälliger Einkommenseinbussen von Angehörigen übersteigen.\n3 Die Leistungen werden um den Betrag der Überentschädigung gekürzt. Von einer Kürzung ausgeschlossen sind die Renten der Alters- und Hinterlassenenversicherung und der Invalidenversicherung sowie alle Hilflosen- und Integritätsentschädigungen. Bei Kapitalleistungen wird der Rentenwert berücksichtigt.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_69"
+    },
+    {
+     "id": "art_70",
+     "number": "70",
+     "title": "Vorleistung",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "1 Begründet ein Versicherungsfall einen Anspruch auf Sozialversicherungsleistungen, bestehen aber Zweifel darüber, welche Sozialversicherung die Leistungen zu erbringen hat, so kann die berechtigte Person Vorleistung verlangen.\n2 Vorleistungspflichtig sind:\na. die Krankenversicherung für Sachleistungen und Taggelder, deren Übernahme durch die Krankenversicherung, die Unfallversicherung, die Militärversicherung oder die Invalidenversicherung umstritten ist;\nb. die Arbeitslosenversicherung für Leistungen, deren Übernahme durch die Arbeitslosenversicherung, die Krankenversicherung, die Unfallversicherung, die Militärversicherung oder die Invalidenversicherung umstritten ist;\nc. die Unfallversicherung für Leistungen, deren Übernahme durch die Unfallversicherung oder die Militärversicherung umstritten ist;\nd. die berufliche Alters-, Hinterlassenen- und Invalidenvorsorge nach BVG für Renten, deren Übernahme durch die Unfall‑ beziehungsweise Militärversicherung oder die berufliche Alters‑, Hinterlassenen‑ und Invalidenvorsorge nach BVG umstritten ist.\n3 Die berechtigte Person hat sich bei den in Frage kommenden Sozialversicherungen anzumelden.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_70"
+    },
+    {
+     "id": "art_71",
+     "number": "71",
+     "title": "Rückerstattung von Vorleistungen",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "1. Abschnitt: Leistungskoordination"
+     ],
+     "text": "Der vorleistungspflichtige Versicherungsträger erbringt die Leistungen nach den für ihn geltenden Bestimmungen. Wird der Fall von einem anderen Träger übernommen, so hat dieser die Vorleistungen im Rahmen seiner Leistungspflicht zurückzuerstatten.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_71"
+    },
+    {
+     "id": "art_72",
+     "number": "72",
+     "title": "Grundsatz",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "2. Abschnitt: Rückgriff"
+     ],
+     "text": "1 Gegenüber einem Dritten, der für den Versicherungsfall haftet, tritt der Versicherungsträger im Zeitpunkt des Ereignisses bis auf die Höhe der gesetzlichen Leistungen in die Ansprüche der versicherten Person und ihrer Hinterlassenen ein.\n2 Mehrere Haftpflichtige haften für Rückgriffsansprüche der Versicherungsträger solidarisch.\n3 Auf die übergegangenen Ansprüche bleiben die ihrer Natur entsprechenden Verjährungsfristen anwendbar. Für den Regressanspruch des Versicherungsträgers beginnen jedoch die relativen Fristen erst mit dessen Kenntnis seiner Leistungen und der Person des Ersatzpflichtigen zu laufen.\n4 Besteht ein direktes Forderungsrecht der geschädigten Person gegenüber dem Haftpflichtversicherer, so steht dieses auch dem in ihre Rechte eingetretenen Versicherungsträger zu. Einreden aus dem Versicherungsvertrag, die der geschädigten Person nicht entgegengehalten werden dürfen, können auch gegenüber dem Regressanspruch des Versicherungsträgers nicht vorgebracht werden.\n5 Der Bundesrat erlässt Vorschriften über die Ausübung des Rückgriffsrechtes. Insbesondere kann er anordnen, dass bei Regressnahme gegen einen Haftpflichtigen, der nicht haftpflichtversichert ist, mehrere am Rückgriff beteiligte Versicherer ihre Regressansprüche von einem einzigen Versicherer für alle geltend machen lassen. Der Bundesrat regelt die Vertretung nach aussen für den Fall, dass die betroffenen Versicherer sich darüber nicht einigen können.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_72"
+    },
+    {
+     "id": "art_73",
+     "number": "73",
+     "title": "Umfang",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "2. Abschnitt: Rückgriff"
+     ],
+     "text": "1 Die Ansprüche der versicherten Person und ihrer Hinterlassenen gehen nur so weit auf den Versicherungsträger über, als dessen Leistungen zusammen mit dem vom Dritten für den gleichen Zeitraum geschuldeten Ersatz den entsprechenden Schaden übersteigen.\n2 Hat jedoch der Versicherungsträger seine Leistungen im Sinne von Artikel 21 Absatz 1, 2 oder 4 gekürzt, so gehen die Ansprüche der versicherten Person und ihrer Hinterlassenen so weit auf den Versicherungsträger über, als dessen ungekürzte Leistungen zusammen mit dem vom Dritten für den gleichen Zeitraum geschuldeten Ersatz den entsprechenden Schaden übersteigen würden.\n3 Die Ansprüche, die nicht auf den Versicherungsträger übergehen, bleiben der versicherten Person und ihren Hinterlassenen gewahrt. Kann nur ein Teil des vom Dritten geschuldeten Ersatzes eingebracht werden, so sind daraus zuerst die Ansprüche der versicherten Person und ihrer Hinterlassenen zu befriedigen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_73"
+    },
+    {
+     "id": "art_74",
+     "number": "74",
+     "title": "Gliederung der Ansprüche",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "2. Abschnitt: Rückgriff"
+     ],
+     "text": "1 Die Ansprüche gehen für Leistungen gleicher Art auf den Versicherungsträger über.\n2 Leistungen gleicher Art sind namentlich:\na. vom Versicherungsträger und von Dritten zu erbringende Vergütungen für Heilungs- und Eingliederungskosten;\nb. Taggeld und Ersatz für Arbeitsunfähigkeit;\nc. Invalidenrenten beziehungsweise an deren Stelle ausgerichtete Altersrenten und Ersatz für Erwerbsunfähigkeit sowie Ersatz für Rentenschaden;\nd. Leistungen für Hilflosigkeit, Assistenzbeitrag und Vergütungen für Pflegekosten sowie andere aus der Hilflosigkeit erwachsende Kosten;\ne. Integritätsentschädigung und Genugtuung;\nf. Hinterlassenenrenten und Ersatz für Versorgerschaden;\ng. Bestattungs- und Todesfallkosten;\nh. Abklärungskosten und Kosten der Schadenermittlung.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_74"
+    },
+    {
+     "id": "art_75",
+     "number": "75",
+     "title": "Einschränkung des Rückgriffs",
+     "path": [
+      "5. Kapitel: Koordinationsregeln",
+      "2. Abschnitt: Rückgriff"
+     ],
+     "text": "1 Ein Rückgriffsrecht gegen den Ehegatten der versicherten Person, deren Verwandte in auf- und absteigender Linie oder mit ihr in gemeinsamem Haushalt lebende Personen steht dem Versicherungsträger nur zu, wenn sie den Versicherungsfall absichtlich oder grobfahrlässig herbeigeführt haben.\n2 Die gleiche Einschränkung gilt für den Rückgriffsanspruch aus einem Berufsunfall gegen den Arbeitgeber der versicherten Person, gegen dessen Familienangehörige und gegen dessen Arbeitnehmerinnen und Arbeitnehmer.\n3 Die Einschränkung des Rückgriffsrechts des Versicherungsträgers entfällt, wenn und soweit die Person, gegen welche Rückgriff genommen wird, obligatorisch haftpflichtversichert ist.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_75"
+    },
+    {
+     "id": "art_75_a",
+     "number": "75a",
+     "title": "Zuständige Stellen",
+     "path": [
+      "5a. Kapitel: Durchführung internationaler Sozialversicherungsabkommen"
+     ],
+     "text": "Der Bundesrat bestimmt die Stellen, die damit beauftragt sind, für die einzelnen Sozialversicherungen die Aufgaben, insbesondere als zuständige Behörde, Verbindungsstelle und zuständiger Träger, gemäss den Erlassen in der für die Schweiz verbindlichen Fassung von Anhang II des Freizügigkeitsabkommens und gemäss anderen internationalen Abkommen über die soziale Sicherheit wahrzunehmen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_75_a"
+    },
+    {
+     "id": "art_75_b",
+     "number": "75b",
+     "title": "Infrastruktur für die Durchführung",
+     "path": [
+      "5a. Kapitel: Durchführung internationaler Sozialversicherungsabkommen"
+     ],
+     "text": "1 Der Bundesrat bestimmt die Bundesstellen, die zuständig sind für die Einrichtung und den Betrieb der Infrastruktur zum Zweck des elektronischen Datenaustausches mit dem Ausland, insbesondere der nötigen elektronischen Zugangsstellen und Schnittstellen zwischen dem nationalen und dem internationalen Datenaustauschsystem.\n2 Die Bundesstellen nach Absatz 1 dürfen den Stellen nach Artikel 75 a Zugriff auf die in ihren Zuständigkeitsbereich fallenden Daten mittels Abrufverfahren gewähren.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_75_b"
+    },
+    {
+     "id": "art_75_c",
+     "number": "75c",
+     "title": "Finanzierung der Infrastruktur",
+     "path": [
+      "5a. Kapitel: Durchführung internationaler Sozialversicherungsabkommen"
+     ],
+     "text": "1 Die Bundesstellen nach Artikel 75 b erheben bei den zuständigen Trägern nach Artikel 75 a Gebühren für den Anschluss an die Infrastruktur zum Zweck des elektronischen Datenaustausches mit dem Ausland und für deren Benutzung.\n2 Der Bundesrat regelt die Gebühren im Rahmen von Artikel 46 a des Regierungs- und Verwaltungsorganisationsgesetzes vom 21. März 1997 . Er hört vorgängig die betroffenen Stellen an. Er berücksichtigt bei der Bemessung der Gebühren den Umfang der Benutzung der Infrastruktur.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_75_c"
+    },
+    {
+     "id": "art_76",
+     "number": "76",
+     "title": "Aufsichtsbehörde",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "1 Der Bundesrat überwacht die Durchführung der Sozialversicherungen und erstattet hierüber regelmässig Bericht.\n1bis Der Bericht enthält eine Darstellung der Systemrisiken der verschiedenen Sozialversicherungen und erläutert die strategische Steuerung der Sozialversicherungen durch den Bundesrat.\n2 In Fällen wiederholter schwerer Missachtung der gesetzlichen Vorschriften durch einen Versicherungsträger ordnet der Bundesrat oder die von ihm bezeichnete Aufsichtsbehörde die notwendigen Massnahmen zur Wiederherstellung der gesetzmässigen Verwaltung der Versicherung an.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_76"
+    },
+    {
+     "id": "art_76_a",
+     "number": "76a",
+     "title": "Elektronischer Datenaustausch",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "1 Der Bundesrat regelt den elektronischen Austausch von Sozialversicherungsdaten unter den schweizerischen Versicherungsträgern und zwischen diesen und den Bundesbehörden. Die Bestimmungen über die Datenbekanntgabe in den einzelnen Sozialversicherungsgesetzen bleiben vorbehalten.\n2 Der Bundesrat kann die Regelung des elektronischen Austausches den Aufsichtsbehörden übertragen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_76_a"
+    },
+    {
+     "id": "art_77",
+     "number": "77",
+     "title": "Berichterstattung und Statistik",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "Die Träger der Sozialversicherung haben den Aufsichtsbehörden alle Auskünfte zu erteilen, die diese für die Überprüfung der Tätigkeit und für die Erstellung aussagekräftiger Statistiken benötigen. Sie haben jeweils Jahresberichte und Jahresrechnungen einzureichen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_77"
+    },
+    {
+     "id": "art_78",
+     "number": "78",
+     "title": "Verantwortlichkeit",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "1 Für Schäden, die von Durchführungsorganen oder einzelnen Funktionären von Versicherungsträgern einer versicherten Person oder Dritten widerrechtlich zugefügt wurden, haften die öffentlichen Körperschaften, privaten Trägerorganisationen oder Versicherungsträger, die für diese Organe verantwortlich sind.\n2 Die zuständige Behörde entscheidet durch Verfügung über Ersatzforderungen.\n3 Die subsidiäre Haftung des Bundes für ausserhalb der ordentlichen Bundesverwaltung stehende Organisationen richtet sich nach Artikel 19 des Verantwortlichkeitsgesetzes vom 14. März 1958 .\n4 Für die Verfahren nach den Absätzen 1 und 3 gelten die Bestimmungen dieses Gesetzes. Ein Einspracheverfahren wird nicht durchgeführt. Die Artikel 3–9, 11, 12, 20 Absatz 1, 21 und 23 des Verantwortlichkeitsgesetzes vom 14. März 1958 sind sinngemäss anwendbar.\n5 Personen, die als Organe oder Funktionäre eines Versicherungsträgers, einer Revisions- oder Kontrollstelle handeln oder denen durch die Einzelgesetze bestimmte Aufgaben übertragen wurden, unterliegen der gleichen strafrechtlichen Verantwortlichkeit wie Behördemitglieder und Beamte nach dem Strafgesetzbuch .",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_78"
+    },
+    {
+     "id": "art_79",
+     "number": "79",
+     "title": "Strafbestimmungen",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "1 Die Bestimmungen des Allgemeinen Teils des Strafgesetzbuches sowie Artikel 6 des Bundesgesetzes vom 22. März 1974 über das Verwaltungsstrafrecht finden Anwendung.\n2 Die Strafverfolgung ist Sache der Kantone.\n3 Der Versicherungsträger kann in Strafverfahren wegen Verletzung von Artikel 148 a des Strafgesetzbuches und Artikel 87 des Bundesgesetzes vom 20. Dezember 1946 über die Alters- und Hinterlassenenversicherung die Rechte einer Privatklägerschaft wahrnehmen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_79"
+    },
+    {
+     "id": "art_80",
+     "number": "80",
+     "title": "Steuerfreiheit der Versicherungsträger",
+     "path": [
+      "6. Kapitel: Verschiedene Bestimmungen"
+     ],
+     "text": "1 Die Versicherungsträger und Durchführungsorgane sind, soweit ihre Einkünfte und Vermögenswerte ausschliesslich der Durchführung der Sozialversicherung, der Erbringung oder der Sicherstellung von Sozialversicherungsleistungen dienen, von den direkten Steuern des Bundes, der Kantone und der Gemeinden und von Erbschafts- und Schenkungssteuern der Kantone und Gemeinden befreit.\n2 Urkunden, die bei der Durchführung der Sozialversicherung im Verkehr mit den Versicherten oder mit Drittpersonen und anderen Organisationen verwendet werden, sind von den öffentlichen Abgaben und Gebühren befreit. Der Bezug der gesetzlichen Versicherungsbeiträge unterliegt der eidgenössischen Stempelabgabe auf Prämienquittungen nicht.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_80"
+    },
+    {
+     "id": "art_81",
+     "number": "81",
+     "title": "Vollzug",
+     "path": [
+      "7. Kapitel: Schlussbestimmungen"
+     ],
+     "text": "Der Bundesrat wird mit dem Vollzug beauftragt. Er erlässt die Ausführungsbestimmungen.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_81"
+    },
+    {
+     "id": "art_82",
+     "number": "82",
+     "title": "Übergangsbestimmungen",
+     "path": [
+      "7. Kapitel: Schlussbestimmungen"
+     ],
+     "text": "1 Materielle Bestimmungen dieses Gesetzes sind auf die bei seinem Inkrafttreten laufenden Leistungen und festgesetzten Forderungen nicht anwendbar. Wegen Selbstverschulden gekürzte oder verweigerte Invaliden- oder Hinterlassenenrenten werden jedoch auf Antrag überprüft und gegebenenfalls frühestens vom Inkrafttreten dieses Gesetzes an auf Grund von Artikel 21 Absatz 1 und 2 neu festgesetzt.\n2 …",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_82"
+    },
+    {
+     "id": "art_82_a",
+     "number": "82a",
+     "title": "Übergangsbestimmung zur Änderung vom 21. Juni 2019",
+     "path": [
+      "7. Kapitel: Schlussbestimmungen"
+     ],
+     "text": "Für im Zeitpunkt des Inkrafttretens der Änderung vom 21. Juni 2019 beim erstinstanzlichen Gericht hängige Beschwerden gilt das bisherige Recht.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_82_a"
+    },
+    {
+     "id": "art_83",
+     "number": "83",
+     "title": "Änderung bisherigen Rechts",
+     "path": [
+      "7. Kapitel: Schlussbestimmungen"
+     ],
+     "text": "1 Die im Anhang aufgeführten Artikel werden aufgehoben oder geändert.\n2 Die Bundesversammlung kann vor Inkrafttreten dieses Gesetzes auf dem Verordnungsweg den Anhang ändern, um diesen an Änderungen anzupassen, die in den betroffenen Gesetzen vorgenommen wurden und seit der Verabschiedung dieses Gesetzes in Kraft getreten sind.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_83"
+    },
+    {
+     "id": "art_84",
+     "number": "84",
+     "title": "Referendum und Inkrafttreten",
+     "path": [
+      "7. Kapitel: Schlussbestimmungen"
+     ],
+     "text": "1 Dieses Gesetz untersteht dem fakultativen Referendum.\n2 Der Bundesrat bestimmt den Zeitpunkt des Inkrafttretens.\n3 Artikel 83 Absatz 2 tritt am ersten Tag des zweiten Monats nach dem unbenützten Ablauf der Referendumsfrist oder mit seiner Annahme in der Volksabstimmung in Kraft.\nDatum des Inkrafttretens: 1. Januar 2003 Art. 83 Abs. 2: 1. März 2001",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/de#art_84"
+    }
+   ]
+  },
+  "fr": {
+   "in_force": "2024-01-01",
+   "source": "https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/2002/510/20240101/fr/html/fedlex-data-admin-ch-eli-cc-2002-510-20240101-fr-html-4.html",
+   "articles": [
+    {
+     "id": "art_1",
+     "number": "1",
+     "title": "But et objet",
+     "path": [
+      "Chapitre 1 Champ d’application"
+     ],
+     "text": "La présente loi coordonne le droit fédéral des assurances sociales:\na. en définissant les principes, les notions et les institutions du droit des assurances sociales;\nb. en fixant les normes d’une procédure uniforme et en réglant l’organisation judiciaire dans le domaine des assurances sociales;\nc. en harmonisant les prestations des assurances sociales;\nd. en réglant le droit de recours des assurances sociales envers les tiers.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_1"
+    },
+    {
+     "id": "art_2",
+     "number": "2",
+     "title": "Champ d’application et rapports avec les lois spéciales sur les assurances sociales",
+     "path": [
+      "Chapitre 1 Champ d’application"
+     ],
+     "text": "Les dispositions de la présente loi sont applicables aux assurances sociales régies par la législation fédérale, si et dans la mesure où les lois spéciales sur les assurances sociales le prévoient.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_2"
+    },
+    {
+     "id": "art_3",
+     "number": "3",
+     "title": "Maladie",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Est réputée maladie toute atteinte à la santé physique, mentale ou psychique qui n’est pas due à un accident et qui exige un examen ou un traitement médical ou provoque une incapacité de travail.\n2 Est réputée infirmité congénitale toute maladie présente à la naissance accomplie de l’enfant.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_3"
+    },
+    {
+     "id": "art_4",
+     "number": "4",
+     "title": "Accident",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "Est réputée accident toute atteinte dommageable, soudaine et involontaire, portée au corps humain par une cause extérieure extraordinaire qui compromet la santé physique, mentale ou psychique ou qui entraîne la mort.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_4"
+    },
+    {
+     "id": "art_5",
+     "number": "5",
+     "title": "Maternité",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "La maternité comprend la grossesse et l’accouchement ainsi que la convalescence qui suit ce dernier.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_5"
+    },
+    {
+     "id": "art_6",
+     "number": "6",
+     "title": "Incapacité de travail",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "Est réputée incapacité de travail toute perte, totale ou partielle, de l’aptitude de l’assuré à accomplir dans sa profession ou son domaine d’activité le travail qui peut raisonnablement être exigé de lui, si cette perte résulte d’une atteinte à sa santé physique, mentale ou psychique. En cas d’incapacité de travail de longue durée, l’activité qui peut être exigée de lui peut aussi relever d’une autre profession ou d’un autre domaine d’activité.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_6"
+    },
+    {
+     "id": "art_7",
+     "number": "7",
+     "title": "Incapacité de gain",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Est réputée incapacité de gain toute diminution de l’ensemble ou d’une partie des possibilités de gain de l’assuré sur le marché du travail équilibré qui entre en considération, si cette diminution résulte d’une atteinte à sa santé physique, mentale ou psychique et qu’elle persiste après les traitements et les mesures de réadaptation exigibles.\n2 Seules les conséquences de l’atteinte à la santé sont prises en compte pour juger de la présence d’une incapacité de gain. De plus, il n’y a incapacité de gain que si celle-ci n’est pas objectivement surmontable.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_7"
+    },
+    {
+     "id": "art_8",
+     "number": "8",
+     "title": "Invalidité",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Est réputée invalidité l’incapacité de gain totale ou partielle qui est présumée permanente ou de longue durée.\n2 Les assurés mineurs sans activité lucrative sont réputés invalides s’ils présentent une atteinte à leur santé physique, mentale ou psychique qui provoquera probablement une incapacité de gain totale ou partielle.\n3 Les assurés majeurs qui n’exerçaient pas d’activité lucrative avant d’être atteints dans leur santé physique, mentale ou psychique et dont il ne peut être exigé qu’ils en exercent une sont réputés invalides si l’atteinte les empêche d’accomplir leurs travaux habituels. L’art. 7, al. 2, est applicable par analogie.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_8"
+    },
+    {
+     "id": "art_9",
+     "number": "9",
+     "title": "Impotence",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "Est réputée impotente toute personne qui, en raison d’une atteinte à sa santé, a besoin de façon permanente de l’aide d’autrui ou d’une surveillance personnelle pour accomplir des actes élémentaires de la vie quotidienne.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_9"
+    },
+    {
+     "id": "art_10",
+     "number": "10",
+     "title": "Salarié",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "Est réputé salarié celui qui fournit un travail dépendant et qui reçoit pour ce travail un salaire déterminant au sens des lois spéciales.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_10"
+    },
+    {
+     "id": "art_11",
+     "number": "11",
+     "title": "Employeur",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "Est réputé employeur celui qui emploie des salariés.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_11"
+    },
+    {
+     "id": "art_12",
+     "number": "12",
+     "title": "Personnes exerçant une activité lucrative indépendante",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Est considéré comme exerçant une activité lucrative indépendante celui dont le revenu ne provient pas de l’exercice d’une activité en tant que salarié.\n2 Une personne exerçant une activité lucrative indépendante peut simultanément avoir la qualité de salarié si elle reçoit un salaire correspondant.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_12"
+    },
+    {
+     "id": "art_13",
+     "number": "13",
+     "title": "Domicile et résidence habituelle",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Le domicile d’une personne est déterminé selon les art. 23 à 26 du code civil .\n2 Une personne est réputée avoir sa résidence habituelle au lieu où elle séjourne un certain temps même si la durée de ce séjour est d’emblée limitée.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_13"
+    },
+    {
+     "id": "art_13_a",
+     "number": "13a",
+     "title": "Partenariat enregistré",
+     "path": [
+      "Chapitre 2 Définitions de notions générales"
+     ],
+     "text": "1 Pendant toute sa durée, le partenariat enregistré est assimilé au mariage dans le droit des assurances sociales.\n2 Le partenaire enregistré survivant est assimilé à un veuf.\n3 La dissolution judiciaire du partenariat enregistré est assimilée au divorce.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_13_a"
+    },
+    {
+     "id": "art_14",
+     "number": "14",
+     "title": "",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 1 Prestations en nature"
+     ],
+     "text": "Constituent des prestations en nature notamment les traitements ou les soins, les moyens auxiliaires, les mesures individuelles de prévention et de réadaptation, les frais de transport et les prestations analogues qui sont fournis ou remboursés par les différentes assurances sociales.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_14"
+    },
+    {
+     "id": "art_15",
+     "number": "15",
+     "title": "Généralités",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "Les prestations en espèces comprennent, en particulier, les indemnités journalières, les rentes, les prestations complémentaires annuelles, les allocations pour impotents et leurs compléments; elles n’englobent pas le remplacement d’une prestation en nature à la charge d’une assurance.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_15"
+    },
+    {
+     "id": "art_16",
+     "number": "16",
+     "title": "Taux d’invalidité",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "Pour évaluer le taux d’invalidité, le revenu que l’assuré aurait pu obtenir s’il n’était pas invalide est comparé avec celui qu’il pourrait obtenir en exerçant l’activité qui peut raisonnablement être exigée de lui après les traitements et les mesures de réadaptation, sur un marché du travail équilibré.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_16"
+    },
+    {
+     "id": "art_17",
+     "number": "17",
+     "title": "Révision de la rente d’invalidité et d’autres prestations durables",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "1 La rente d’invalidité est, d’office ou sur demande, révisée pour l’avenir, à savoir augmentée, réduite ou supprimée, lorsque le taux d’invalidité de l’assuré:\na. subit une modification d’au moins 5 points de pourcentage, ou\nb. atteint 100 %.\n2 De même, toute prestation durable accordée en vertu d’une décision entrée en force est, d’office ou sur demande, augmentée ou réduite en conséquence, ou encore supprimée si les circonstances dont dépendait son octroi changent notablement.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_17"
+    },
+    {
+     "id": "art_18",
+     "number": "18",
+     "title": "Montant maximum du gain assuré",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "Pour les assurances sociales qui allouent des prestations en espèces fixées en pour-cent du gain, le Conseil fédéral fixe le montant maximum du gain assuré.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_18"
+    },
+    {
+     "id": "art_19",
+     "number": "19",
+     "title": "Versement de prestations en espèces",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "1 En règle générale, les prestations périodiques en espèces sont payées mensuellement.\n2 Les indemnités journalières et les prestations analogues sont versées à l’employeur dans la mesure où il continue à verser un salaire à l’assuré malgré son droit à des indemnités journalières.\n3 Les rentes et allocations pour impotents sont toujours payées d’avance pour le mois civil entier. Une prestation qui en remplace une autre est versée seulement pour le mois suivant.\n4 Si le droit à des prestations semble avéré et que leur versement est retardé, des avances peuvent être versées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_19"
+    },
+    {
+     "id": "art_20",
+     "number": "20",
+     "title": "Garantie de l’utilisation conforme au but",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 2 Prestations en espèces"
+     ],
+     "text": "1 L’assureur peut verser tout ou partie des prestations en espèces à un tiers qualifié ou à une autorité ayant une obligation légale ou morale d’entretien à l’égard du bénéficiaire, ou qui l’assiste en permanence lorsque:\na. le bénéficiaire n’utilise pas ces prestations pour son entretien ou celui des personnes dont il a la charge, ou s’il est établi qu’il n’est pas en mesure de les utiliser à cet effet, et que\nb. lui-même ou les personnes dont il a la charge dépendent de ce fait de l’assistance publique ou privée.\n2 Les prestations versées à un tiers ou à une autorité ne peuvent pas être compensées par ce tiers ou cette autorité avec des créances contre l’ayant droit. Fait exception la compensation en cas de versement rétroactif de prestations au sens de l’art. 22, al. 2.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_20"
+    },
+    {
+     "id": "art_21",
+     "number": "21",
+     "title": "",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 3 Réduction et refus de prestations"
+     ],
+     "text": "1 Si l’assuré a aggravé le risque assuré ou en a provoqué la réalisation intentionnellement ou en commettant intentionnellement un crime ou un délit, les prestations en espèces peuvent être temporairement ou définitivement réduites ou, dans les cas particulièrement graves, refusées.\n2 Les prestations en espèces dues aux proches ou aux survivants de l’assuré ne sont réduites ou refusées que si ceux-ci ont provoqué la réalisation du risque intentionnellement ou en commettant intentionnellement un crime ou un délit.\n3 Dans la mesure où des assurances sociales ayant le caractère d’assurance de perte de gain ne prévoient aucune prestation en espèces pour les proches, les prestations en espèces ne peuvent être réduites en vertu de l’al. 1 que de moitié. Pour l’autre moitié, la réduction prévue à l’al. 2 est réservée.\n4 Les prestations peuvent être réduites ou refusées temporairement ou définitivement si l’assuré se soustrait ou s’oppose, ou encore ne participe pas spontanément, dans les limites de ce qui peut être exigé de lui, à un traitement ou à une mesure de réinsertion professionnelle raisonnablement exigible et susceptible d’améliorer notablement sa capacité de travail ou d’offrir une nouvelle possibilité de gain. Une mise en demeure écrite l’avertissant des conséquences juridiques et lui impartissant un délai de réflexion convenable doit lui avoir été adressée. Les traitements et les mesures de réadaptation qui présentent un danger pour la vie ou pour la santé ne peuvent être exigés.\n5 Si l’assuré exécute une peine ou une mesure, le paiement des prestations pour perte de gain peut être partiellement ou totalement suspendu durant la durée de la peine. S’il se soustrait à l’exécution d’une peine ou d’une mesure, le paiement des prestations pour perte de gain est suspendu à partir du moment où la peine ou la mesure aurait dû être exécutée. Les prestations destinées à l’entretien des proches visées à l’al. 3 sont exceptées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_21"
+    },
+    {
+     "id": "art_22",
+     "number": "22",
+     "title": "Garantie des prestations",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 4 Dispositions particulières"
+     ],
+     "text": "1 Le droit aux prestations est incessible; il ne peut être donné en gage. Toute cession ou mise en gage est nulle.\n2 Les prestations accordées rétroactivement par l’assureur social peuvent en revanche être cédées:\na. à l’employeur ou à une institution d’aide sociale publique ou privée dans la mesure où ceux-ci ont consenti des avances;\nb. à l’assureur qui a pris provisoirement à sa charge des prestations .",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_22"
+    },
+    {
+     "id": "art_23",
+     "number": "23",
+     "title": "Renonciation à des prestations",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 4 Dispositions particulières"
+     ],
+     "text": "1 L’ayant droit peut renoncer à des prestations qui lui sont dues. La renonciation peut être en tout temps révoquée pour l’avenir. La renonciation et la révocation font l’objet d’une déclaration écrite.\n2 La renonciation et la révocation sont nulles lorsqu’elles sont préjudiciables aux intérêts d’autres personnes, d’institutions d’assurance ou d’assistance ou lorsqu’elles tendent à éluder des dispositions légales.\n3 L’assureur confirme par écrit à l’ayant droit la renonciation et la révocation. L’objet, l’étendue et les suites de la renonciation et de la révocation doivent être mentionnés dans la confirmation.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_23"
+    },
+    {
+     "id": "art_24",
+     "number": "24",
+     "title": "Extinction du droit",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 4 Dispositions particulières"
+     ],
+     "text": "1 Le droit à des prestations ou à des cotisations arriérées s’éteint cinq ans après la fin du mois pour lequel la prestation était due et cinq ans après la fin de l’année civile pour laquelle la cotisation devait être payée.\n2 Si le cotisant s’est soustrait à l’obligation de cotiser par un acte punissable pour lequel le droit pénal prévoit un délai de prescription plus long, c’est celui-ci qui détermine le moment où s’éteint la créance.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_24"
+    },
+    {
+     "id": "art_25",
+     "number": "25",
+     "title": "Restitution",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 4 Dispositions particulières"
+     ],
+     "text": "1 Les prestations indûment touchées doivent être restituées. La restitution ne peut être exigée lorsque l’intéressé était de bonne foi et qu’elle le mettrait dans une situation difficile.\n2 Le droit de demander la restitution s’éteint trois ans après le moment où l’institution d’assurance a eu connaissance du fait, mais au plus tard cinq ans après le versement de la prestation. Si la créance naît d’un acte punissable pour lequel le droit pénal prévoit un délai de prescription plus long, celui-ci est déterminant.\n3 Le remboursement de cotisations payées en trop peut être demandé. Le droit s’éteint une année après que le cotisant a eu connaissance de ses paiements trop élevés, mais au plus tard cinq ans après la fin de l’année civile au cours de laquelle les cotisations ont été payées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_25"
+    },
+    {
+     "id": "art_26",
+     "number": "26",
+     "title": "Intérêts moratoires et intérêts rémunératoires",
+     "path": [
+      "Chapitre 3 Dispositions générales concernant les prestations et les cotisations",
+      "Section 4 Dispositions particulières"
+     ],
+     "text": "1 Les créances de cotisations échues sont soumises à la perception d’intérêts moratoires et les créances échues en restitution de cotisations indûment versées sont soumises au versement d’intérêts rémunératoires. Le Conseil fédéral peut prévoir des exceptions pour les créances modestes ou échues depuis peu.\n2 Des intérêts moratoires sont dus pour toute créance de prestations d’assurances sociales à l’échéance d’un délai de 24 mois à compter de la naissance du droit, mais au plus tôt douze mois à partir du moment où l’assuré fait valoir ce droit, pour autant qu’il se soit entièrement conformé à l’obligation de collaborer qui lui incombe.\n3 Aucun intérêt moratoire n’est dû lorsque des assureurs étrangers sont à l’origine des retards.\n4 N’ont pas droit à des intérêts moratoires:\na. la personne ayant droit aux prestations ou ses héritiers, lorsque les prestations sont versées rétroactivement à des tiers;\nb. les tiers qui ont consenti des avances ou provisoirement pris en charge des prestations au sens de l’art. 22, al. 2, et auxquels les prestations accordées rétroactivement ont été cédées;\nc. les autres assurances sociales qui ont provisoirement pris en charge des prestations au sens de l’art. 70.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_26"
+    },
+    {
+     "id": "art_27",
+     "number": "27",
+     "title": "Renseignements et conseils",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "1 Dans les limites de leur domaine de compétence, les assureurs et les organes d’exécution des diverses assurances sociales sont tenus de renseigner les personnes intéressées sur leurs droits et obligations.\n2 Chacun a le droit d’être conseillé, en principe gratuitement, sur ses droits et obligations. Sont compétents pour cela les assureurs à l’égard desquels les intéressés doivent faire valoir leurs droits ou remplir leurs obligations. Le Conseil fédéral peut prévoir la perception d’émoluments et en fixer le tarif pour les consultations qui nécessitent des recherches coûteuses.\n3 Si un assureur constate qu’un assuré ou ses proches ont droit à des prestations d’autres assurances sociales, il les en informe sans retard.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_27"
+    },
+    {
+     "id": "art_28",
+     "number": "28",
+     "title": "Collaboration lors de la mise en œuvre",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "1 Les assurés et les employeurs doivent collaborer gratuitement à l’exécution des différentes lois sur les assurances sociales.\n2 Quiconque fait valoir son droit à des prestations doit fournir gratuitement tous les renseignements nécessaires pour établir ce droit, fixer les prestations dues et faire valoir les prétentions récursoires.\n3 Le requérant est tenu d’autoriser dans le cas d’espèce les personnes et institutions concernées, notamment les employeurs, les médecins, les assurances et les organes officiels, à fournir les renseignements nécessaires pour établir le droit aux prestations et faire valoir les prétentions récursoires. Ces personnes et institutions sont tenues de donner les renseignements requis.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_28"
+    },
+    {
+     "id": "art_29",
+     "number": "29",
+     "title": "Exercice du droit aux prestations",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "1 Celui qui fait valoir son droit à des prestations doit s’annoncer à l’assureur compétent, dans la forme prescrite pour l’assurance sociale concernée.\n2 Les assureurs sociaux remettent gratuitement les formules destinées à faire valoir et à établir le droit aux prestations; ces formules doivent être transmises à l’assureur compétent, remplies de façon complète et exacte par le requérant ou son employeur et, le cas échéant, par le médecin traitant.\n3 Si une demande ne respecte pas les exigences de forme ou si elle est remise à un organe incompétent, la date à laquelle elle a été remise à la poste ou déposée auprès de cet organe est déterminante quant à l’observation des délais et aux effets juridiques de la demande.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_29"
+    },
+    {
+     "id": "art_30",
+     "number": "30",
+     "title": "Transmission obligatoire",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "Tous les organes de mise en œuvre des assurances sociales ont l’obligation d’accepter les demandes, requêtes ou autres documents qui leur parviennent par erreur. Ils en enregistrent la date de réception et les transmettent à l’organe compétent.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_30"
+    },
+    {
+     "id": "art_31",
+     "number": "31",
+     "title": "Avis obligatoire en cas de modification des circonstances",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "1 L’ayant droit, ses proches ou les tiers auxquels une prestation est versée sont tenus de communiquer à l’assureur ou, selon le cas, à l’organe compétent toute modification importante des circonstances déterminantes pour l’octroi d’une prestation.\n2 Toute personne ou institution participant à la mise en œuvre des assurances sociales a l’obligation d’informer l’assureur si elle apprend que les circonstances déterminantes pour l’octroi de prestations se sont modifiées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_31"
+    },
+    {
+     "id": "art_32",
+     "number": "32",
+     "title": "Assistance administrative",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "1 Les autorités administratives et judiciaires de la Confédération, des cantons, des districts, des circonscriptions et des communes fournissent gratuitement aux organes des assurances sociales, dans des cas particuliers et sur demande écrite et motivée, les données qui leur sont nécessaires pour:\na. fixer ou modifier des prestations, ou encore en réclamer la restitution;\nb. prévenir des versements indus;\nc. fixer et percevoir les cotisations;\nd. faire valoir une prétention récursoire contre le tiers responsable.\n2 Les organes des assurances sociales se prêtent mutuellement assistance aux mêmes conditions.\n2bis Si les organes d’une assurance sociale ou les autorités administratives et judiciaires de la Confédération, des cantons, des districts, des arrondissements ou des communes apprennent dans l’exercice de leurs fonctions qu’un assuré perçoit des prestations indues, ils peuvent en informer les organes des assurances sociales concernées ainsi que ceux des institutions de prévoyance touchées.\n3 Les organismes visés à l’art. 75 a se communiquent les données nécessaires pour accomplir les tâches qui leur sont assignées en vertu de l’annexe II de l’Accord du 21 juin 1999 entre la Confédération suisse, d’une part, et la Communauté européenne et ses États membres, d’autre part, sur la libre circulation des personnes (accord sur la libre circulation des personnes) et d’autres conventions internationales en matière de sécurité sociale.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_32"
+    },
+    {
+     "id": "art_33",
+     "number": "33",
+     "title": "Obligation de garder le secret",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 1 Information, assistance administrative, obligation de garder le secret"
+     ],
+     "text": "Les personnes qui participent à l’application des lois sur les assurances sociales ainsi qu’à son contrôle ou à sa surveillance sont tenues de garder le secret à l’égard des tiers.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_33"
+    },
+    {
+     "id": "art_34",
+     "number": "34",
+     "title": "Parties",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "Ont qualité de parties les personnes dont les droits ou obligations résultent des assurances sociales, ainsi que les personnes, organisations ou autorités qui disposent d’un moyen de droit contre la décision d’un assureur ou d’un organe d’exécution de même niveau.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_34"
+    },
+    {
+     "id": "art_35",
+     "number": "35",
+     "title": "Compétence",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 L’assureur examine d’office s’il est compétent.\n2 L’assureur qui se tient pour compétent le constate dans une décision si une partie conteste sa compétence.\n3 L’assureur qui se tient pour incompétent rend une décision d’irrecevabilité si une partie prétend qu’il est compétent.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_35"
+    },
+    {
+     "id": "art_36",
+     "number": "36",
+     "title": "Récusation",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les personnes appelées à rendre ou à préparer des décisions sur des droits ou des obligations doivent se récuser si elles ont un intérêt personnel dans l’affaire ou si, pour d’autres raisons, elles semblent prévenues.\n2 Si la récusation est contestée, la décision est rendue par l’autorité de surveillance. S’il s’agit de la récusation d’un membre d’un collège, la décision est rendue par le collège en l’absence de ce membre.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_36"
+    },
+    {
+     "id": "art_37",
+     "number": "37",
+     "title": "Représentation et assistance",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Une partie peut, en tout temps, se faire représenter, à moins qu’elle ne doive agir personnellement, ou se faire assister, pour autant que l’urgence d’une enquête ne l’exclue pas.\n2 L’assureur peut exiger du mandataire qu’il justifie ses pouvoirs par une procuration écrite.\n3 Tant que la partie ne révoque pas la procuration, l’assureur adresse ses communications au mandataire.\n4 Lorsque les circonstances l’exigent, l’assistance gratuite d’un conseil juridique est accordée au demandeur.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_37"
+    },
+    {
+     "id": "art_38",
+     "number": "38",
+     "title": "Calcul et suspension des délais",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Si le délai, compté par jours ou par mois, doit être communiqué aux parties, il commence à courir le lendemain de la communication.\n2 S’il ne doit pas être communiqué aux parties, il commence à courir le lendemain de l’événement qui le déclenche.\n2bis Une communication qui n’est remise que contre la signature du destinataire ou d’un tiers habilité est réputée reçue au plus tard sept jours après la première tentative infructueuse de distribution.\n3 Lorsque le délai échoit un samedi, un dimanche ou un jour férié selon le droit fédéral ou cantonal, son terme est reporté au premier jour ouvrable qui suit. Le droit cantonal déterminant est celui du canton où la partie ou son mandataire a son domicile ou son siège.\n4 Les délais en jours ou en mois fixés par la loi ou par l’autorité ne courent pas:\na. du 7 e jour avant Pâques au 7 e jour après Pâques inclusivement;\nb. du 15 juillet au 15 août inclusivement;\nc. du 18 décembre au 2 janvier inclusivement.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_38"
+    },
+    {
+     "id": "art_39",
+     "number": "39",
+     "title": "Observation des délais",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les écrits doivent être remis au plus tard le dernier jour du délai à l’assureur ou, à son adresse, à La Poste suisse ou à une représentation diplomatique ou consulaire suisse.\n2 Lorsqu’une partie s’adresse en temps utile à un assureur incompétent, le délai est réputé observé.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_39"
+    },
+    {
+     "id": "art_40",
+     "number": "40",
+     "title": "Prolongation des délais et retard",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Le délai légal ne peut pas être prolongé.\n2 Si l’assureur fixe un délai pour une action déterminée, il indique en même temps les conséquences d’un retard. Celui-ci ne peut avoir d’autres conséquences que celles mentionnées dans l’avertissement.\n3 Le délai fixé par l’assureur peut être prolongé pour des motifs pertinents si la partie en fait la demande avant son expiration.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_40"
+    },
+    {
+     "id": "art_41",
+     "number": "41",
+     "title": "Restitution du délai",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "Si le requérant ou son mandataire a été empêché, sans sa faute, d’agir dans le délai fixé, celui-ci est restitué pour autant que, dans les 30 jours à compter de celui où l’empêchement a cessé, le requérant ou son mandataire ait déposé une demande motivée de restitution et ait accompli l’acte omis.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_41"
+    },
+    {
+     "id": "art_42",
+     "number": "42",
+     "title": "Droit d’être entendu",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "Les parties ont le droit d’être entendues. Il n’est pas nécessaire de les entendre avant une décision sujette à opposition.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_42"
+    },
+    {
+     "id": "art_43",
+     "number": "43",
+     "title": "Instruction de la demande",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 L’assureur examine les demandes, prend d’office les mesures d’instruction nécessaires et recueille les renseignements dont il a besoin. Les renseignements donnés oralement doivent être consignés par écrit.\n1bis L’assureur détermine la nature et l’étendue de l’instruction nécessaire.\n2 L’assuré doit se soumettre à des examens médicaux ou techniques si ceux-ci sont nécessaires à l’appréciation du cas et qu’ils peuvent être raisonnablement exigés.\n3 Si l’assuré ou d’autres requérants refusent de manière inexcusable de se conformer à leur obligation de renseigner ou de collaborer à l’instruction, l’assureur peut se prononcer en l’état du dossier ou clore l’instruction et décider de ne pas entrer en matière. Il doit leur avoir adressé une mise en demeure écrite les avertissant des conséquences juridiques et leur impartissant un délai de réflexion convenable.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_43"
+    },
+    {
+     "id": "art_43_a",
+     "number": "43a",
+     "title": "Observation",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 L’assureur peut observer secrètement un assuré et, à cette fin, effectuer des enregistrements visuels et sonores ou utiliser des instruments techniques visant à le localiser aux conditions suivantes:\na. il dispose d’indices concrets laissant présumer qu’un assuré perçoit ou tente de percevoir indûment des prestations;\nb. sans mesure d’observation, les mesures d’instruction n’auraient aucune chance d’aboutir ou seraient excessivement difficiles.\n2 Une personne assumant une fonction de direction, dans le domaine dont relève le cas à traiter ou dans le domaine des prestations de l’assureur, a la compétence d’ordonner l’observation.\n3 Le recours à des instruments techniques visant à localiser un assuré est soumis à autorisation.\n4 L ’ assuré ne peut être observé que dans les cas suivants:\na. il se trouve dans un lieu accessible au public, ou\nb. il se trouve dans un lieu qui est librement visible depuis un lieu accessible au public.\n5 Une observation peut avoir lieu sur 30 jours au maximum au cours d’une période de six mois à compter du premier jour d’observation. Cette période peut être prolongée de six mois au maximum si des motifs suffisants le justifient.\n6 L’assureur peut confier l’observation à des spécialistes externes. Ces derniers sont soumis au devoir de garder le secret conformément à l’art. 33 et ont l’interdiction d’utiliser à d’autres fins les informations recueillies dans le cadre de leur mandat. L’assureur peut exploiter le matériel recueilli lors d’une observation réalisée par un autre assureur au sens de la présente loi ou d’un assureur au sens de la loi du 17 décembre 2004 sur la surveillance des assurances ou réalisée sur mandat de ceux-ci, pour autant que cette observation ait respecté les conditions prévues aux al. 1 à 5.\n7 L’assureur informe la personne concernée du motif, de la nature et de la durée de l’observation, au plus tard avant de rendre la décision qui porte sur la prestation.\n8 Si l’observation n’a pas permis de confirmer les indices visés à l’al. 1, let. a, l’assureur:\na. rend une décision concernant le motif, la nature et la durée de l’observation effectuée;\nb. détruit le matériel recueilli lors de l’observation après l’entrée en force de la décision si l’assuré n’a pas expressément demandé que celui-ci soit conservé dans le dossier.\n9 Le Conseil fédéral règle:\na. la procédure selon laquelle l’assuré peut consulter le matériel complet recueilli lors de l’observation;\nb. la conservation et la destruction du matériel recueilli;\nc. les exigences à l’endroit des spécialistes chargés de l’observation.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_43_a"
+    },
+    {
+     "id": "art_43_b",
+     "number": "43b",
+     "title": "Observation: Autorisation du recours à des instruments techniques de localisation",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Lorsque l’assureur envisage d’ordonner une mesure d’observation avec des instruments techniques visant à localiser l’assuré, il adresse au tribunal compétent une demande contenant les éléments suivants:\na. l’indication du but spécifique de la mesure d’observation;\nb. les données relatives aux personnes concernées par la mesure d’observation;\nc. les modalités prévues de la mesure d’observation;\nd. la justification de la nécessité du recours aux instruments techniques visant à localiser l’assuré ainsi que les raisons pour lesquelles, sans le recours à ces instruments, les mesures d’instruction sont restées vaines, n’auraient aucune chance d’aboutir ou seraient excessivement difficiles;\ne. l’indication du début et de la fin de la mesure d’observation et le délai dans lequel elle doit être mise en œuvre;\nf. les pièces essentielles au traitement de la demande.\n2 Le président de la cour compétente du tribunal compétent statue en tant que juge unique dans les cinq jours ouvrables à compter de la réception de la demande de l’assureur en indiquant brièvement les motifs; il peut confier cette tâche à un autre juge.\n3 Il peut autoriser l’observation à titre provisoire, assortir l’autorisation de conditions ou encore demander que le dossier soit complété ou que d’autres éclaircissements soient apportés.\n4 Le tribunal compétent est:\na. le tribunal cantonal des assurances du canton de domicile de l’assuré;\nb. le Tribunal administratif fédéral pour les assurés domiciliés à l’étranger.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_43_b"
+    },
+    {
+     "id": "art_44",
+     "number": "44",
+     "title": "Expertise",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Si l’assureur juge une expertise nécessaire dans le cadre de mesures d’instruction médicale, il en fixe le type selon les exigences requises; trois types sont possibles:\na. expertise monodisciplinaire;\nb. expertise bidisciplinaire;\nc. expertise pluridisciplinaire.\n2 Si l’assureur doit recourir aux services d’un ou de plusieurs experts indépendants pour élucider les faits dans le cadre d’une expertise, il communique leur nom aux parties. Les parties peuvent récuser les experts pour les motifs indiqués à l’art. 36, al. 1, et présenter des contre-propositions dans un délai de dix jours.\n3 Lorsqu’il communique le nom des experts, l’assureur soumet aussi aux parties les questions qu’il entend poser aux experts et leur signale qu’elles ont la possibilité de remettre par écrit des questions supplémentaires dans le même délai. L’assureur décide en dernier ressort des questions qui sont posées aux experts.\n4 Si, malgré la demande de récusation, l’assureur maintient son choix du ou des experts pressentis, il en avise les parties par une décision incidente.\n5 Les disciplines médicales sont déterminées à titre définitif par l’assureur pour les expertises visées à l’al. 1, let. a et b, et par le centre d’expertises pour les expertises visées à l’al. 1, let. c.\n6 Sauf avis contraire de l’assuré, les entretiens entre l’assuré et l’expert font l’objet d’enregistrements sonores, lesquels sont conservés dans le dossier de l’assureur.\n7 Le Conseil fédéral:\na. peut régler la nature de l’attribution du mandat à un centre d’expertises, pour les expertises visées à l’al. 1;\nb. édicte des critères pour l’admission des experts médicaux et des experts en neuropsychologie, pour les expertises visées à l’al. 1;\nc. crée une commission réunissant des représentants des différentes assurances sociales, des centres d’expertises, des médecins, des neuropsychologues, des milieux scientifiques, ainsi que des organisations d’aide aux patients et aux personnes en situation de handicap qui veille au contrôle de l’accréditation, du processus, et du résultat des expertises médicales. Elle émet des recommandations publiques.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_44"
+    },
+    {
+     "id": "art_45",
+     "number": "45",
+     "title": "Frais de l’instruction",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les frais de l’instruction sont pris en charge par l’assureur qui a ordonné les mesures. À défaut, l’assureur rembourse les frais occasionnés par les mesures indispensables à l’appréciation du cas ou comprises dans les prestations accordées ultérieurement.\n2 L’assureur indemnise les parties ainsi que les personnes tenues de fournir des renseignements si elles subissent une perte de gain ou encourent des frais.\n3 Les frais peuvent être mis à la charge de la partie qui empêche ou entrave l’instruction de manière inexcusable après sommation et indication des conséquences.\n4 Si l’assuré a obtenu ou a tenté d’obtenir une prestation en fournissant sciemment des indications fausses ou d’une autre manière illicite, l’assureur peut mettre à la charge de l’assuré les frais supplémentaires que lui a occasionnés le recours à des spécialistes chargés d’effectuer des observations pour lutter contre la perception indue de prestations.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_45"
+    },
+    {
+     "id": "art_46",
+     "number": "46",
+     "title": "Gestion des documents",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "Lors de chaque procédure relevant des assurances sociales, l’assureur enregistre de manière systématique tous les documents qui peuvent être déterminants.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_46"
+    },
+    {
+     "id": "art_47",
+     "number": "47",
+     "title": "Consultation du dossier",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Ont le droit de consulter le dossier, dans la mesure où les intérêts privés prépondérants sont sauvegardés:\na. l’assuré, pour les données qui le concernent;\nb. les parties, s’agissant des données qui leur sont nécessaires pour exercer un droit ou remplir une obligation qui découle d’une loi sur les assurances sociales ou pour faire valoir un moyen de droit contre une décision fondée sur cette même loi;\nc. les autorités habilitées à statuer sur les recours contre des décisions fondées sur une loi sur les assurances sociales, pour les données nécessaires à l’accomplissement de cette tâche;\nd. le tiers responsable et son assureur, pour les données qui leur sont nécessaires pour se déterminer sur une prétention récursoire de l’assurance sociale concernée.\n2 S’il s’agit de données sur la santé dont la communication pourrait entraîner une atteinte à la santé de la personne autorisée à consulter le dossier, celle-ci peut être tenue de désigner un médecin qui les lui communiquera.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_47"
+    },
+    {
+     "id": "art_48",
+     "number": "48",
+     "title": "Prise en considération de pièces tenues secrètes",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "Une pièce dont la consultation a été refusée à une partie ne peut être utilisée à son désavantage que si l’assureur lui en a communiqué, oralement ou par écrit, le contenu essentiel se rapportant à l’affaire et lui a donné en outre l’occasion de s’exprimer et de fournir des contre-preuves.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_48"
+    },
+    {
+     "id": "art_49",
+     "number": "49",
+     "title": "Décision",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 L’assureur doit rendre par écrit les décisions qui portent sur des prestations, créances ou injonctions importantes ou avec lesquelles l’intéressé n’est pas d’accord.\n2 Si le requérant rend vraisemblable un intérêt digne d’être protégé, l’assureur rend une décision en constatation.\n3 Les décisions indiquent les voies de droit. Elles doivent être motivées si elles ne font pas entièrement droit aux demandes des parties. La notification irrégulière d’une décision ne doit entraîner aucun préjudice pour l’intéressé.\n4 L’assureur qui rend une décision touchant l’obligation d’un autre assureur d’allouer des prestations est tenu de lui en communiquer un exemplaire. Cet autre assureur dispose des mêmes voies de droit que l’assuré.\n5 Dans sa décision, l’assureur peut priver toute opposition ou tout recours de l’effet suspensif, même si cette décision porte sur une prestation en espèces. Les décisions ordonnant la restitution de prestations versées indûment sont exceptées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_49"
+    },
+    {
+     "id": "art_50",
+     "number": "50",
+     "title": "Transaction",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les litiges portant sur des prestations des assurances sociales peuvent être réglés par transaction.\n2 L’assureur est tenu de notifier la transaction sous la forme d’une décision sujette à recours.\n3 Les al. 1 et 2 s’appliquent par analogie à la procédure d’opposition ainsi qu’à la procédure de recours.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_50"
+    },
+    {
+     "id": "art_51",
+     "number": "51",
+     "title": "Procédure simplifiée",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les prestations, créances et injonctions qui ne sont pas visées à l’art. 49, al. 1, peuvent être traitées selon une procédure simplifiée.\n2 L’intéressé peut exiger qu’une décision soit rendue.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_51"
+    },
+    {
+     "id": "art_52",
+     "number": "52",
+     "title": "Opposition",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les décisions peuvent être attaquées dans les trente jours par voie d’opposition auprès de l’assureur qui les a rendues, à l’exception des décisions d’ordonnancement de la procédure.\n2 Les décisions sur opposition doivent être rendues dans un délai approprié. Elles sont motivées et indiquent les voies de recours.\n3 La procédure d’opposition est gratuite. En règle générale, il ne peut être alloué de dépens.\n4 Dans sa décision sur opposition, l’assureur peut priver tout recours de l’effet suspensif, même si cette décision porte sur une prestation en espèces. Les décisions sur opposition ordonnant la restitution de prestations versées indûment sont exceptées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_52"
+    },
+    {
+     "id": "art_52_a",
+     "number": "52a",
+     "title": "Suspension à titre provisionnel des prestations",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "L’assureur peut suspendre à titre provisionnel le versement de prestations si l’assuré a manqué à son obligation de l’aviser dans les cas visés à l’art. 31, al. 1, s’il n’a pas présenté dans les délais le certificat de vie ou d’état civil demandé, ou si l’assureur a de sérieuses raisons de penser que l’assuré perçoit une prestation à laquelle il n’a pas droit.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_52_a"
+    },
+    {
+     "id": "art_53",
+     "number": "53",
+     "title": "Révision et reconsidération",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les décisions et les décisions sur opposition formellement passées en force sont soumises à révision si l’assuré ou l’assureur découvre subséquemment des faits nouveaux importants ou trouve des nouveaux moyens de preuve qui ne pouvaient être produits auparavant.\n2 L’assureur peut revenir sur les décisions ou les décisions sur opposition formellement passées en force lorsqu’elles sont manifestement erronées et que leur rectification revêt une importance notable.\n3 Jusqu’à l’envoi de son préavis à l’autorité de recours, l’assureur peut reconsidérer une décision ou une décision sur opposition contre laquelle un recours a été formé.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_53"
+    },
+    {
+     "id": "art_54",
+     "number": "54",
+     "title": "Exécution",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les décisions et les décisions sur opposition sont exécutoires lorsque:\na. elles ne peuvent plus être attaquées par une opposition ou un recours;\nb. l’opposition ou le recours n’a pas d’effet suspensif;\nc. l’effet suspensif attribué à une opposition ou à un recours a été retiré.\n2 Les décisions et les décisions sur opposition exécutoires qui portent condamnation à payer une somme d’argent ou à fournir des sûretés sont assimilées aux jugements exécutoires au sens de l’art. 80 de la loi fédérale du 11 avril 1889 sur la poursuite pour dettes et la faillite .",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_54"
+    },
+    {
+     "id": "art_55",
+     "number": "55",
+     "title": "Règles particulières de procédure",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 2 Procédure en matière d’assurances sociales"
+     ],
+     "text": "1 Les points de procédure qui ne sont pas réglés de manière exhaustive aux art. 27 à 54 de la présente loi ou par les dispositions des lois spéciales sont régis par la loi fédérale du 20 décembre 1968 sur la procédure administrative .\n1bis Le Conseil fédéral peut déclarer applicables aux procédures régies par la présente loi les dispositions de la loi fédérale du 20 décembre 1968 sur la procédure administrative relatives à la communication électronique avec les autorités.\n2 La procédure devant une autorité fédérale est régie par la loi fédérale du 20 décembre 1968 sur la procédure administrative, sauf lorsqu’il s’agit de prestations, créances et injonctions relevant du droit des assurances sociales.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_55"
+    },
+    {
+     "id": "art_56",
+     "number": "56",
+     "title": "Droit de recours",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "1 Les décisions sur opposition et celles contre lesquelles la voie de l’opposition n’est pas ouverte sont sujettes à recours.\n2 Le recours peut aussi être formé lorsque l’assureur, malgré la demande de l’intéressé, ne rend pas de décision ou de décision sur opposition.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_56"
+    },
+    {
+     "id": "art_57",
+     "number": "57",
+     "title": "Tribunal cantonal des assurances",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "Chaque canton institue un tribunal des assurances, qui statue en instance unique sur les recours dans le domaine des assurances sociales.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_57"
+    },
+    {
+     "id": "art_58",
+     "number": "58",
+     "title": "Compétence",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "1 Le tribunal des assurances compétent est celui du canton de domicile de l’assuré ou d’une autre partie au moment du dépôt du recours.\n2 Si l’assuré ou une autre partie sont domiciliés à l’étranger, le tribunal des assurances compétent est celui du canton de leur dernier domicile en Suisse ou celui du canton de domicile de leur dernier employeur suisse; si aucun de ces domiciles ne peut être déterminé, le tribunal des assurances compétent est celui du canton où l’organe d’exécution a son siège.\n3 Le tribunal qui décline sa compétence transmet sans délai le recours au tribunal compétent.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_58"
+    },
+    {
+     "id": "art_59",
+     "number": "59",
+     "title": "Qualité pour recourir",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "Quiconque est touché par la décision ou la décision sur opposition et a un intérêt digne d’être protégé à ce qu’elle soit annulée ou modifiée a qualité pour recourir.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_59"
+    },
+    {
+     "id": "art_60",
+     "number": "60",
+     "title": "Délai de recours",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "1 Le recours doit être déposé dans les trente jours suivant la notification de la décision sujette à recours.\n2 Les art. 38 à 41 sont applicables par analogie.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_60"
+    },
+    {
+     "id": "art_61",
+     "number": "61",
+     "title": "Procédure",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "Sous réserve de l’art. 1, al. 3, de la loi fédérale du 20 décembre 1968 sur la procédure administrative , la procédure devant le tribunal cantonal des assurances est réglée par le droit cantonal. Elle doit satisfaire aux exigences suivantes:\na. elle doit être simple, rapide et en règle générale publique;\nb. l’acte de recours doit contenir un exposé succinct des faits et des motifs invoqués, ainsi que les conclusions; si l’acte n’est pas conforme à ces règles, le tribunal impartit un délai convenable au recourant pour combler les lacunes, en l’avertissant qu’en cas d’inobservation le recours sera écarté;\nc. le tribunal établit avec la collaboration des parties les faits déterminants pour la solution du litige; il administre les preuves nécessaires et les apprécie librement;\nd. le tribunal n’est pas lié par les conclusions des parties; il peut réformer, au détriment du recourant, la décision attaquée ou accorder plus que le recourant n’avait demandé; il doit cependant donner aux parties l’occasion de se prononcer ou de retirer le recours;\ne. si les circonstances le justifient, les parties peuvent être convoquées aux débats;\nf. le droit de se faire assister par un conseil doit être garanti; lorsque les circonstances le justifient, l’assistance judiciaire gratuite est accordée au recourant;\nf bis .\npour les litiges en matière de prestations, la procédure est soumise à des frais judiciaires si la loi spéciale le prévoit; si la loi spéciale ne prévoit pas de frais judiciaires pour de tels litiges, le tribunal peut en mettre à la charge de la partie qui agit de manière téméraire ou fait preuve de légèreté;\ng. le recourant qui obtient gain de cause a droit au remboursement de ses frais et dépens dans la mesure fixée par le tribunal; leur montant est déterminé sans égard à la valeur litigieuse d’après l’importance et la complexité du litige;\nh. les jugements contiennent les motifs retenus, l’indication des voies de recours ainsi que les noms des membres du tribunal et sont notifiés par écrit;\ni. les jugements sont soumis à révision si des faits ou des moyens de preuve nouveaux sont découverts ou si un crime ou un délit a influencé le jugement.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_61"
+    },
+    {
+     "id": "art_62",
+     "number": "62",
+     "title": "Tribunal fédéral",
+     "path": [
+      "Chapitre 4 Dispositions générales de procédure",
+      "Section 3 Contentieux"
+     ],
+     "text": "1 Les jugements rendus par les tribunaux cantonaux des assurances peuvent faire l’objet d’un recours devant le Tribunal fédéral, conformément à la loi du 17 juin 2005 sur le Tribunal fédéral .\n1bis Le Conseil fédéral règle la qualité pour recourir devant le Tribunal fédéral des organes d’exécution des assurances sociales.\n2 L’art. 54 s’applique par analogie à l’exécution des jugements rendus par les autorités de recours précédant le Tribunal fédéral.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_62"
+    },
+    {
+     "id": "art_63",
+     "number": "63",
+     "title": "Généralités",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 Les règles de coordination prévues dans la présente section s’appliquent aux prestations allouées par plusieurs assurances sociales.\n2 L’AVS et l’AI sont considérées comme une seule assurance sociale.\n3 La coordination des prestations d’une même assurance sociale est régie par la loi spéciale concernée.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_63"
+    },
+    {
+     "id": "art_64",
+     "number": "64",
+     "title": "Traitement",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 Le traitement est à la charge exclusive d’une seule assurance sociale dans la mesure où il s’agit de prestations prescrites par la loi.\n2 Si les conditions de la loi spéciale concernée sont remplies, le traitement, dans les limites légales, est dans l’ordre suivant à la charge de:\na. l’assurance militaire;\nb. l’assurance-accidents;\nc. l’AI;\nd. l’assurance-maladie.\n3 L’assureur social tenu de verser des prestations prend en charge seul et de manière illimitée les frais du traitement hospitalier, même si l’atteinte à la santé n’est pas entièrement due à l’événement qu’il est tenu de couvrir.\n4 Par ailleurs, l’assureur social tenu de verser des prestations prend en charge le traitement des atteintes à la santé dont il n’a pas à répondre lorsque ces atteintes surviennent au cours d’un traitement hospitalier et ne peuvent être traitées séparément.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_64"
+    },
+    {
+     "id": "art_65",
+     "number": "65",
+     "title": "Autres prestations en nature",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "Les autres prestations en nature telles que les moyens auxiliaires ou les mesures de réadaptation sont, dans les limites de la loi spéciale concernée et dans l’ordre ci-après, prises en charge par:\na. l’assurance militaire ou l’assurance-accidents;\nb. l’AVS ou l’AI;\nc. l’assurance-maladie.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_65"
+    },
+    {
+     "id": "art_66",
+     "number": "66",
+     "title": "Rentes et allocations pour impotents",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 Sous réserve de surindemnisation, les rentes et les indemnités en capital des différentes assurances sociales sont cumulées.\n2 Les rentes et indemnités en capital sont, selon les dispositions de la loi spéciale concernée et dans l’ordre suivant, versées par:\na. l’AVS ou l’AI;\nb. l’assurance militaire ou l’assurance-accidents;\nc. la prévoyance professionnelle vieillesse, survivants et invalidité au sens de la loi fédérale du 25 juin 1982 sur la prévoyance professionnelle vieillesse, survivants et invalidité (LPP) .\n3 Les allocations pour impotents sont, selon les dispositions de la loi spéciale concernée et dans l’ordre suivant, versées exclusivement par:\na. l’assurance militaire ou l’assurance-accidents;\nb. l’AVS ou l’AI.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_66"
+    },
+    {
+     "id": "art_67",
+     "number": "67",
+     "title": "Traitement et prestations en espèces",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 Lorsque le bénéficiaire d’indemnités journalières ou d’une rente séjourne aux frais de l’assurance sociale dans un établissement hospitalier, l’assureur social tenu de prendre en charge le traitement peut, compte tenu des charges familiales de l’assuré, déduire un montant fixe pour les frais de pension dans l’établissement hospitalier. Cette déduction peut être opérée sur l’indemnité journalière ou sur la rente.\n2 Si le bénéficiaire d’une allocation pour impotent séjourne dans un établissement hospitalier aux frais de l’assurance sociale, le droit à l’allocation est supprimé pour chaque mois civil entier passé dans l’établissement.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_67"
+    },
+    {
+     "id": "art_68",
+     "number": "68",
+     "title": "Indemnités journalières et rentes",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "Sous réserve de surindemnisation, les indemnités journalières et les rentes de différentes assurances sociales sont cumulées.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_68"
+    },
+    {
+     "id": "art_69",
+     "number": "69",
+     "title": "Surindemnisation",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 Le concours de prestations des différentes assurances sociales ne doit pas conduire à une surindemnisation de l’ayant droit. Ne sont prises en compte dans le calcul de la surindemnisation que des prestations de nature et de but identiques qui sont accordées à l’assuré en raison de l’événement dommageable.\n2 Il y a surindemnisation dans la mesure où les prestations sociales légalement dues dépassent, du fait de la réalisation du risque, à la fois le gain dont l’assuré est présumé avoir été privé, les frais supplémentaires et les éventuelles diminutions de revenu subies par les proches.\n3 Les prestations en espèces sont réduites du montant de la surindemnisation. Sont exceptées de toute réduction les rentes de l’AVS et de l’AI, de même que les allocations pour impotents et les indemnités pour atteinte à l’intégrité. Pour les prestations en capital, la valeur de la rente correspondante est prise en compte.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_69"
+    },
+    {
+     "id": "art_70",
+     "number": "70",
+     "title": "Prise en charge provisoire des prestations",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "1 L’ayant droit peut demander la prise en charge provisoire de son cas lorsqu’un événement assuré lui donne droit à des prestations d’une assurance sociale mais qu’il y a doute sur le débiteur de ces prestations.\n2 Sont tenues de prendre provisoirement le cas à leur charge:\na. l’assurance-maladie, pour les prestations en nature et les indemnités journalières dont la prise en charge par l’assurance-maladie, l’assurance-accidents, l’assurance militaire ou l’AI est contestée;\nb. l’assurance-chômage, pour les prestations dont la prise en charge par l’assurance-chômage, l’assurance-maladie, l’assurance-accidents, l’assurance militaire ou l’AI est contestée;\nc. l’assurance-accidents, pour les prestations dont la prise en charge par l’assurance-accidents ou l’assurance militaire est contestée;\nd. la prévoyance professionnelle vieillesse, survivants et invalidité au sens de la LPP , pour les rentes dont la prise en charge par l’assurance-accidents ou l’assurance militaire ou par la prévoyance professionnelle vieillesse, survivants et invalidité au sens de la LPP est contestée.\n3 L’ayant droit adresse sa demande aux institutions d’assurances sociales entrant en ligne de compte.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_70"
+    },
+    {
+     "id": "art_71",
+     "number": "71",
+     "title": "Remboursement",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 1 Coordination des prestations"
+     ],
+     "text": "L’assureur tenu de prendre provisoirement le cas à sa charge alloue les prestations selon les dispositions régissant son activité. Lorsque le cas est pris en charge par un autre assureur, celui-ci lui rembourse ses avances dans la mesure où elles correspondent aux prestations qu’il aurait dû lui-même allouer.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_71"
+    },
+    {
+     "id": "art_72",
+     "number": "72",
+     "title": "Principe",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 2 Subrogation"
+     ],
+     "text": "1 Dès la survenance de l’événement dommageable, l’assureur est subrogé, jusqu’à concurrence des prestations légales, aux droits de l’assuré et de ses survivants contre tout tiers responsable.\n2 Lorsqu’il y a plusieurs responsables, ceux-ci répondent solidairement à l’égard de l’assureur.\n3 Les délais de prescription applicables aux droits de la personne lésée sont également applicables aux droits qui ont passé à l’assureur. Pour les prétentions récursoires de l’assureur, les délais relatifs ne commencent toutefois pas à courir avant que celui-ci ait eu connaissance des prestations qu’il doit allouer ainsi que du responsable.\n4 Lorsque la personne lésée dispose d’un droit direct contre l’assureur en responsabilité civile, ce droit passe également à l’assureur subrogé. Les exceptions fondées sur le contrat d’assurance qui ne peuvent pas être opposées à la personne lésée ne peuvent non plus l’être aux prétentions récursoires de l’assureur.\n5 Le Conseil fédéral édicte des dispositions sur l’exercice du droit de recours. Il peut notamment ordonner qu’en cas de recours contre un responsable qui n’est pas assuré en responsabilité civile, plusieurs assureurs participant au recours fassent valoir leurs prétentions récursoires par l’intermédiaire d’un seul assureur. Le Conseil fédéral règle la représentation à l’égard des tiers si les assureurs intéressés ne parviennent pas à s’entendre.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_72"
+    },
+    {
+     "id": "art_73",
+     "number": "73",
+     "title": "Étendue de la subrogation",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 2 Subrogation"
+     ],
+     "text": "1 L’assureur n’est subrogé aux droits de l’assuré et de ses survivants que dans la mesure où les prestations qu’il alloue, jointes à la réparation due pour la même période par le tiers responsable, excèdent le dommage causé par celui-ci.\n2 Toutefois, si l’assureur a réduit ses prestations au sens de l’art. 21, al. 1, 2 ou 4, les droits de l’assuré ou de ses survivants passent à l’assureur dans la mesure où les prestations non réduites, jointes à la réparation due pour la même période par le tiers, excèdent le montant du dommage.\n3 Les droits qui ne passent pas à l’assureur restent acquis à l’assuré ou à ses survivants. Si seule une partie de l’indemnité due par le tiers responsable peut être récupérée, l’assuré ou ses survivants ont un droit préférentiel sur cette partie.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_73"
+    },
+    {
+     "id": "art_74",
+     "number": "74",
+     "title": "Classification des droits",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 2 Subrogation"
+     ],
+     "text": "1 Les droits passent à l’assureur pour les prestations de même nature.\n2 Sont notamment des prestations de même nature:\na. le remboursement des frais de traitement et de réadaptation par l’assureur et par le tiers responsable;\nb. l’indemnité journalière et l’indemnisation pour l’incapacité de travail;\nc. les rentes d’invalidité ou les rentes de vieillesse allouées à leur place, l’indemnisation pour incapacité de gain et l’indemnisation pour dommage de rente;\nd. les prestations pour impotence, la contribution d’assistance et le remboursement des frais liés aux soins et des autres frais dus à l’impotence;\ne. l’indemnité pour atteinte à l’intégrité et l’indemnité à titre de réparation morale;\nf. les rentes de survivants et les indemnités pour perte de soutien;\ng. les frais funéraires et les autres frais liés au décès;\nh. les frais engagés pour l’instruction et l’évaluation du dommage.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_74"
+    },
+    {
+     "id": "art_75",
+     "number": "75",
+     "title": "Limitation du droit de recours",
+     "path": [
+      "Chapitre 5 Règles de coordination",
+      "Section 2 Subrogation"
+     ],
+     "text": "1 L’assureur n’a un droit de recours contre le conjoint de l’assuré, ses parents en ligne ascendante et descendante ou les personnes qui font ménage commun avec lui que s’ils ont provoqué l’événement assuré intentionnellement ou par négligence grave.\n2 Si les prétentions récursoires découlent d’un accident professionnel, la même limitation est applicable à l’employeur de l’assuré, aux membres de sa famille et aux travailleurs de son entreprise.\n3 Il n’y a pas de limitation du droit de recours de l’assureur dans la mesure où la personne contre laquelle le recours est formé est couverte par une assurance responsabilité civile obligatoire.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_75"
+    },
+    {
+     "id": "art_75_a",
+     "number": "75a",
+     "title": "Organismes responsables",
+     "path": [
+      "Chapitre 5a Exécution de traités internationaux en matière de sécurité sociale"
+     ],
+     "text": "Le Conseil fédéral désigne les organismes chargés d’accomplir les tâches assignées aux diverses assurances sociales, notamment en qualité d’autorité compétente, d’organisme de liaison ou d’institution compétente, en vertu des actes pertinents dans la version qui lie la Suisse de l’annexe II de l’accord sur la libre circulation des personnes et en vertu d’autres conventions internationales en matière de sécurité sociale.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_75_a"
+    },
+    {
+     "id": "art_75_b",
+     "number": "75b",
+     "title": "Infrastructure pour l’exécution",
+     "path": [
+      "Chapitre 5a Exécution de traités internationaux en matière de sécurité sociale"
+     ],
+     "text": "1 Le Conseil fédéral désigne les services de la Confédération responsables de la mise sur pied et de l’exploitation de l’infrastructure destinée à l’échange électronique de données avec l’étranger, notamment des points d’accès électroniques requis et des interfaces entre le système national et le système international d’échange de données.\n2 Les services de la Confédération visés à l’al. 1 peuvent accorder aux organismes visés à l’art. 75 a un accès en ligne aux données relevant de leur domaine de compétence.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_75_b"
+    },
+    {
+     "id": "art_75_c",
+     "number": "75c",
+     "title": "Financement de l’infrastructure",
+     "path": [
+      "Chapitre 5a Exécution de traités internationaux en matière de sécurité sociale"
+     ],
+     "text": "1 Les services de la Confédération visés à l’art. 75 b perçoivent auprès des institutions compétentes visées à l’art. 75 a des émoluments pour le raccordement à l’infrastructure destinée à l’échange électronique des données avec l’étranger et l’utilisation de celle-ci.\n2 Le Conseil fédéral fixe les émoluments conformément à l’art. 46 a de la loi du 21 mars 1997 sur l’organisation du gouvernement et de l’administration . Il consulte au préalable les organismes concernés. Il tient compte de l’étendue de l’utilisation de l’infrastructure lors du calcul des émoluments.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_75_c"
+    },
+    {
+     "id": "art_76",
+     "number": "76",
+     "title": "Autorité de surveillance",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "1 Le Conseil fédéral surveille la mise en œuvre des assurances sociales et en rend régulièrement compte.\n1bis Le rapport rédigé à cet effet contient une présentation des risques systémiques des différentes assurances sociales et expose le pilotage stratégique des assurances sociales par le Conseil fédéral.\n2 En cas de violation grave et répétée des dispositions légales par un assureur, le Conseil fédéral ou l’autorité de surveillance qu’il a désignée ordonne les mesures nécessaires au rétablissement d’une gestion de l’assurance conforme à la loi.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_76"
+    },
+    {
+     "id": "art_76_a",
+     "number": "76a",
+     "title": "Échange électronique de données",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "1 Le Conseil fédéral règle l’échange électronique de données de sécurité sociale entre les assureurs suisses et entre ceux-ci et les autorités fédérales. Les dispositions relatives à la communication des données dans les différentes lois sur les assurances sociales sont réservées.\n2 Le Conseil fédéral peut déléguer aux autorités de surveillance la compétence de régler l’échange électronique de données.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_76_a"
+    },
+    {
+     "id": "art_77",
+     "number": "77",
+     "title": "Rapports et statistiques",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "Les assureurs sociaux sont tenus de fournir aux autorités de surveillance tous les renseignements dont celles-ci ont besoin pour contrôler leur activité et pour établir des statistiques significatives. Ils ont l’obligation de leur remettre un rapport et des comptes annuels.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_77"
+    },
+    {
+     "id": "art_78",
+     "number": "78",
+     "title": "Responsabilité",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "1 Les corporations de droit public, les organisations fondatrices privées et les assureurs répondent, en leur qualité de garants de l’activité des organes d’exécution des assurances sociales, des dommages causés illicitement à un assuré ou à des tiers par leurs organes d’exécution ou par leur personnel.\n2 L’autorité compétente rend une décision sur les demandes en réparation.\n3 La responsabilité subsidiaire de la Confédération pour les institutions indépendantes de l’administration ordinaire de la Confédération est régie par l’art. 19 de la loi du 14 mars 1958 sur la responsabilité .\n4 Les dispositions de la présente loi s’appliquent à la procédure prévue aux al. 1 et 3. Il n’y a pas de procédure d’opposition. Les art. 3 à 9, 11, 12, 20, al. 1, 21 et 23 de la loi du 14 mars 1958 sur la responsabilité sont applicables par analogie.\n5 Les personnes agissant en tant qu’organes ou agents d’un assureur, d’un organe de révision ou de contrôle ou auxquelles sont confiées des tâches dans le cadre des lois spéciales, sont soumises à la même responsabilité pénale que les membres des autorités et les fonctionnaires, selon les dispositions du code pénal .",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_78"
+    },
+    {
+     "id": "art_79",
+     "number": "79",
+     "title": "Dispositions pénales",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "1 La partie générale du CP ainsi que l’art. 6 de la loi fédérale du 22 mars 1974 sur le droit pénal administratif sont applicables.\n2 La poursuite pénale incombe aux cantons.\n3 En cas de procédure pénale pour violation de l’art. 148 a CP ou de l’art. 87 de la loi fédérale du 20 décembre 1946 sur l’assurance-vieillesse et survivants , l’assureur peut exercer les droits d’une partie plaignante.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_79"
+    },
+    {
+     "id": "art_80",
+     "number": "80",
+     "title": "Exonération fiscale des assureurs",
+     "path": [
+      "Chapitre 6 Dispositions diverses"
+     ],
+     "text": "1 Les assureurs et les organes d’exécution sont exonérés des impôts directs fédéraux, cantonaux et communaux ainsi que des impôts cantonaux et communaux sur les successions et donations dans la mesure où leur revenu et leur fortune servent exclusivement à mettre en œuvre les assurances sociales, ou à allouer ou à garantir des prestations d’assurances sociales.\n2 Les documents employés dans la mise en œuvre des assurances sociales pour correspondre avec les assurés ou des tiers et d’autres organisations sont exempts de taxes et d’émoluments publics. La perception des cotisations légalement dues n’est pas soumise au droit fédéral de timbre sur les quittances de primes.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_80"
+    },
+    {
+     "id": "art_81",
+     "number": "81",
+     "title": "Exécution",
+     "path": [
+      "Chapitre 7 Dispositions finales"
+     ],
+     "text": "Le Conseil fédéral est chargé de l’exécution de la présente loi. Il édicte les dispositions nécessaires.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_81"
+    },
+    {
+     "id": "art_82",
+     "number": "82",
+     "title": "Dispositions transitoires",
+     "path": [
+      "Chapitre 7 Dispositions finales"
+     ],
+     "text": "1 Les dispositions matérielles de la présente loi ne sont pas applicables aux prestations en cours et aux créances fixées avant son entrée en vigueur. Sur demande, les rentes d’invalidité ou de survivants réduites ou refusées en raison d’une faute de l’assuré seront cependant réexaminées et, si nécessaire, fixées à nouveau conformément à l’art. 21, al. 1 et 2, au plus tôt à compter de l’entrée en vigueur de la présente loi.\n2 …",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_82"
+    },
+    {
+     "id": "art_82_a",
+     "number": "82a",
+     "title": "Disposition transitoire de la modification du 21 juin 2019",
+     "path": [
+      "Chapitre 7 Dispositions finales"
+     ],
+     "text": "Les recours pendants devant le tribunal de première instance à l’entrée en vigueur de la modification du 21 juin 2019 sont régis par l’ancien droit.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_82_a"
+    },
+    {
+     "id": "art_83",
+     "number": "83 Modification du droit en vigueur",
+     "title": "",
+     "path": [
+      "Chapitre 7 Dispositions finales"
+     ],
+     "text": "1 Les articles figurant en annexe sont abrogés ou modifiés.\n2 Avant l’entrée en vigueur de la présente loi, l’Assemblée fédérale peut, par voie d’ordonnance, modifier l’annexe afin de l’adapter aux modifications qui auraient été apportées aux lois concernées et qui seraient entrées en vigueur depuis l’adoption de la présente loi.",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_83"
+    },
+    {
+     "id": "art_84",
+     "number": "84",
+     "title": "Référendum et entrée en vigueur",
+     "path": [
+      "Chapitre 7 Dispositions finales"
+     ],
+     "text": "1 La présente loi est sujette au référendum facultatif.\n2 Le Conseil fédéral fixe la date de l’entrée en vigueur.\n3 L’art. 83, al. 2, entre en vigueur, en l’absence de référendum, le premier jour du deuxième mois qui suit l’échéance du délai référendaire ou, en cas de référendum, le jour de l’acceptation de la présente loi par le peuple.\nDate de l’entrée en vigueur: 1 er janvier 2003 Art. 83, al. 2: 1 er mars 2001",
+     "url": "https://www.fedlex.admin.ch/eli/cc/2002/510/fr#art_84"
+    }
+   ]
+  }
+ }
+}
