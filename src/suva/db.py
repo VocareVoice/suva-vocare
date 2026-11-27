@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS classification (
     primary_category TEXT NOT NULL,
     secondary TEXT NOT NULL DEFAULT '[]',
     statutes TEXT NOT NULL DEFAULT '[]',
+    precedents TEXT NOT NULL DEFAULT '[]',
     outcome TEXT,
     flags TEXT NOT NULL DEFAULT '[]',
     method TEXT NOT NULL CHECK (method IN ('llm', 'subject', 'rule')),
@@ -187,13 +188,19 @@ def connect(path: Path | str) -> sqlite3.Connection:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    """Bring databases created before the French triage explanation up to `SCHEMA`."""
+    """Bring databases created before the French triage explanation and the cited precedents up
+    to the schema."""
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(triage)")}
+    classification = {row["name"] for row in conn.execute("PRAGMA table_info(classification)")}
     with conn:
         if "reasoning" in columns:
             conn.execute("ALTER TABLE triage RENAME COLUMN reasoning TO reasoning_de")
         if "reasoning_fr" not in columns:
             conn.execute("ALTER TABLE triage ADD COLUMN reasoning_fr TEXT")
+        if "precedents" not in classification:
+            conn.execute(
+                "ALTER TABLE classification ADD COLUMN precedents TEXT NOT NULL DEFAULT '[]'"
+            )
 
 
 def upsert_ruling(conn: sqlite3.Connection, ruling: dict[str, Any]) -> None:
@@ -500,13 +507,14 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
     }
 
 
-_JSON_COLUMNS = ("secondary", "statutes", "flags")
+_JSON_COLUMNS = ("secondary", "statutes", "precedents", "flags")
 CLASSIFICATION_FIELDS = (
     "docket",
     "branch",
     "primary",
     "secondary",
     "statutes",
+    "precedents",
     "outcome",
     "flags",
     "method",
@@ -717,9 +725,9 @@ def save_classification(conn: sqlite3.Connection, docket: str, **values: Any) ->
     with conn:
         conn.execute(
             "INSERT INTO classification (docket, branch, primary_category, secondary, statutes, "
-            "outcome, flags, method, rationale, model, prompt_version) VALUES (:docket, :branch, "
-            ":primary, :secondary, :statutes, :outcome, :flags, :method, :rationale, :model, "
-            ":prompt_version)",
+            "precedents, outcome, flags, method, rationale, model, prompt_version) VALUES "
+            "(:docket, :branch, :primary, :secondary, :statutes, :precedents, :outcome, :flags, "
+            ":method, :rationale, :model, :prompt_version)",
             row,
         )
 
@@ -766,9 +774,9 @@ def import_classification(conn: sqlite3.Connection, path: Path | str) -> int:
                 row[key] = json.dumps(row[key] or [], ensure_ascii=False)
             cursor = conn.execute(
                 "INSERT INTO classification (docket, branch, primary_category, secondary, "
-                "statutes, outcome, flags, method, rationale, model, prompt_version, created_at) "
-                "SELECT :docket, :branch, :primary, :secondary, :statutes, :outcome, :flags, "
-                ":method, :rationale, :model, :prompt_version, "
+                "statutes, precedents, outcome, flags, method, rationale, model, prompt_version, "
+                "created_at) SELECT :docket, :branch, :primary, :secondary, :statutes, "
+                ":precedents, :outcome, :flags, :method, :rationale, :model, :prompt_version, "
                 "COALESCE(:created_at, datetime('now')) "
                 "WHERE EXISTS (SELECT 1 FROM rulings WHERE docket = :docket) "
                 "AND NOT EXISTS (SELECT 1 FROM classification WHERE docket = :docket "

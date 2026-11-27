@@ -145,7 +145,7 @@ def main() -> None:
             conn,
             date_from=args.date_from,
             date_to=args.date_to,
-            prompt_version=classify.PROMPT_VERSION,
+            prompt_version=classify.VERSION,
         )
         print(f"Classifying {len(dockets)} rulings with {llm.model}")
         failed = 0
@@ -158,7 +158,7 @@ def main() -> None:
                 conn,
                 docket,
                 **asdict(result),
-                prompt_version=classify.PROMPT_VERSION,
+                prompt_version=classify.VERSION,
             )
             labels = " ".join([result.branch, result.primary, *result.secondary])
             print(f"{docket}: {labels} ({result.method})")
