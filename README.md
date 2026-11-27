@@ -54,19 +54,24 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` t
 
 ```sh
 make install   # uv sync
-make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage and classification results
+make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage, classification and summary results
 make triage    # score every ruling not triaged with the current prompt yet (Apertus)
 make classify  # classify every ruling not classified with the current prompt yet (Apertus)
-make summarize # DE + FR summaries of every relevant ruling without one yet, best first (Apertus)
+make summarize # DE + FR summaries and headlines of every relevant ruling without one yet, best first (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make lint      # ruff
 ```
 
 `uv run suva summarize 8C_129/2025` summarises a single ruling in German and French;
-`uv run suva summarize-relevant [--limit 10]` summarises every ruling with a triage score of at
-least 50 that has no summary of the current prompt version, highest score first. How the summary
-writer works and how it scores: `docs/eval_summaries.md`; the style it writes: `docs/style_guide.md`,
-section 11.
+`uv run suva summarize-relevant [--from ... --to ...] [--limit 10]` summarises every ruling with a
+triage score of at least 50 that has no summary of the current prompt version, highest score
+first. Summaries always use `apertus-v1-5-70b`, whatever `LLM_NAME` says. Each summary run also
+writes a one-line headline per language (`headline_de` / `headline_fr` in the API), and
+`uv run suva headline-relevant` writes only the headlines, at a fraction of the cost.
+`export-summaries` / `import-summaries` work like their triage counterparts;
+`data/results/summaries_2026q2.jsonl` holds the summaries of the 30 highest-scored April-June 2026
+rulings and the headlines of every relevant one. How the summary writer works and how it scores:
+`docs/eval_summaries.md`; the style it writes: `docs/style_guide.md`, section 11.
 
 For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
 rulings with hand-written demo triage and Suva's reference summaries (marked as demo data).
@@ -102,7 +107,9 @@ database and corpus directory. Load the corpus with `docker compose run --rm api
 the triage results with
 `docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl` and the
 classification with `docker compose run --rm api suva import-classification
-data/results/classification_2026q2.jsonl` (likewise for `classification_2025q4_2026q1.jsonl`).
+data/results/classification_2026q2.jsonl` (likewise for `classification_2025q4_2026q1.jsonl`)
+and the summaries with `docker compose run --rm api suva import-summaries
+data/results/summaries_2026q2.jsonl`.
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),

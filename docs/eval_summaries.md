@@ -61,7 +61,20 @@ authors FRT, LC4 and VIL), never shown to the model.
    are normalised deterministically.
 
 A summary takes 10 to 16 model calls and 1 to 5 minutes on the shared gateway, so in the UI it
-runs on demand with a progress state, or ahead of time with `suva summarize-relevant`.
+runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The model
+is pinned to `apertus-v1-5-70b` (`summarize.MODEL`): a comparison with the thinking variant gave
+no gain.
+
+**Headlines.** Each run also writes a headline per language (`headline_de` / `headline_fr`): at
+most about 12 words saying what the Court decided, without docket or date, e.g. "Keine analoge
+Anwendung von Art. 26bis IVV in der Unfallversicherung" / "Pas d'application par analogie de
+l'art. 26bis RAI dans l'assurance-accidents". It is written from the subject line, the operative
+part and the extracted holdings (step 2), first in the ruling's language and then in the other
+with the first as reference, with the glossary terms found in the ruling. A headline is checked
+for length (14 words in German, 15 in French), language, the other language's statute
+abbreviations, dockets, dates, names and an opening with the Court; failures go back to the model
+twice, after which the headline is left out. `suva headline-relevant` runs only the source,
+holdings and headline steps (3 to 6 calls), and a later summary reuses them from the cache.
 
 ## Results on the hold-out
 
@@ -243,15 +256,15 @@ from suva.config import get_settings
 from suva.eval.examples import load_split
 from suva.llm import LLMClient
 
-conn, llm = db.connect(get_settings().db_path), LLMClient()
+conn, llm = db.connect(get_settings().db_path), LLMClient(model=summarize.MODEL)
 with open("generated.jsonl", "w") as out:
     for docket in load_split()["holdout"]:
-        for lang, text in summarize.summarize(conn, docket, llm).items():
+        for lang, text in summarize.summarize(conn, docket, llm).summaries.items():
             row = {"docket": docket, "lang": lang, "text": text}
             out.write(json.dumps(row, ensure_ascii=False) + "\n")
 PY
 uv run python -m suva.eval.score_summaries generated.jsonl
 ```
 
-With `LLM_NAME=apertus-v1-5-70b` at temperature 0. The gateway is not bit-for-bit deterministic,
+With `LLMClient(model=summarize.MODEL)` (`apertus-v1-5-70b`) at temperature 0. The gateway is not bit-for-bit deterministic,
 so wording and the scores above vary slightly between runs.

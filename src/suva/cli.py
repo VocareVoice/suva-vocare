@@ -57,19 +57,40 @@ def main() -> None:
     )
     imp_cls.add_argument("path", type=Path)
 
-    summ = commands.add_parser("summarize", help="summarise one ruling in German and French")
+    summ = commands.add_parser(
+        "summarize", help="summarise one ruling in German and French, with headlines"
+    )
     summ.add_argument("docket")
 
     summ_all = commands.add_parser(
         "summarize-relevant",
-        help="summarise every ruling with a triage score of at least --min-score that has no "
-        "summary of the current prompt version, highest score first",
+        help="summarise (with headlines) every ruling with a triage score of at least "
+        "--min-score that has no summary of the current prompt version, highest score first",
     )
-    summ_all.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
-    summ_all.add_argument("--limit", type=int, help="summarise only the top N rulings")
-    summ_all.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
-    summ_all.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
-    summ_all.add_argument("--workers", type=int, default=4, help="rulings in parallel")
+    heads = commands.add_parser(
+        "headline-relevant",
+        help="write only the German and French headlines of every ruling with a triage score of "
+        "at least --min-score that has no headline of the current prompt version, highest "
+        "score first (about a tenth of the calls of a summary)",
+    )
+    for sub in (summ_all, heads):
+        sub.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
+        sub.add_argument("--limit", type=int, help="only the top N rulings")
+        sub.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
+        sub.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
+        sub.add_argument("--workers", type=int, default=4, help="rulings in parallel")
+
+    export_summ = commands.add_parser(
+        "export-summaries", help="write the latest summaries and headlines as JSONL"
+    )
+    export_summ.add_argument("path", type=Path)
+    export_summ.add_argument("--from", dest="date_from")
+    export_summ.add_argument("--to", dest="date_to")
+
+    imp_summ = commands.add_parser(
+        "import-summaries", help="load summaries and headlines from export-summaries"
+    )
+    imp_summ.add_argument("path", type=Path)
 
     serve = commands.add_parser("serve", help="run the API and web UI")
     serve.add_argument("--host", default="127.0.0.1")
@@ -152,45 +173,44 @@ def main() -> None:
         count = db.import_classification(conn, args.path)
         print(f"Loaded {count} classifications from {args.path}")
     elif args.command == "summarize":
-        llm = LLMClient(settings)
-        for lang, text in summarize.summarize(conn, args.docket, llm).items():
-            db.save_summary(
-                conn,
-                args.docket,
-                lang=lang,
-                text=text,
-                model=llm.model,
-                prompt_version=summarize.PROMPT_VERSION,
-            )
-            print(f"--- {lang} ---\n{text}\n")
-    elif args.command == "summarize-relevant":
-        llm = LLMClient(settings)
+        llm = LLMClient(settings, model=summarize.MODEL)
+        result = summarize.summarize(conn, args.docket, llm)
+        summarize.save(conn, args.docket, result, llm.model)
+        for lang in summarize.LANGUAGES:
+            print(f"--- {lang} ---\n{result.headlines.get(lang)}\n\n{result.summaries[lang]}\n")
+    elif args.command in ("summarize-relevant", "headline-relevant"):
+        headlines_only = args.command == "headline-relevant"
+        version = summarize.HEADLINE_VERSION if headlines_only else summarize.PROMPT_VERSION
+        llm = LLMClient(settings, model=summarize.MODEL)
         dockets = db.dockets_to_summarize(
             conn,
             min_score=args.min_score,
-            prompt_version=summarize.PROMPT_VERSION,
+            prompt_version=version,
             date_from=args.date_from,
             date_to=args.date_to,
+            table="headlines" if headlines_only else "summaries",
         )[: args.limit]
-        print(f"Summarising {len(dockets)} rulings with {llm.model}")
+        task = "Writing headlines for" if headlines_only else "Summarising"
+        print(f"{task} {len(dockets)} rulings with {llm.model}")
         failed = 0
-        for docket, texts in summarize.summarize_batch(conn, dockets, llm, workers=args.workers):
-            if isinstance(texts, Exception):
+        for docket, result in summarize.summarize_batch(
+            conn, dockets, llm, workers=args.workers, headlines_only=headlines_only
+        ):
+            if isinstance(result, Exception):
                 failed += 1
-                print(f"{docket}: failed ({texts!r})")
+                print(f"{docket}: failed ({result!r})")
                 continue
-            for lang, text in texts.items():
-                db.save_summary(
-                    conn,
-                    docket,
-                    lang=lang,
-                    text=text,
-                    model=llm.model,
-                    prompt_version=summarize.PROMPT_VERSION,
-                )
-            print(f"{docket}: {len(texts['de'].split())} / {len(texts['fr'].split())} words")
+            summarize.save(conn, docket, result, llm.model)
+            words = " / ".join(str(len(t.split())) for t in result.summaries.values())
+            print(f"{docket}: {words + ' words; ' if words else ''}{result.headlines}")
         if failed:
-            raise SystemExit(f"{failed} rulings failed; run summarize-relevant again to retry")
+            raise SystemExit(f"{failed} rulings failed; run {args.command} again to retry them")
+    elif args.command == "export-summaries":
+        count = db.export_summaries(conn, args.path, date_from=args.date_from, date_to=args.date_to)
+        print(f"Wrote summaries and headlines of {count} rulings to {args.path}")
+    elif args.command == "import-summaries":
+        count = db.import_summaries(conn, args.path)
+        print(f"Loaded {count} summaries and headlines from {args.path}")
     elif args.command == "serve":
         import uvicorn
 

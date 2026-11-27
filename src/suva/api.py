@@ -31,7 +31,7 @@ def get_conn() -> Iterator[sqlite3.Connection]:
 
 
 def get_llm() -> LLMClient:
-    return LLMClient()
+    return LLMClient(model=summarize.MODEL)
 
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
@@ -103,16 +103,7 @@ def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
 @app.post("/api/rulings/{docket:path}/summarize")
 def summarize_ruling(docket: str, conn: Conn, llm: LLM) -> dict[str, Any]:
     _require_ruling(conn, docket)
-    texts = summarize.summarize(conn, docket, llm)
-    for lang, text in texts.items():
-        db.save_summary(
-            conn,
-            docket,
-            lang=lang,
-            text=text,
-            model=llm.model,
-            prompt_version=summarize.PROMPT_VERSION,
-        )
+    summarize.save(conn, docket, summarize.summarize(conn, docket, llm), llm.model)
     return db.get_ruling_detail(conn, docket)
 
 

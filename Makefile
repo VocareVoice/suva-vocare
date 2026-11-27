@@ -6,6 +6,7 @@ load:
 	uv run suva import-triage data/results/triage_2026q2.jsonl
 	uv run suva import-classification data/results/classification_2025q4_2026q1.jsonl
 	uv run suva import-classification data/results/classification_2026q2.jsonl
+	uv run suva import-summaries data/results/summaries_2026q2.jsonl
 
 triage:
 	uv run suva triage
