@@ -175,7 +175,13 @@ _COURT_DECIDES = re.compile(
     r"|n'entre|n'est pas entré)\b[^.]*\."
 )
 # Statute and institution abbreviations of Italian rulings: German and French forms.
-ITALIAN = {"LAINF": ("UVG", "LAA"), "OAINF": ("UVV", "OLAA"), "INSAI": ("Suva", "Suva")}
+# "OAA" is no abbreviation at all; the model wrote it for OLAA in 8C_254/2025.
+ITALIAN = {
+    "LAINF": ("UVG", "LAA"),
+    "OAINF": ("UVV", "OLAA"),
+    "OAA": ("UVV", "OLAA"),
+    "INSAI": ("Suva", "Suva"),
+}
 _BENCH_TITLES = re.compile(
     r"Bundesrichter\w*|Mmes?\b|MM?\.|les Juges fédéraux|Giudic[ei] federal[ei]|Präsident\w*"
     r"|Présidente?|Presidente|präsidierendes Mitglied|Juges? suppléant\w*|nebenamtlich\w*"
@@ -852,7 +858,7 @@ def clean(text: str, lang: str) -> str:
     # Suva's summaries always say Suva, also where French rulings say CNA (Italian: INSAI).
     text = re.sub(r"\bCNA\b", "Suva", text)
     text = re.sub(r"\b([Ll])['’]INSAI\b", lambda m: f"{m[1]}a Suva", text)
-    text = re.sub(r"\b(?:LAINF|OAINF|INSAI)\b", lambda m: ITALIAN[m[0]][lang == "fr"], text)
+    text = re.sub(r"\b(?:LAINF|OAINF|OAA|INSAI)\b", lambda m: ITALIAN[m[0]][lang == "fr"], text)
     # OAI is the Italian IVV, but in French also the IV office, so only after an article number.
     text = re.sub(
         r"(\d\w*(?:\s+(?:Abs|al|cpv)\.\s*\d+)*(?:\s+(?:lit|let|Bst)\.\s*\w+)?\s+)OAI\b",
@@ -873,6 +879,10 @@ def clean(text: str, lang: str) -> str:
         # "Der Dachdecker A. rutschte": an initial after a noun (five letters or more, so never
         # after an article: "Der A.________ erhielt" is left to `finish`).
         text = re.sub(r"\b([A-ZÄÖÜ][a-zäöüß]{4,}) [A-Z]\.(?= [a-zäöü])", r"\1", text)
+        # The same for anonymised names the model kept ("des Spitals E.________", "der
+        # C.________ GmbH"); `finish` only asks for roles, and its answer is not always usable.
+        text = re.sub(r"\b([A-ZÄÖÜ][a-zäöüß]{3,}) [A-Z]\._+(?! (?:AG|GmbH)\b)", r"\1", text)
+        text = re.sub(r"\b[A-Z]\._+ (AG|GmbH)\b", r"\1", text)
         # "wies die Beschwerde ... gut" mixes up "hiess ... gut" and "wies ... ab".
         text = re.sub(r"\bwies\b([^.]*?)\bgut\b", r"hiess\1gut", text)
         text = re.sub(r"\b(?:consid|Erw)\. ?(?=\d)", "E. ", text)
@@ -881,6 +891,12 @@ def clean(text: str, lang: str) -> str:
         text = re.sub(r"\bart\. (?=\d)", "Art. ", text)
     else:
         text = re.sub(r"(?<![\w.])(?:E|Erw)\. ?(?=\d)", "consid. ", text)
+        text = re.sub(
+            r"\b(société|entreprise|doctoresse|docteur|médecin|experte?|hôpital|clinique) "
+            r"[A-Z]\._+(?: (?:SA|Sàrl|GmbH|AG)\b)?",
+            r"\1",
+            text,
+        )
         text = re.sub(r"(?:(?<=[a-zà-ÿ,;] )|(?<=['’]))Art\. (?=\d)", "art. ", text)
     return text.strip()
 
