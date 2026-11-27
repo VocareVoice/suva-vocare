@@ -29,3 +29,5 @@ build/
 # Local runtime data (the corpus under data/corpus/ may be committed)
 data/*.db*
 data/cache/
+data/raw/
+data/corpus/*.jsonl
