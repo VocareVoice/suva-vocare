@@ -143,7 +143,7 @@ const I18N = {
     "gen.s2": "Kernaussagen und Normen extrahieren",
     "gen.s3": "Deutsche Fassung verfassen",
     "gen.s4": "Französische Fassung verfassen",
-    "gen.elapsed": (s) => `Laufzeit ${s} s, dauert in der Regel 30–90 s`,
+    "gen.elapsed": (s) => `Laufzeit ${fmtElapsed(s)} · kann einige Minuten dauern`,
     "gen.err": "Die Zusammenfassung konnte nicht erstellt werden",
     "gen.notimpl": "Der Zusammenfassungs-Dienst ist noch nicht verfügbar.",
     "gen.done": "Zusammenfassung erstellt",
@@ -318,7 +318,7 @@ const I18N = {
     "gen.s2": "Extraire les considérants et les normes",
     "gen.s3": "Rédiger la version allemande",
     "gen.s4": "Rédiger la version française",
-    "gen.elapsed": (s) => `Durée ${s} s, prend en général 30–90 s`,
+    "gen.elapsed": (s) => `Durée ${fmtElapsed(s)} · peut prendre quelques minutes`,
     "gen.err": "Le résumé n'a pas pu être généré",
     "gen.notimpl": "Le service de résumé n'est pas encore disponible.",
     "gen.done": "Résumé généré",
@@ -363,7 +363,10 @@ const I18N = {
   },
 };
 
-export let uiLang = localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
+// 75 -> "1:15 min", 42 -> "42 s"
+const fmtElapsed = (s) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} min`);
+
+export let uiLang =localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
 export function t(key, ...args) {
   const v = I18N[uiLang][key] ?? I18N.de[key] ?? key;
   return typeof v === "function" ? v(...args) : v;
@@ -409,16 +412,25 @@ function suvaTitle(r) {
 // Court division from the docket prefix (8C_129/2025 -> "8C"); the digit names the Abteilung,
 // the letter the procedure (C/A/B = ordinary appeal, D = subsidiary constitutional appeal, F = revision).
 const ABTEILUNG = {
-  1: "I. öffentlich-rechtliche Abteilung", 2: "II. öffentlich-rechtliche Abteilung",
-  9: "III. öffentlich-rechtliche Abteilung", 8: "IV. öffentlich-rechtliche Abteilung",
-  4: "I. zivilrechtliche Abteilung", 5: "II. zivilrechtliche Abteilung",
-  6: "I. strafrechtliche Abteilung", 7: "II. strafrechtliche Abteilung",
+  de: {
+    1: "I. öffentlich-rechtliche Abteilung", 2: "II. öffentlich-rechtliche Abteilung",
+    9: "III. öffentlich-rechtliche Abteilung", 8: "IV. öffentlich-rechtliche Abteilung",
+    4: "I. zivilrechtliche Abteilung", 5: "II. zivilrechtliche Abteilung",
+    6: "I. strafrechtliche Abteilung", 7: "II. strafrechtliche Abteilung",
+  },
+  fr: {
+    1: "Ire Cour de droit public", 2: "IIe Cour de droit public",
+    9: "IIIe Cour de droit public", 8: "IVe Cour de droit public",
+    4: "Ire Cour de droit civil", 5: "IIe Cour de droit civil",
+    6: "Ire Cour de droit pénal", 7: "IIe Cour de droit pénal",
+  },
 };
 const COMMON_DIVISIONS = ["8C", "9C", "1C", "2C", "4A", "5A", "6B", "7B"];
-function divisionName(code) { return ABTEILUNG[(code || "")[0]] || ""; }
+function divisionName(code) { return ABTEILUNG[uiLang][(code || "")[0]] || ""; }
+// The stored `division` is the court's German name; the docket prefix gives it in the UI language.
 function rulingDivision(r) {
   const code = divisionCode(r.docket);
-  return r.division && r.division.length > 3 ? r.division : divisionName(code) || r.division || code;
+  return divisionName(code) || r.division || code;
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
@@ -527,6 +539,9 @@ const LAWS = ["UVG", "LAA", "UVV", "OLAA", "ATSG", "LPGA", "ATSV", "OPGA", "IVG"
   "BVG", "LPP", "KVG", "LAMal", "MVG", "LAM", "VVG", "LCA", "OR", "CO", "ZGB", "CC", "BV", "Cst\\.", "BGG", "LTF", "VwVG", "PA", "EMRK", "CEDH", "SVG", "LCR"];
 const LAW_PAIRS = { LAA: "UVG", OLAA: "UVV", LPGA: "ATSG", OPGA: "ATSV", LAI: "IVG", RAI: "IVV", LAVS: "AHVG", LPP: "BVG",
   LAMal: "KVG", LAM: "MVG", LCA: "VVG", CO: "OR", CC: "ZGB", "Cst.": "BV", LTF: "BGG", PA: "VwVG", CEDH: "EMRK", LCR: "SVG" };
+const LAW_FR = Object.fromEntries(Object.entries(LAW_PAIRS).map(([fr, de]) => [de, fr]));
+// A statute's abbreviation in the UI language: "UVG" reads "LAA" in the French UI.
+const lawAbbr = (law) => (uiLang === "fr" ? LAW_FR[LAW_PAIRS[law] || law] || law : LAW_PAIRS[law] || law);
 const CITE_RE = new RegExp(
   String.raw`\b[Aa]rt(?:\.|ikel)\s*(\d+[a-z]?(?:\s*(?:bis|ter|quater))?)` +
   String.raw`((?:\s*(?:Abs\.|al\.|para\.)\s*\d+[a-z]?)?(?:\s*(?:lit\.|let\.|Bst\.|Ziff\.|ch\.)\s*[a-z0-9]+)?)` +
@@ -535,7 +550,8 @@ const CITE_RE = new RegExp(
 );
 // Escape text, then mark statute citations and search terms.
 export function highlight(text, terms = []) {
-  let html = esc(text);
+  // "13 %" stays on one line.
+  let html = esc(text).replace(/(\d) %/g, "$1 %");
   html = html.replace(new RegExp(CITE_RE.source.replace("des\\s+|de\\s+la\\s+|du\\s+|de\\s+l')", "des\\s+|de\\s+la\\s+|du\\s+|de\\s+l&#39;)"), "g"),
     (m, art, _sub, law) => `<span class="cite" data-cite="${esc((LAW_PAIRS[law] || law) + " " + art.replace(/\s+/g, ""))}">${m}</span>`);
   const words = terms.filter((w) => w.length > 1);
@@ -1017,11 +1033,13 @@ function relevanceCard(r) {
 // One-line headline of what the court decided (`headline_de` / `headline_fr`, written by Apertus;
 // null until generated, see lucas-firstmate on agent-comms). It is the ruling's heading next to
 // the docket. Without one, the court's subject line is the heading and the classification's
-// one-sentence explanation (German only) stands in below it.
+// one-sentence explanation (German only, so only in the German UI) stands in below it. Never the
+// headline of the other language: a French heading in the German UI reads as a bug.
 export function headlineOf(r) {
-  return r[`headline_${uiLang}`] || r[`headline_${uiLang === "fr" ? "de" : "fr"}`] || "";
+  return r[`headline_${uiLang}`] || "";
 }
-const headlineIsRationale = (r) => !headlineOf(r) && !!r.classification?.rationale;
+const rationaleOf = (c) => (uiLang === "de" && c?.rationale) || "";
+const headlineIsRationale = (r) => !headlineOf(r) && !!rationaleOf(r.classification);
 
 function classificationCard(c, hideRationale = false) {
   if (!c) return "";
@@ -1036,7 +1054,7 @@ function classificationCard(c, hideRationale = false) {
     <div class="card__body" style="display:grid;gap:12px">
       <dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${c.flags.length ? `<div class="statutes">${c.flags.map((f) => `<span class="chip chip--accent">${esc(taxLabel("flags", f))}</span>`).join("")}</div>` : ""}
-      ${c.rationale && !hideRationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
+      ${rationaleOf(c) && !hideRationale ? `<p class="reasoning">${esc(rationaleOf(c))}</p>` : ""}
     </div>
   </section>`;
 }
@@ -1052,8 +1070,8 @@ function statutesCard(statutes) {
     <div class="card__head"><h2 class="card__title">${esc(t("st.title"))}</h2></div>
     <div class="card__body">${statutes.length
       ? `<div class="statutes">${statutes.map((s) => {
-        const title = [`Art. ${s.art} ${s.law}`, ...(s.details || []).map(statuteDetail)].join("\n");
-        return `<button type="button" class="chip" data-goto="${esc(s.law + " " + String(s.art).replace(/\s+/g, ""))}" title="${esc(title)}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`;
+        const title = [`Art. ${s.art} ${lawAbbr(s.law)}`, ...(s.details || []).map(statuteDetail)].join("\n");
+        return `<button type="button" class="chip" data-goto="${esc((LAW_PAIRS[s.law] || s.law) + " " + String(s.art).replace(/\s+/g, ""))}" title="${esc(title)}">Art. ${esc(s.art)} ${esc(lawAbbr(s.law))}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`;
       }).join("")}</div>`
       : `<p class="muted" style="margin:0">${esc(t("st.none"))}</p>`}</div>
   </section>`;
@@ -1248,10 +1266,15 @@ function bindSummary(r, terms) {
       <div class="progress"><div class="progress__bar"><i></i></div>
       <ol class="progress__steps">${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
       <div class="progress__time" id="genTime"></div></div>`;
-    // The API is a single blocking call; the steps are paced by elapsed time to show progress.
+    // The API is a single blocking call that takes from one to many minutes on the shared
+    // gateway, so the progress is an estimate: the bar creeps towards 90 % and never goes back,
+    // the steps follow it, and the last step stays open (pulsing) until the call returns.
+    const bar = $(".progress__bar i", gen);
     const tick = () => {
       const s = Math.floor((Date.now() - started) / 1000);
-      const idx = Math.min(steps.length - 1, Math.floor(s / 12));
+      const p = 0.9 * (1 - Math.exp(-s / 150));
+      bar.style.width = `${(p * 100).toFixed(1)}%`;
+      const idx = Math.min(steps.length - 1, Math.floor((p / 0.9) * steps.length * 1.15));
       $$(".progress__steps li", gen).forEach((li, i) => { li.className = i < idx ? "is-done" : i === idx ? "is-now" : ""; });
       const tm = $("#genTime"); if (tm) tm.textContent = t("gen.elapsed", s);
     };
