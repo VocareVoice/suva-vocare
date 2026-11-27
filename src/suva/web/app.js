@@ -525,7 +525,7 @@ async function route() {
   const m = /^\/r\/(.+)$/.exec(path);
   window.scrollTo(0, 0);
   const section = path.startsWith("/all") ? "#/all" : m ? "" : "#/";
-  $$(".topbar__nav > a").forEach((a) => {
+  $$(".pillnav a").forEach((a) => {
     if (a.getAttribute("href") === section) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   });

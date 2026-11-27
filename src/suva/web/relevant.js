@@ -94,9 +94,6 @@ export async function renderRelevant(params, opts) {
   state.lastListHash = toHash(f);
   const app = $("#app");
   app.innerHTML = `
-    <header class="pagehead">
-      <h1>${esc(t("rel.title"))}</h1>
-    </header>
     <div class="relgrid">
       <aside class="relgrid__side" id="register"><div class="skel"></div><div class="skel"></div><div class="skel" style="width:60%"></div></aside>
       <div class="relgrid__main">
