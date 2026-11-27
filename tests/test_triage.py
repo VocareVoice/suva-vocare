@@ -41,11 +41,17 @@ class FakeLLM:
         self.calls = []
         examples = tmp_path / "examples.jsonl"
         examples.write_text(
-            json.dumps({"docket": "8C_129/2025", "de": "Die Reinigung fällt unter Art. 73 UVV."})
-            + "\n"
-            + json.dumps({"docket": "8C_9/2025", "de": "Der Unfallbegriff setzt Folgendes voraus."})
-            + "\n"
+            "".join(
+                json.dumps({"docket": docket, "text_de": text}) + "\n"
+                for docket, text in [
+                    ("8C_129/2025", "Die Reinigung fällt unter Art. 73 UVV."),
+                    ("8C_9/2025", "Der Unfallbegriff setzt Folgendes voraus."),
+                    ("8C_78/2025", "Hold-out: Listenverletzung nach Art. 6 Abs. 2 UVG."),
+                ]
+            )
         )
+        split = {"fewshot_pool": ["8C_129/2025", "8C_9/2025"], "holdout": ["8C_78/2025"]}
+        (tmp_path / "split.json").write_text(json.dumps(split))
         self.settings = SimpleNamespace(examples_path=examples)
 
     def complete(self, messages, **params):
@@ -61,7 +67,7 @@ def ruling(docket="8C_1/2026", title="Unfallversicherung (Kausalzusammenhang)", 
 
 def test_prior_recognises_suva_accident_cases():
     p = triage.prior(ruling())
-    assert p.score >= 80
+    assert p.score >= 70
     assert "Suva ist Partei" in p.factors
     assert any(f.startswith("Gegenstand: Unfallversicherung") for f in p.factors)
 
@@ -91,6 +97,19 @@ def test_invalidity_insurance_reaches_the_llm():
     assert p.score >= triage.PRIOR_CUTOFF
 
 
+def test_substance_signals_only_affect_ranking():
+    full = triage.prior(ruling(filler="Begründung. " * 1500))
+    assert "ausführlich begründet" in full.factors
+    dismissed = ruling().copy()
+    dismissed["text"] = dismissed["text"].replace(
+        "Die Beschwerde wird abgewiesen.", "Auf die Beschwerde wird nicht eingetreten."
+    )
+    short = triage.prior(dismissed)
+    assert short.score == full.score
+    assert short.ranking < full.ranking
+    assert "Nichteintreten oder Abschreibung" in short.factors
+
+
 def test_split_sections_and_excerpt_keep_rubrum_and_operative_part():
     text = RULING_TEXT.format(filler="Lange Begründung. " * 5000)
     sections = triage.split_sections(text)
@@ -107,18 +126,20 @@ def test_split_sections_and_excerpt_keep_rubrum_and_operative_part():
 
 
 @pytest.mark.parametrize(
-    ("reply", "prior", "score", "label"),
+    ("reply", "prior", "level", "label"),
     [
-        ({"relevanz": 9, "reasoning": "Klar."}, 100, 100, "relevant"),
-        ({"relevanz": "6", "reasoning": "Grenzfall."}, 40, 60, "relevant"),
-        ({"relevanz": 3, "reasoning": ["Satz eins.", "Satz zwei."]}, 40, 35, "not_relevant"),
-        ({"relevanz": 12, "reasoning": "Zu hoch."}, 0, 75, "relevant"),
+        ({"relevanz": 9, "reasoning": "Klar."}, 100, 9, "relevant"),
+        ({"relevanz": "7", "reasoning": "Eher relevant."}, 40, 7, "relevant"),
+        ({"relevanz": 3, "reasoning": ["Satz eins.", "Satz zwei."]}, 40, 3, "not_relevant"),
+        ({"relevanz": 12, "reasoning": "Zu hoch."}, 100, 9, "relevant"),
         ({"relevanz": -1, "reasoning": "Nein."}, 0, 0, "not_relevant"),
     ],
 )
-def test_parse_result_blends_level_and_prior(reply, prior, score, label):
+def test_parse_result_blends_level_and_prior(reply, prior, level, label):
     result = triage.parse_result(reply, "m", prior_score=prior)
-    assert (result.score, result.label, result.model) == (score, label, "m")
+    w = triage.PRIOR_WEIGHT
+    assert result.score == round(100 * ((1 - w) * level / 9 + w * prior / 100))
+    assert (result.label, result.model) == (label, "m")
     assert "  " not in result.reasoning
 
 
@@ -155,6 +176,7 @@ def test_triage_calls_the_llm_with_examples_and_feedback(conn, tmp_path):
     assert "8C_9/2025: Der Unfallbegriff" in prompt
     # The ruling's own example summary must not leak into its prompt.
     assert "8C_129/2025: Die Reinigung" not in prompt
+    assert "Hold-out" not in prompt
     assert "8C_135/2025 (Assurance-accidents (rente d'invalidité)): relevant, Score 90" in prompt
     assert "Kommentar: BGE" in prompt
 

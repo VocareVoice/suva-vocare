@@ -3,6 +3,7 @@ install:
 
 load:
 	uv run suva load
+	uv run suva import-triage data/results/triage_2026q2.jsonl
 
 triage:
 	uv run suva triage

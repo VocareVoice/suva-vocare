@@ -32,6 +32,9 @@ def test_responses_are_cached_on_disk(tmp_path):
 def test_parse_json_tolerates_prose():
     assert parse_json('Antwort: {"label": "relevant"} Ende') == {"label": "relevant"}
     assert parse_json("[1, 2]") == [1, 2]
+    assert parse_json('{"reasoning": "Zeile eins.\nZeile\tzwei."}') == {
+        "reasoning": "Zeile eins.\nZeile\tzwei."
+    }
 
 
 def test_logprobs_survive_the_cache(tmp_path):

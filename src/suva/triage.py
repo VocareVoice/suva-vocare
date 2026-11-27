@@ -1,9 +1,10 @@
 """Relevance triage of a ruling for Suva.
 
-Stage 1 is a deterministic prior from the docket and the text (division, statutes, Suva as a
-party, accident-insurance vocabulary). Rulings below `PRIOR_CUTOFF` are labelled not relevant
-without an LLM call. Stage 2 asks Apertus for a score and a German explanation, with the topics
-of Suva's own example summaries and the lawyers' feedback as context.
+Stage 1 is a deterministic prior from the docket and the text (subject, division, statutes,
+Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call.
+Stage 2 asks Apertus for a relevance level and a German explanation, with the topics of Suva's
+example summaries and the lawyers' feedback as context. The score blends the level, weighted by
+its token probabilities, with the prior. Results and metrics: docs/eval_triage.md.
 """
 
 import json
@@ -19,13 +20,13 @@ from typing import Any, Literal
 from suva import db
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 PREFILTER_MODEL = "prefilter"
 RELEVANCE_THRESHOLD = 50
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
 # Share of the final score that comes from the keyword prior rather than the LLM.
-PRIOR_WEIGHT = 0.25
+PRIOR_WEIGHT = 0.3
 
 
 @dataclass
@@ -38,8 +39,13 @@ class TriageResult:
 
 @dataclass
 class Prior:
-    score: int
+    score: int  # topical: how closely the ruling concerns accident insurance; filters for the LLM
+    substance: int  # adjustment for how much law the ruling states; only used for ranking
     factors: list[str]
+
+    @property
+    def ranking(self) -> int:
+        return max(0, min(100, self.score + self.substance))
 
 
 def _pattern(*alternatives: str, flags: int = 0) -> re.Pattern[str]:
@@ -86,6 +92,27 @@ _REASONS = re.compile(
     r"^\s*(?:Erwägungen?|Considérant en droit|Considérants?|Diritto|Considerando in diritto)\s*:",
     re.MULTILINE,
 )
+_INADMISSIBLE = _pattern(
+    r"nicht eingetreten",
+    r"abgeschrieben",
+    r"n.est pas entré en matière",
+    r"irrecevable",
+    r"rayée? du rôle",
+    r"inammissibile",
+    r"non (?:si )?entra nel merito",
+    r"stralciat",
+)
+_SIMPLIFIED = _pattern(
+    r"vereinfachten Verfahren",
+    r"procédure simplifiée",
+    r"procedura semplificata",
+    r"erkennt (?:die Präsidentin|der Präsident)",
+    r"(?:la Présidente|le Président) prononce",
+    r"(?:la|il) President[ea] pronuncia",
+)
+_UPHELD = _pattern(r"gutgeheissen", r"\badmis\b", r"\baccolto\b")
+LONG_RULING_CHARS = 12_000
+
 _OPERATIVE = re.compile(r"^\s*(?:Demnach erkennt|Par ces motifs|Per questi motivi)", re.MULTILINE)
 _SUBJECT = re.compile(
     r"^\s*(?:Gegenstand|Objet|Oggetto)\s*\n(.+?)(?:\n\s*(?:Beschwerde|Recours|Ricorso|Revisionsgesuch|"
@@ -133,11 +160,16 @@ def prior(ruling: dict[str, Any]) -> Prior:
     text = ruling.get("text") or ""
     sections = split_sections(text)
     subj = ruling.get("title") or subject(text)
-    score, factors = 0, []
+    score, substance, factors = 0, 0, []
 
     def add(points: int, factor: str) -> None:
         nonlocal score
         score += points
+        factors.append(factor)
+
+    def weigh(points: int, factor: str) -> None:
+        nonlocal substance
+        substance += points
         factors.append(factor)
 
     if ACCIDENT_INSURANCE.search(subj) or MVG.search(subj):
@@ -148,7 +180,7 @@ def prior(ruling: dict[str, Any]) -> Prior:
     if points := DIVISION_PRIOR.get(division):
         add(points, f"Abteilung {division}")
     if SUVA.search(sections.rubrum):
-        add(25, "Suva ist Partei")
+        add(15, "Suva ist Partei")
     elif SUVA.search(text):
         add(10, "Suva erwähnt")
     if uvg := len(UVG.findall(text)):
@@ -159,7 +191,16 @@ def prior(ruling: dict[str, Any]) -> Prior:
         add(5, "Unfallversicherung erwähnt")
     if ATSG.search(text):
         add(5, "ATSG zitiert")
-    return Prior(score=min(score, 100), factors=factors)
+
+    if _INADMISSIBLE.search(sections.operative[:600]):
+        weigh(-20, "Nichteintreten oder Abschreibung")
+    elif _SIMPLIFIED.search(text):
+        weigh(-15, "vereinfachtes Verfahren")
+    elif _UPHELD.search(sections.operative[:600]):
+        weigh(5, "Beschwerde (teilweise) gutgeheissen")
+    if len(_clean(text)) >= LONG_RULING_CHARS:
+        weigh(10, "ausführlich begründet")
+    return Prior(score=min(score, 100), substance=substance, factors=factors)
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
@@ -229,12 +270,17 @@ für die Suva relevant ist oder nicht>", "key_factors": ["<Stichwort>", ...], \
 "relevanz": <Stufe 0-9>}"""
 
 
-def load_examples(path: Path) -> list[dict[str, str]]:
-    """Suva's example summaries (docket and German text) from a JSONL file, if present."""
+def load_examples(path: Path) -> list[dict[str, Any]]:
+    """Suva's example summaries from the few-shot pool of `split.json` next to `path`.
+
+    The evaluation hold-out is never shown to the model.
+    """
     if not path.exists():
         return []
+    pool = set(json.loads((path.parent / "split.json").read_text())["fewshot_pool"])
     with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+        examples = [json.loads(line) for line in f if line.strip()]
+    return [e for e in examples if e["docket"] in pool]
 
 
 def _first_sentences(text: str, limit: int = 300) -> str:
@@ -248,14 +294,14 @@ def _first_sentences(text: str, limit: int = 300) -> str:
 def build_messages(
     ruling: dict[str, Any],
     prior_: Prior,
-    examples: list[dict[str, str]],
+    examples: list[dict[str, Any]],
     feedback: list[dict[str, Any]],
 ) -> list[Message]:
     parts = []
     # The ruling's own example summary is left out so the labelled period can be evaluated.
     shown = [e for e in examples if e["docket"] != ruling["docket"]]
     if shown:
-        lines = "\n".join(f"- {e['docket']}: {_first_sentences(e['de'])}" for e in shown)
+        lines = "\n".join(f"- {e['docket']}: {_first_sentences(e['text_de'])}" for e in shown)
         parts.append(f"Beispiele früherer Urteile, die die Suva zusammengefasst hat:\n{lines}")
     if feedback:
         lines = "\n".join(
@@ -332,8 +378,8 @@ def prefiltered(prior_: Prior) -> TriageResult:
         score=prior_.score // 4,
         label="not_relevant",
         reasoning=(
-            "In der Vorprüfung ausgeschieden: Das Urteil enthält keine ausreichenden Bezüge zur "
-            "Unfall- oder Militärversicherung (keine Suva-Beteiligung, kaum UVG/UVV-Zitate). "
+            "In der Vorprüfung ausgeschieden: Das Urteil betrifft weder die Unfall- noch die "
+            "Invaliden- oder Militärversicherung und hat zu wenig Bezug zur Suva oder zum UVG. "
             f"Gefundene Hinweise: {hints}."
         ),
         model=PREFILTER_MODEL,
@@ -343,7 +389,7 @@ def prefiltered(prior_: Prior) -> TriageResult:
 def triage_ruling(
     ruling: dict[str, Any],
     llm: LLMClient,
-    examples: list[dict[str, str]],
+    examples: list[dict[str, Any]],
     feedback: list[dict[str, Any]],
 ) -> TriageResult:
     prior_ = prior(ruling)
@@ -354,7 +400,7 @@ def triage_ruling(
     return parse_result(
         parse_json(completion.content),
         llm.model,
-        prior_score=prior_.score,
+        prior_score=prior_.ranking,
         level=expected_level(completion.logprobs),
     )
 

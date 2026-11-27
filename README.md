@@ -54,8 +54,8 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` t
 
 ```sh
 make install   # uv sync
-make load      # ingest data/corpus/rulings.jsonl.gz into data/suva.db
-make triage    # score every ruling not triaged yet (Apertus)
+make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage results
+make triage    # score every ruling not triaged with the current prompt yet (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make test      # pytest
 make lint      # ruff
@@ -66,13 +66,23 @@ make lint      # ruff
 For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
 rulings with hand-written demo triage and Suva's reference summaries (marked as demo data).
 
+Triage (`triage.py`, results and metrics in `docs/eval_triage.md`) runs in two stages: a
+keyword prior from subject, statutes and parties drops rulings without an accident-insurance
+link, then Apertus rates the rest. `uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
+a period (resumable, responses cached), `uv run suva export-triage PATH --from ... --to ...`
+writes the results as JSONL and `uv run suva import-triage PATH` loads them.
+`data/results/triage_2026q2.jsonl` holds the April-June 2026 triage, so the UI works without
+calling Apertus.
+
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
 2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which
 caches raw downloads under `data/raw/` and replaces the corpus records in that date range.
 
 With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
-database and corpus directory. Load the corpus with `docker compose run --rm api suva load`.
+database and corpus directory. Load the corpus with `docker compose run --rm api suva load`
+and the triage results with
+`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl`.
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),

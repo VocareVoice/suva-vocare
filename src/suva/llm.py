@@ -95,12 +95,13 @@ class LLMClient:
 def parse_json(text: str) -> Any:
     if fenced := _JSON_FENCE.search(text):
         text = fenced.group(1)
+    # strict=False: models sometimes put raw newlines or tabs inside JSON strings.
     try:
-        return json.loads(text)
+        return json.loads(text, strict=False)
     except json.JSONDecodeError:
         starts = [i for i in (text.find("{"), text.find("[")) if i != -1]
         if not starts:
             raise
         start = min(starts)
         end = max(text.rfind("}"), text.rfind("]"))
-        return json.loads(text[start : end + 1])
+        return json.loads(text[start : end + 1], strict=False)
