@@ -1,6 +1,6 @@
 # Summary evaluation
 
-How the summary writer `src/suva/summarize.py` (prompt version `v2`, model `apertus-v1-5-70b`)
+How the summary writer `src/suva/summarize.py` (prompt version `v6`, model `apertus-v1-5-70b`)
 works, and how its German and French summaries compare with Suva's human summaries on the
 hold-out of `data/eval/split.json`: 10 rulings (5 German-, 4 French- and 1 Italian-language;
 authors FRT, LC4 and VIL), never shown to the model.
@@ -46,12 +46,24 @@ authors FRT, LC4 and VIL), never shown to the model.
      upheld appeal, 8C_254/2025, which the closing-sentence fix did not reach; the finishing
      step replaces such a sentence by the operative part when the revision keeps it);
    - the target language's statute abbreviations and terms, the glossary's avoid list and the
-     citation format.
+     citation format;
+   - no German percentage adjective ("10%igen Abzugspraxis", v3);
+   - a principle the Court recalls ("erinnert daran" / "rappelle"; v4: the German summary of
+     8C_256/2025 listed the findings without the rule of E. 5.2).
 
    The model also checks the draft claim by claim, quoting the ruling for each claim. Both sets
    of findings go back for a revision. A second revision follows if rule checks still fail, and
-   an overlong text is shortened (a shortening that drops the consideration references or the
-   paragraphs is rejected). The checks see only the rules, not the examples: with the examples
+   an overlong text is shortened to at most 200 words in German and 220 in French (v3; before,
+   230 and 250). A shortening that drops the consideration references or the paragraphs is
+   rejected and drawn again with some sampling. Apertus often returned the text unchanged
+   (8C_718/2025 stayed at 250 words through every rewrite), so a final text that is still too
+   long is cut by whole sentences (v6): the model ranks the numbered sentences from least to
+   most needed, and the least needed are deleted until the text fits. The first sentence of a
+   paragraph, the cantonal court's decision, the principles the Court recalls, the closing
+   outcome paragraph and the last consideration reference are never deleted. Asked instead
+   which sentences to delete, the model named half of them (8C_718/2025 fell to 88 words); a
+   rewrite prompt naming the number of words to remove (v5) made the top summaries worse and
+   was dropped. The checks see only the rules, not the examples: with the examples
    in context, the model quoted an example as if it were the ruling.
 7. **Consistency.** The model compares the German and the French summary and names, for each
    contradiction, the version the ruling supports; that version's counterpart is revised.
@@ -64,7 +76,21 @@ authors FRT, LC4 and VIL), never shown to the model.
    standard formula. Five-judge rulings, detected from the bench in the rubrum, end with
    "Fünfer-Entscheid." / "Décision à cinq.". Citation format, Swiss amounts, "Suva" for "CNA",
    the Italian abbreviations of Italian rulings (LAINF, OAINF, OAI, INSAI; v2) and anonymised
-   places ("in U.________"; v2) are normalised deterministically.
+   places ("in U.________"; v2) are normalised deterministically. v3 adds: the finishing step
+   shortens again (the revisions and the consistency fix lengthened the texts); OAI becomes
+   RAI / IVV with its article wherever the ruling cites the Italian IV ordinance ("la révision
+   de l'OAI" → "du RAI", 8C_254/2025); a word the model copied from the ruling with one letter
+   too many or too few, which neither the ruling nor the corpus contains, takes the ruling's
+   spelling ("Beimmann" → "Beimann", 8C_343/2025); a canton in brackets after an anonymised
+   employer goes ("bei einer Firma (TI)"); the outcome sentence becomes a paragraph of its own;
+   and the prompt calls another insurer "the accident insurer" instead of "an accident insurer
+   other than Suva", which the model copied into 8C_63/2026. v4: a short sentence before the
+   closing paragraph that only states the outcome goes ("Das Bundesgericht heisst die Beschwerde
+   der Suva gut.", 8C_254/2025), "der B.________ GmbH" becomes "einer GmbH" instead of "der
+   GmbH", and the consistency check compares every figure, duration, percentage and date (the
+   German summary of 8C_256/2025 said "fast vier Jahre" for "quatre ans et huit mois"). v6:
+   superscripts the ruling text lost are restored in the final French text ("1 er août" → "1er août", "la I e
+   Cour" → "la Ire Cour").
 
 A summary takes 10 to 16 model calls and 1 to 5 minutes on the shared gateway, so in the UI it
 runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The model
@@ -77,9 +103,14 @@ Anwendung von Art. 26bis IVV in der Unfallversicherung" / "Pas d'application par
 l'art. 26bis RAI dans l'assurance-accidents". It is written from the subject line, the operative
 part and the extracted holdings (step 2), first in the ruling's language and then in the other
 with the first as reference, with the glossary terms found in the ruling. A headline is checked
-for length (14 words in German, 15 in French), language, the other language's statute
-abbreviations, dockets, dates, names and an opening with the Court; failures go back to the model
-twice, after which the headline is left out. `suva headline-relevant` runs only the source,
+for length (15 words in German, 17 in French), language, the other language's statute
+abbreviations, dockets, dates, names, an opening with the Court and (v3) procedural wording
+("recours rejeté", "Beschwerde abgewiesen", "l'intimée", unless the appeal was inadmissible);
+failures go back to the model twice, after which the headline is left out. Also in v3, a word
+that no two rulings of the corpus in that language use, up to its ending and for German compounds
+part by part, goes back to the model ("Prémiums" for "primes", 8C_470/2025); a headline whose
+only problem is such a word is kept if the corrections find nothing better, because rare
+legitimate words (an occupation) would otherwise cost the headline. `suva headline-relevant` runs only the source,
 holdings and headline steps (3 to 6 calls), and a later summary reuses them from the cache.
 
 ## Results on the hold-out
