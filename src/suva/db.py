@@ -498,6 +498,36 @@ def untriaged_dockets(
     return [row["docket"] for row in rows]
 
 
+def dockets_to_summarize(
+    conn: sqlite3.Connection,
+    *,
+    min_score: int,
+    prompt_version: str,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[str]:
+    """Rulings whose latest triage score is at least `min_score` and that have no summary of
+    `prompt_version`, highest score first."""
+    where = [
+        "t.score >= ?",
+        "NOT EXISTS (SELECT 1 FROM summaries s WHERE s.docket = r.docket AND s.prompt_version = ?)",
+    ]
+    params: list[Any] = [min_score, prompt_version]
+    date = "COALESCE(r.publication_date, r.decision_date)"
+    if date_from:
+        where.append(f"{date} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{date} <= ?")
+        params.append(date_to)
+    rows = conn.execute(
+        f"SELECT r.docket FROM rulings r JOIN triage t ON {_LATEST_TRIAGE} "
+        f"WHERE {' AND '.join(where)} ORDER BY t.score DESC, r.docket",
+        params,
+    )
+    return [row["docket"] for row in rows]
+
+
 def save_triage(
     conn: sqlite3.Connection,
     docket: str,

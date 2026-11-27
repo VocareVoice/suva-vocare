@@ -57,12 +57,17 @@ make install   # uv sync
 make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage and classification results
 make triage    # score every ruling not triaged with the current prompt yet (Apertus)
 make classify  # classify every ruling not classified with the current prompt yet (Apertus)
+make summarize # DE + FR summaries of every relevant ruling without one yet, best first (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make test      # pytest
 make lint      # ruff
 ```
 
-`uv run suva summarize 8C_129/2025` summarises a single ruling in German and French.
+`uv run suva summarize 8C_129/2025` summarises a single ruling in German and French;
+`uv run suva summarize-relevant [--limit 10]` summarises every ruling with a triage score of at
+least 50 that has no summary of the current prompt version, highest score first. How the summary
+writer works and how it scores: `docs/eval_summaries.md`; the style it writes: `docs/style_guide.md`,
+section 11.
 
 For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
 rulings with hand-written demo triage and Suva's reference summaries (marked as demo data).

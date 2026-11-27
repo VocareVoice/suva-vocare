@@ -11,6 +11,7 @@ Only the hold-out dockets of `data/eval/split.json` are scored unless `--all` is
 """
 
 import argparse
+import re
 import statistics
 from pathlib import Path
 from string import Template
@@ -67,7 +68,13 @@ def judge_prompt(docket: str, lang: str, candidate: str, reference: str) -> str:
 
 
 def parse_judgement(text: str) -> dict:
-    data = parse_json(text)
+    try:
+        data = parse_json(text)
+    except ValueError:
+        # Judges often put unescaped quotes into the free-text comment; the scores still parse.
+        data = {c: m[1] for c in JUDGE_CRITERIA if (m := re.search(rf'"{c}"\s*:\s*(\d+)', text))}
+        comment = re.search(r'"comment"\s*:\s*"(.*)"\s*}', text, re.S)
+        data["comment"] = comment[1] if comment else ""
     if not isinstance(data, dict):
         raise ValueError(f"judge answer is not a JSON object: {text[:200]!r}")
     scores = {}

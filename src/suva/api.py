@@ -97,10 +97,7 @@ def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
 @app.post("/api/rulings/{docket:path}/summarize")
 def summarize_ruling(docket: str, conn: Conn, llm: LLM) -> dict[str, Any]:
     _require_ruling(conn, docket)
-    try:
-        texts = summarize.summarize(conn, docket, llm)
-    except NotImplementedError as exc:
-        raise HTTPException(501, str(exc)) from exc
+    texts = summarize.summarize(conn, docket, llm)
     for lang, text in texts.items():
         db.save_summary(
             conn,
