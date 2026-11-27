@@ -109,7 +109,7 @@ def main() -> None:
     elif args.command == "load":
         print(f"Loaded {db.load_corpus(conn, args.path)} rulings into {settings.db_path}")
     elif args.command == "triage":
-        llm = LLMClient(settings, model=triage.MODEL)
+        llm = LLMClient(settings)
         dockets = db.untriaged_dockets(
             conn,
             date_from=args.date_from,
@@ -142,7 +142,7 @@ def main() -> None:
     elif args.command == "import-triage":
         print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
     elif args.command == "classify":
-        llm = LLMClient(settings, model=classify.MODEL)
+        llm = LLMClient(settings)
         dockets = db.unclassified_dockets(
             conn,
             date_from=args.date_from,
@@ -175,7 +175,7 @@ def main() -> None:
         count = db.import_classification(conn, args.path)
         print(f"Loaded {count} classifications from {args.path}")
     elif args.command == "summarize":
-        llm = LLMClient(settings, model=summarize.MODEL)
+        llm = LLMClient(settings)
         result = summarize.summarize(conn, args.docket, llm)
         summarize.save(conn, args.docket, result, llm.model)
         for lang in summarize.LANGUAGES:
@@ -183,7 +183,7 @@ def main() -> None:
     elif args.command in ("summarize-relevant", "headline-relevant"):
         headlines_only = args.command == "headline-relevant"
         version = summarize.HEADLINE_VERSION if headlines_only else summarize.PROMPT_VERSION
-        llm = LLMClient(settings, model=summarize.MODEL)
+        llm = LLMClient(settings)
         dockets = db.dockets_to_summarize(
             conn,
             min_score=args.min_score,

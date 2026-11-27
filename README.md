@@ -51,6 +51,11 @@ LLM_API_KEY — your API key
 ## Running it
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` to `.env` and fill in the three `LLM_*` variables.
+Every LLM step (triage, classification, summaries, the agent, the evaluation judge) uses `LLM_NAME`,
+the model id as your endpoint names it: `apertus-v1-5-70b` on the gateway we used (also the default
+when `LLM_NAME` is empty), `swiss-ai/Apertus-v1.5-70B` on Hugging Face-style gateways. All results
+in `data/results/` and `docs/` come from the regular 70B model; the app warns when `LLM_NAME` names a
+thinking variant.
 
 ```sh
 make install   # uv sync
@@ -67,7 +72,7 @@ make lint      # ruff
 triage score of at least 50 that has no summary of the current prompt version, highest score
 first; `--limit N` takes the N highest-scored rulings and skips those already summarised, so after
 a new triage `uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --limit 30`
-writes only what the new top 30 lacks. Summaries always use `apertus-v1-5-70b`, whatever `LLM_NAME` says. Each summary run also
+writes only what the new top 30 lacks. Each summary run also
 writes a one-line headline per language (`headline_de` / `headline_fr` in the API), and
 `uv run suva headline-relevant` writes only the headlines, at a fraction of the cost.
 `export-summaries` / `import-summaries` work like their triage counterparts;
@@ -107,14 +112,10 @@ insurance by its division.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which
 caches raw downloads under `data/raw/` and replaces the corpus records in that date range.
 
-With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
-database and corpus directory. Load the corpus with `docker compose run --rm api suva load`
-the triage results with
-`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl` (likewise for
-`triage_2025q4_2026q1.jsonl`), the classification with `docker compose run --rm api suva import-classification
-data/results/classification_2026q2.jsonl` (likewise for `classification_2025q4_2026q1.jsonl`)
-and the summaries with `docker compose run --rm api suva import-summaries
-data/results/summaries_2026q2.jsonl`.
+With Docker: `cp .env.example .env`, fill in the `LLM_*` variables, then `docker compose up --build`
+serves on http://127.0.0.1:8000, with `./data` mounted as the database and corpus directory.
+The first start builds `data/suva.db` like `make load` (about 30 seconds); later starts reuse it.
+Any other command runs in the same container, e.g. `docker compose run --rm api suva summarize 8C_129/2025`.
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),

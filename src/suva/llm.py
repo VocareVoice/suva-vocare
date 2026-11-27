@@ -42,7 +42,7 @@ class LLMClient:
         self, settings: Settings | None = None, *, cache: bool = True, model: str | None = None
     ) -> None:
         self.settings = settings or get_settings()
-        self.model = model or self.settings.llm_name
+        self.model = model or self.settings.model
         self.cache_dir: Path | None = self.settings.llm_cache_dir if cache else None
         self._client: OpenAI | None = None
 

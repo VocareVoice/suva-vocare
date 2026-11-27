@@ -29,9 +29,6 @@ from suva.eval.glossary import load_glossary
 from suva.eval.metrics import citation_issues, contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message
 
-# Pinned like classify.MODEL, whatever LLM_NAME says: the thinking variant wrote no better
-# summaries.
-MODEL = "apertus-v1-5-70b"
 PROMPT_VERSION = "v6"
 HEADLINE_VERSION = "v3"
 LANGUAGES = ("de", "fr")

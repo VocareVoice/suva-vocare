@@ -68,8 +68,8 @@ degree of incapacity and daily allowances also come up, e.g. 4A_106/2025.
    (method `rule`), without reading the subject line. Division 9 also decides tax law (most of
    9D and 9F, part of 9C) and division 8 social assistance and public employment law; Apertus
    puts those rulings in `other`.
-3. **Apertus 70B for the social-law divisions.** The model is set in the code
-   (`classify.MODEL = "apertus-v1-5-70b"`, not the thinking variant), whatever `LLM_NAME` says.
+3. **Apertus 70B for the social-law divisions.** The results use `apertus-v1-5-70b` (not the
+   thinking variant), the model `LLM_NAME` names and the default when it is empty.
    The prompt holds the taxonomy, the matrix, the subject line with the branch and the categories
    it names, the most cited statutes, the outcome and the same ruling excerpt as triage (20,000
    characters here). The reply is constrained by a JSON schema

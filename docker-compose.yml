@@ -8,3 +8,21 @@ services:
         required: false
     volumes:
       - ./data:/app/data
+    # The first start builds data/suva.db from the corpus and the committed Apertus results,
+    # like `make load`; later starts reuse it. The build goes to a temporary file so that an
+    # interrupted first start is redone rather than served half loaded.
+    command:
+      - sh
+      - -ec
+      - |
+        if [ ! -e data/suva.db ]; then
+          rm -f data/suva.db.new*
+          export DB_PATH=data/suva.db.new
+          suva load
+          for f in data/results/triage_*.jsonl; do suva import-triage "$$f"; done
+          for f in data/results/classification_*.jsonl; do suva import-classification "$$f"; done
+          for f in data/results/summaries_*.jsonl; do suva import-summaries "$$f"; done
+          mv data/suva.db.new data/suva.db
+          unset DB_PATH
+        fi
+        exec suva serve --host 0.0.0.0 --port 8000
