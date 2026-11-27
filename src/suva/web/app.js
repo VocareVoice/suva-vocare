@@ -136,6 +136,7 @@ const I18N = {
     "f.summary.yes": "Vorhanden",
     "f.summary.no": "Fehlt",
     "f.reset": "Filter zurücksetzen",
+    "f.advanced": "Erweitert",
     "results": (n, t) => (n === t ? `${n.toLocaleString("de-CH")} Urteile` : `${n.toLocaleString("de-CH")} von ${t.toLocaleString("de-CH")} Urteilen`),
     "more": "Weitere anzeigen",
     "loading": "Lädt …",
@@ -365,6 +366,7 @@ const I18N = {
     "f.summary.yes": "Disponible",
     "f.summary.no": "Manquant",
     "f.reset": "Réinitialiser",
+    "f.advanced": "Avancé",
     "results": (n, t) => (n === t ? `${n.toLocaleString("fr-CH")} arrêts` : `${n.toLocaleString("fr-CH")} sur ${t.toLocaleString("fr-CH")} arrêts`),
     "more": "Afficher plus",
     "loading": "Chargement …",
@@ -576,6 +578,7 @@ export const ICONS = {
   downv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V4h3v10zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.3-6A2 2 0 0 1 6.3 4H17"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  chevron: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
 };
@@ -703,6 +706,7 @@ export const state = {
   // cache of last list response
   items: [], total: 0, sig: "", loaded: false, shown: 0,
   lastListHash: "#/",
+  advOpen: null, // "Erweitert" filters shown; null: open only when one of them is set
 };
 
 export const PERIODS = [
@@ -834,7 +838,12 @@ async function ensureItems() {
 }
 
 // Stats describe the period and search, independent of the triage/score filters.
+// Filters behind "Erweitert": score threshold, division, language, summary.
+const advancedCount = () => [state.min > 0, state.div, state.lang, state.sum].filter(Boolean).length;
+
 function listShell() {
+  const advN = advancedCount();
+  const advOpen = state.advOpen ?? advN > 0;
   const sel = (name, opts, val) =>
     `<select data-f="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   return `
@@ -877,6 +886,17 @@ function listShell() {
             .map(([v, l]) => `<button type="button" data-label="${v}" aria-pressed="${state.label === v}">${esc(l)}</button>`).join("")}
         </span>
       </span>
+      <span class="field">${esc(t("f.branch"))} <span id="branchSel"></span></span>
+      <span class="field">${esc(t("f.category"))} <span id="catSel"></span></span>
+      <span class="toolbar__spacer"></span>
+      <span class="toolbar__actions">
+      <button type="button" class="btn btn--ghost btn--sm advtoggle" id="advToggle" aria-expanded="${advOpen}" aria-controls="advRow">
+        ${esc(t("f.advanced"))}<span class="advtoggle__n" id="advCount"${advN ? "" : " hidden"}>${advN}</span>${ICONS.chevron}
+      </button>
+      <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
+      </span>
+    </div>
+    <div class="toolbar__row toolbar__row--adv" id="advRow"${advOpen ? "" : " hidden"}>
       <span class="field">${esc(t("f.minscore"))}
         <input type="range" min="0" max="100" step="5" data-f="min" value="${state.min}">
         <output class="num" id="minOut">${state.min}</output>
@@ -888,10 +908,6 @@ function listShell() {
       <span class="field">${esc(t("f.summary"))}
         ${sel("sum", [["", t("f.summary.all")], ["yes", t("f.summary.yes")], ["no", t("f.summary.no")]], state.sum)}
       </span>
-      <span class="field">${esc(t("f.branch"))} <span id="branchSel"></span></span>
-      <span class="field">${esc(t("f.category"))} <span id="catSel"></span></span>
-      <span class="toolbar__spacer"></span>
-      <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
     </div>
   </section>
   <section class="tablebox">
@@ -987,6 +1003,9 @@ async function renderList() {
 
   let loadingTimer;
   const reload = async (resetShown = true) => {
+    const n = advancedCount();
+    const badge = $("#advCount");
+    if (badge) { badge.textContent = n; badge.hidden = !n; }
     history.replaceState(null, "", listHash());
     state.lastListHash = listHash();
     if (resetShown) state.shown = SHOW_STEP;
@@ -1044,6 +1063,13 @@ async function renderList() {
       if (state.sort === key) state.dir = state.dir === "asc" ? "desc" : "asc";
       else { state.sort = key; state.dir = ["docket", "title", "category"].includes(key) ? "asc" : "desc"; }
       reload();
+      return;
+    }
+    const adv = e.target.closest("#advToggle");
+    if (adv) {
+      state.advOpen = adv.getAttribute("aria-expanded") !== "true";
+      adv.setAttribute("aria-expanded", state.advOpen);
+      $("#advRow").hidden = !state.advOpen;
       return;
     }
     if (e.target.id === "more") {
