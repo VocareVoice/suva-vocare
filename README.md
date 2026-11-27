@@ -107,10 +107,20 @@ insurance by its division.
 `export-classification` / `import-classification` work like their triage counterparts, and
 `data/results/classification_*.jsonl` hold the results for October 2025 to June 2026.
 
+The relevance list for the challenge's recall / F2 evaluation is in `deliverables/`:
+`uv run suva export-relevant deliverables/relevant_q2_2026 --from 2026-04-01 --to 2026-06-30`
+writes every ruling with a triage score of at least 28 (the cut-off that maximises F2 on the
+labelled period, `python -m suva.eval.cutoff`), highest score first, as one comma-separated line
+(`.txt`) and as a table (`.csv`); `--by publication` selects by publication date instead.
+`deliverables/README.md` explains the cut-off, the expected F2 and both variants.
+
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
 2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which
 caches raw downloads under `data/raw/` and replaces the corpus records in that date range.
+`uv run python -m suva.fetch.published --until 2026-07-03` then sets each record's
+`publication_date` from the mirror's crawl log (empty for rulings published after `--until`).
+The app and the `--from` / `--to` options select rulings by decision date.
 
 With Docker: `cp .env.example .env`, fill in the `LLM_*` variables, then `docker compose up --build`
 serves on http://127.0.0.1:8000, with `./data` mounted as the database and corpus directory.

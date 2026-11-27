@@ -33,6 +33,22 @@ def main() -> None:
     export.add_argument("--from", dest="date_from")
     export.add_argument("--to", dest="date_to")
 
+    export_rel = commands.add_parser(
+        "export-relevant",
+        help="write the rulings with a triage score of at least --min-score, highest score "
+        "first, as one comma-separated line of dockets (PATH.txt) and as a table (PATH.csv)",
+    )
+    export_rel.add_argument("path", type=Path, help="output path; .txt and .csv are added")
+    export_rel.add_argument("--min-score", type=int, default=triage.LIST_MIN_SCORE)
+    export_rel.add_argument("--from", dest="date_from", help="first date, YYYY-MM-DD")
+    export_rel.add_argument("--to", dest="date_to", help="last date, YYYY-MM-DD")
+    export_rel.add_argument(
+        "--by",
+        choices=("decision", "publication"),
+        default="decision",
+        help="date that --from and --to apply to (publication: python -m suva.fetch.published)",
+    )
+
     imp = commands.add_parser("import-triage", help="load triage results from export-triage")
     imp.add_argument("path", type=Path)
 
@@ -144,6 +160,16 @@ def main() -> None:
     elif args.command == "export-triage":
         count = db.export_triage(conn, args.path, date_from=args.date_from, date_to=args.date_to)
         print(f"Wrote {count} triage results to {args.path}")
+    elif args.command == "export-relevant":
+        count = db.export_relevant(
+            conn,
+            args.path,
+            min_score=args.min_score,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            by=f"{args.by}_date",
+        )
+        print(f"Wrote {count} rulings to {args.path.with_suffix('.txt')} and .csv")
     elif args.command == "import-triage":
         print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
     elif args.command == "classify":
