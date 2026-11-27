@@ -91,6 +91,7 @@ RULING_FIELDS = (
 
 # Latest triage row per ruling; triage and summaries keep history, newest id wins.
 _LATEST_TRIAGE = "t.id = (SELECT MAX(id) FROM triage WHERE docket = r.docket)"
+_HAS_SUMMARY = "(SELECT 1 FROM summaries s WHERE s.docket = r.docket)"
 
 
 def connect(path: Path | str) -> sqlite3.Connection:
@@ -136,64 +137,167 @@ def load_corpus(conn: sqlite3.Connection, path: Path | str) -> int:
     return count
 
 
+DEMO_PATH = Path(__file__).parent / "demo" / "rulings.json"
+DEMO_SOURCE = "demo"
+
+
+def load_demo(conn: sqlite3.Connection, path: Path | str = DEMO_PATH) -> int:
+    """(Re)load the demo seed: real rulings with hand-written triage and Suva's human
+    reference summaries, all marked with source "demo". Refuses to mix with a real corpus."""
+    real = conn.execute("SELECT COUNT(*) FROM rulings WHERE source IS NOT ?", (DEMO_SOURCE,))
+    if real.fetchone()[0]:
+        raise ValueError("database already holds non-demo rulings; use another DB_PATH")
+    records = json.loads(Path(path).read_text(encoding="utf-8"))
+    with conn:
+        conn.execute("DELETE FROM rulings")
+        for record in records:
+            upsert_ruling(conn, {**record, "source": DEMO_SOURCE})
+            docket = record["docket"]
+            if triage := record.get("triage"):
+                conn.execute(
+                    "INSERT INTO triage (docket, score, label, reasoning, model, prompt_version) "
+                    "VALUES (?, ?, ?, ?, 'demo', 'demo')",
+                    (docket, triage["score"], triage["label"], triage["reasoning"]),
+                )
+            for lang, text in record.get("summaries", {}).items():
+                conn.execute(
+                    "INSERT INTO summaries (docket, lang, text, model, prompt_version) "
+                    "VALUES (?, ?, ?, 'Suva-Referenz (Demo)', 'demo')",
+                    (docket, lang, text),
+                )
+    return len(records)
+
+
 def fts_query(text: str) -> str:
     """Turn free user input into a safe FTS5 query: every token must match, as a phrase."""
     tokens = text.split()
     return " ".join('"' + token.replace('"', '""') + '"' for token in tokens)
 
 
-def list_rulings(
-    conn: sqlite3.Connection,
+_DATE = "COALESCE(r.publication_date, r.decision_date)"
+_FROM = f"FROM rulings r LEFT JOIN triage t ON {_LATEST_TRIAGE}"
+
+
+def _filters(
     *,
     q: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
     min_score: int | None = None,
+    max_score: int | None = None,
     label: str | None = None,
-    sort: str = "score",
-    limit: int = 50,
-    offset: int = 0,
-) -> tuple[int, list[dict[str, Any]]]:
+    division: str | None = None,
+    language: str | None = None,
+    has_summary: bool | None = None,
+) -> tuple[str, list[Any]]:
+    """WHERE clause (or "") and parameters for the list filters, over `_FROM`."""
     where, params = [], []
     if q and q.strip():
         where.append("r.id IN (SELECT rowid FROM rulings_fts WHERE rulings_fts MATCH ?)")
         params.append(fts_query(q))
-    date = "COALESCE(r.publication_date, r.decision_date)"
-    if date_from:
-        where.append(f"{date} >= ?")
-        params.append(date_from)
-    if date_to:
-        where.append(f"{date} <= ?")
-        params.append(date_to)
-    if min_score is not None:
-        where.append("t.score >= ?")
-        params.append(min_score)
-    if label:
-        where.append("t.label = ?")
-        params.append(label)
+    for clause, value in [
+        (f"{_DATE} >= ?", date_from),
+        (f"{_DATE} <= ?", date_to),
+        ("t.score >= ?", min_score),
+        ("t.score <= ?", max_score),
+        ("t.label = ?", label),
+        ("r.division = ?", division),
+        ("r.language = ?", language),
+    ]:
+        if value is not None and value != "":
+            where.append(clause)
+            params.append(value)
+    if has_summary is not None:
+        where.append(f"{'' if has_summary else 'NOT '}EXISTS {_HAS_SUMMARY}")
+    return ("WHERE " + " AND ".join(where) if where else ""), params
 
-    order = {
-        "score": "t.score IS NULL, t.score DESC, r.decision_date DESC",
-        "date": f"{date} DESC, r.docket",
-    }[sort]
-    base = f"""
-        FROM rulings r
-        LEFT JOIN triage t ON {_LATEST_TRIAGE}
-        {"WHERE " + " AND ".join(where) if where else ""}
-    """
-    total = conn.execute(f"SELECT COUNT(*) {base}", params).fetchone()[0]
+
+# Docket order: year, division prefix, then number (8C_9/2025 before 8C_129/2025).
+_DOCKET_ORDER = (
+    "substr(r.docket, instr(r.docket, '/') + 1) {d}, "
+    "substr(r.docket, 1, instr(r.docket, '_') - 1) {d}, "
+    "CAST(substr(r.docket, instr(r.docket, '_') + 1) AS INTEGER) {d}"
+)
+SORTS = {
+    "score": "t.score IS NULL, t.score {d}, r.decision_date DESC",
+    "date": f"{_DATE} {{d}}, r.docket",
+    "docket": _DOCKET_ORDER,
+    "title": "r.title IS NULL, r.title COLLATE NOCASE {d}, t.score DESC",
+    "language": "r.language {d}, t.score DESC",
+    "summary": f"EXISTS {_HAS_SUMMARY} {{d}}, t.score DESC",
+}
+
+
+def list_rulings(
+    conn: sqlite3.Connection,
+    *,
+    sort: str = "score",
+    order: str = "desc",
+    limit: int = 50,
+    offset: int = 0,
+    **filters: Any,
+) -> tuple[int, list[dict[str, Any]]]:
+    """One page of rulings matching `filters` (see `_filters`), plus the total match count."""
+    where, params = _filters(**filters)
+    total = conn.execute(f"SELECT COUNT(*) {_FROM} {where}", params).fetchone()[0]
+    order_by = SORTS[sort].format(d="ASC" if order == "asc" else "DESC")
     rows = conn.execute(
         f"""
         SELECT r.docket, r.decision_date, r.publication_date, r.division, r.language,
-               r.title, r.url, t.score, t.label,
-               EXISTS (SELECT 1 FROM summaries s WHERE s.docket = r.docket) AS has_summary
-        {base}
-        ORDER BY {order}
+               r.title, r.url, t.score, t.label, t.reasoning,
+               EXISTS {_HAS_SUMMARY} AS has_summary,
+               (SELECT verdict FROM feedback f WHERE f.docket = r.docket
+                ORDER BY f.id DESC LIMIT 1) AS feedback_verdict
+        {_FROM} {where}
+        ORDER BY {order_by}
         LIMIT ? OFFSET ?
         """,
         [*params, limit, offset],
     ).fetchall()
     return total, [{**dict(row), "has_summary": bool(row["has_summary"])} for row in rows]
+
+
+def list_stats(conn: sqlite3.Connection, **filters: Any) -> dict[str, int]:
+    """Counts over every ruling matching `filters`, not just one page."""
+    where, params = _filters(**filters)
+    row = conn.execute(
+        f"""
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(t.label = 'relevant'), 0) AS relevant,
+               COALESCE(SUM(EXISTS {_HAS_SUMMARY}), 0) AS with_summary,
+               COALESCE(SUM(t.label = 'relevant' AND NOT EXISTS {_HAS_SUMMARY}), 0)
+                   AS relevant_without_summary
+        {_FROM} {where}
+        """,
+        params,
+    ).fetchone()
+    return dict(row)
+
+
+def facets(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Filter options for the UI: distinct divisions and languages with counts, date range."""
+
+    def counts(column: str) -> list[dict[str, Any]]:
+        rows = conn.execute(
+            f"SELECT {column} AS value, COUNT(*) AS count FROM rulings "
+            f"WHERE {column} IS NOT NULL GROUP BY {column} ORDER BY {column}"
+        )
+        return [dict(row) for row in rows]
+
+    date = "COALESCE(publication_date, decision_date)"
+    stats = conn.execute(
+        f"SELECT COUNT(*) AS total, MIN({date}) AS date_min, MAX({date}) AS date_max, "
+        "SUM(source = ?) > 0 AS demo FROM rulings",
+        (DEMO_SOURCE,),
+    ).fetchone()
+    return {
+        "total": stats["total"],
+        "date_min": stats["date_min"],
+        "date_max": stats["date_max"],
+        "demo": bool(stats["demo"]),
+        "divisions": counts("division"),
+        "languages": counts("language"),
+    }
 
 
 def get_ruling(conn: sqlite3.Connection, docket: str) -> dict[str, Any] | None:

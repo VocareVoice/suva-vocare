@@ -1,3 +1,5 @@
+import pytest
+
 from suva import db
 from tests.conftest import CORPUS
 
@@ -59,3 +61,16 @@ def test_sort_and_filter_by_latest_triage(conn):
 
     _, items = db.list_rulings(conn, date_from="2025-10-01", date_to="2025-10-31")
     assert dockets(items) == ["8C_129/2025"]
+
+
+def test_load_demo(tmp_path, conn):
+    demo = db.connect(tmp_path / "demo.db")
+    count = db.load_demo(demo)
+    assert count == db.load_demo(demo)
+    total, items = db.list_rulings(demo, limit=count)
+    assert total == count
+    assert all(item["score"] is not None for item in items)
+    assert any(item["has_summary"] for item in items)
+    assert db.facets(demo)["demo"] is True
+    with pytest.raises(ValueError):
+        db.load_demo(conn)

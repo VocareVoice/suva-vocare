@@ -50,23 +50,36 @@ def list_rulings(
     date_from: Annotated[str | None, Query(alias="from")] = None,
     date_to: Annotated[str | None, Query(alias="to")] = None,
     min_score: Annotated[int | None, Query(ge=0, le=100)] = None,
+    max_score: Annotated[int | None, Query(ge=0, le=100)] = None,
     label: Literal["relevant", "not_relevant"] | None = None,
-    sort: Literal["score", "date"] = "score",
+    division: str | None = None,
+    language: Literal["de", "fr", "it"] | None = None,
+    has_summary: bool | None = None,
+    sort: Literal["score", "date", "docket", "title", "language", "summary"] = "score",
+    order: Literal["asc", "desc"] = "desc",
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict[str, Any]:
+    filters = {
+        "q": q,
+        "date_from": date_from,
+        "date_to": date_to,
+        "min_score": min_score,
+        "max_score": max_score,
+        "label": label,
+        "division": division,
+        "language": language,
+        "has_summary": has_summary,
+    }
     total, items = db.list_rulings(
-        conn,
-        q=q,
-        date_from=date_from,
-        date_to=date_to,
-        min_score=min_score,
-        label=label,
-        sort=sort,
-        limit=limit,
-        offset=offset,
+        conn, sort=sort, order=order, limit=limit, offset=offset, **filters
     )
-    return {"total": total, "items": items}
+    return {"total": total, "items": items, "stats": db.list_stats(conn, **filters)}
+
+
+@app.get("/api/facets")
+def facets(conn: Conn) -> dict[str, Any]:
+    return db.facets(conn)
 
 
 def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
