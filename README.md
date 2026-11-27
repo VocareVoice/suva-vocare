@@ -48,6 +48,28 @@ LLM_BASE_URL — endpoint base URL
 LLM_API_KEY — your API key
 ```
 
+## Running it
+
+Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` to `.env` and fill in the three `LLM_*` variables.
+
+```sh
+make install   # uv sync
+make load      # ingest data/corpus/rulings.jsonl into data/suva.db
+make triage    # score every ruling not triaged yet (Apertus)
+make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
+make test      # pytest
+make lint      # ruff
+```
+
+`uv run suva summarize 8C_129/2025` summarises a single ruling in German and French.
+
+With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
+database and corpus directory. Load the corpus with `docker compose run --rm api suva load`.
+
+Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
+Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),
+`triage.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend).
+
 ## 📦 Submission Requirements & Deliverables
 
 The submission must:
