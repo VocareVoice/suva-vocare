@@ -2,9 +2,9 @@
 
 Stage 1 is a deterministic prior from the docket and the text (subject, division, statutes,
 Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call.
-Stage 2 asks Apertus for a relevance level and a German explanation, with the topics of Suva's
-example summaries and the lawyers' feedback as context. The score blends the level, weighted by
-its token probabilities, with the prior. Results and metrics: docs/eval_triage.md.
+Stage 2 asks Apertus for a relevance level and an explanation in German and in French, with the
+topics of Suva's example summaries as context. The score blends the level, weighted by its token
+probabilities, with the prior. Results and metrics: docs/eval_triage.md.
 """
 
 import json
@@ -18,22 +18,26 @@ from pathlib import Path
 from typing import Any, Literal
 
 from suva import db
+from suva.eval.metrics import contains_term, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 
-PROMPT_VERSION = "v3"
+PROMPT_VERSION = "v4"
 PREFILTER_MODEL = "prefilter"
 RELEVANCE_THRESHOLD = 50
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
 # Share of the final score that comes from the keyword prior rather than the LLM.
 PRIOR_WEIGHT = 0.3
+LANGUAGES = ("de", "fr")
+GLOSSARY_TERMS = 25
 
 
 @dataclass
 class TriageResult:
     score: int  # 0-100
     label: Literal["relevant", "not_relevant"]
-    reasoning: str
+    reasoning_de: str
+    reasoning_fr: str
     model: str | None = None
 
 
@@ -42,6 +46,7 @@ class Prior:
     score: int  # topical: how closely the ruling concerns accident insurance; filters for the LLM
     substance: int  # adjustment for how much law the ruling states; only used for ranking
     factors: list[str]
+    factors_fr: list[str]
 
     @property
     def ranking(self) -> int:
@@ -111,6 +116,19 @@ _SIMPLIFIED = _pattern(
     r"(?:la|il) President[ea] pronuncia",
 )
 _UPHELD = _pattern(r"gutgeheissen", r"\badmis\b", r"\baccolto\b")
+_PANEL = re.compile(
+    r"^(?:Besetzung|Composition|Composizione)\s*\n(.+?)(?:Gerichtsschreiber|Greffi|Cancellier|"
+    r"\n\s*(?:Verfahrensbeteiligte|Participants|Parti)\b)",
+    re.MULTILINE | re.DOTALL,
+)
+# Titles and roles around the judges' names in the panel block.
+_ROLE = re.compile(
+    r"Bundesrichter(?:in(?:nen)?)?|nebenamtliche[rn]?|präsi\w*\s+Mitglied|Präsident(?:in)?|"
+    r"Einzelrichter(?:in)?|\bals\b|\bM(?:mes?|M)?\b\.?|\bles?\b|\bla\b|Juges?\s+fédéra\w+|"
+    r"Juge\s+présidant\w*|\bJuges?\b|Présidente?|suppléant\w*|juge\s+unique|"
+    r"Giudic[ei]\s+federal[ei]|Giudice|President[ea]|supplente|giudice\s+unico",
+    re.IGNORECASE,
+)
 LONG_RULING_CHARS = 12_000
 
 _OPERATIVE = re.compile(r"^\s*(?:Demnach erkennt|Par ces motifs|Per questi motivi)", re.MULTILINE)
@@ -155,52 +173,63 @@ def subject(text: str) -> str:
     return " ".join(match.group(1).split()).rstrip(",") if match else ""
 
 
+def panel_size(rubrum: str) -> int | None:
+    """Number of judges on the panel: 3, or 5 for questions of principle (Art. 20 BGG)."""
+    match = _PANEL.search(rubrum)
+    if not match:
+        return None
+    names = re.split(r",|\n|\bund\b|\bet\b|\be\b|\.", _ROLE.sub(" ", match.group(1)))
+    return sum(bool(re.search(r"\w{2}", name)) for name in names)
+
+
 def prior(ruling: dict[str, Any]) -> Prior:
     """Cheap relevance prior from docket and text; it decides which rulings reach the LLM."""
     text = ruling.get("text") or ""
     sections = split_sections(text)
     subj = ruling.get("title") or subject(text)
-    score, substance, factors = 0, 0, []
+    score, substance, factors, factors_fr = 0, 0, [], []
 
-    def add(points: int, factor: str) -> None:
+    def add(points: int, factor: str, factor_fr: str) -> None:
         nonlocal score
         score += points
         factors.append(factor)
+        factors_fr.append(factor_fr)
 
-    def weigh(points: int, factor: str) -> None:
+    def weigh(points: int, factor: str, factor_fr: str) -> None:
         nonlocal substance
         substance += points
         factors.append(factor)
+        factors_fr.append(factor_fr)
 
     if ACCIDENT_INSURANCE.search(subj) or MVG.search(subj):
-        add(45, f"Gegenstand: {subj}")
+        add(45, f"Gegenstand: {subj}", f"Objet: {subj}")
     elif INVALIDITY_INSURANCE.search(subj):
-        add(25, f"Gegenstand: {subj}")
+        add(25, f"Gegenstand: {subj}", f"Objet: {subj}")
     division = (ruling.get("docket") or "")[:2]
     if points := DIVISION_PRIOR.get(division):
-        add(points, f"Abteilung {division}")
+        add(points, f"Abteilung {division}", f"cour {division}")
     if SUVA.search(sections.rubrum):
-        add(15, "Suva ist Partei")
+        add(15, "Suva ist Partei", "la Suva est partie")
     elif SUVA.search(text):
-        add(10, "Suva erwähnt")
+        add(10, "Suva erwähnt", "Suva mentionnée")
     if uvg := len(UVG.findall(text)):
-        add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)")
+        add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)", f"LAA/OLAA citées ({uvg} fois)")
     if MVG.search(text) and not MVG.search(subj):
-        add(10, "Militärversicherung erwähnt")
+        add(10, "Militärversicherung erwähnt", "assurance militaire mentionnée")
     if ACCIDENT_INSURANCE.search(text) and not ACCIDENT_INSURANCE.search(subj):
-        add(5, "Unfallversicherung erwähnt")
+        add(5, "Unfallversicherung erwähnt", "assurance-accidents mentionnée")
     if ATSG.search(text):
-        add(5, "ATSG zitiert")
+        add(5, "ATSG zitiert", "LPGA citée")
 
     if _INADMISSIBLE.search(sections.operative[:600]):
-        weigh(-20, "Nichteintreten oder Abschreibung")
+        weigh(-20, "Nichteintreten oder Abschreibung", "irrecevabilité ou radiation du rôle")
     elif _SIMPLIFIED.search(text):
-        weigh(-15, "vereinfachtes Verfahren")
+        weigh(-15, "vereinfachtes Verfahren", "procédure simplifiée")
     elif _UPHELD.search(sections.operative[:600]):
-        weigh(5, "Beschwerde (teilweise) gutgeheissen")
+        weigh(5, "Beschwerde (teilweise) gutgeheissen", "recours (partiellement) admis")
     if len(_clean(text)) >= LONG_RULING_CHARS:
-        weigh(10, "ausführlich begründet")
-    return Prior(score=min(score, 100), substance=substance, factors=factors)
+        weigh(10, "ausführlich begründet", "motivation détaillée")
+    return Prior(score=min(score, 100), substance=substance, factors=factors, factors_fr=factors_fr)
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
@@ -264,10 +293,23 @@ Bedeutung für die Unfallversicherung
 0-2 = kein Bezug zur Unfallversicherung oder rein prozessuale Erledigung (Nichteintreten, \
 Abschreibung, vereinfachtes Verfahren)
 
+Die Begründung schreibst du zweimal, als zwei Originale mit demselben Inhalt: auf Deutsch und \
+auf Französisch. Jede Fassung besteht aus zwei Sätzen: Der erste nennt den Versicherungszweig, \
+die Rolle des Versicherers und die Rechtsfrage, der zweite sagt, warum das Urteil für die Suva \
+relevant ist oder nicht. Jede Fassung verwendet die Fachbegriffe, Gesetzesabkürzungen und \
+Zitierweise ihrer Sprache (UVG/LAA, UVV/OLAA, ATSG/LPGA, IVG/LAI, BGG/LTF; "Art. 6 Abs. 2 UVG" / \
+"art. 6 al. 2 LAA") und ist keine wörtliche Übersetzung der anderen.
+
 Antworte nur mit einem JSON-Objekt in dieser Reihenfolge:
-{"reasoning": "<2-3 Sätze auf Deutsch, höchstens 70 Wörter: worum es geht und warum das Urteil \
-für die Suva relevant ist oder nicht>", "key_factors": ["<Stichwort>", ...], \
-"relevanz": <Stufe 0-9>}"""
+{"reasoning_de": "<zwei Sätze auf Deutsch>", "reasoning_fr": "<deux phrases en français>", \
+"key_factors": ["<Stichwort>", ...], "relevanz": <Stufe 0-9>}"""
+
+# Placed after the ruling: without it, the explanations run to four or five sentences.
+REMINDER = (
+    "Antworte jetzt mit dem JSON-Objekt. reasoning_de und reasoning_fr haben je höchstens drei "
+    "kurze Sätze (zusammen höchstens 60 Wörter pro Sprache)."
+)
+LANGUAGE_NAMES = {"de": "Deutsch", "fr": "Französisch"}
 
 
 def load_examples(path: Path) -> list[dict[str, Any]]:
@@ -283,6 +325,30 @@ def load_examples(path: Path) -> list[dict[str, Any]]:
     return [e for e in examples if e["docket"] in pool]
 
 
+def load_glossary(path: Path) -> dict[str, Any]:
+    """The DE/FR glossary (`glossary.json` next to the examples at `path`)."""
+    path = path.parent / "glossary.json"
+    if not path.exists():
+        return {"statutes": [], "terms": []}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def terminology(glossary: dict[str, Any], text: str) -> list[str]:
+    """DE = FR pairs of the glossary's statutes and terms that occur in `text`."""
+    statutes = [
+        f"{s['de']} = {s['fr']}"
+        for s in glossary["statutes"]
+        if s["de"] != s["fr"] and contains_term(text, [s["de"], s["fr"]])
+    ]
+    terms = [
+        t
+        for t in glossary["terms"]
+        if contains_term(text, term_forms(t, "de") + term_forms(t, "fr"))
+    ]
+    terms.sort(key=lambda t: -t.get("support", 0))
+    return statutes + [f"{t['de']} = {t['fr']}" for t in terms[:GLOSSARY_TERMS]]
+
+
 def _first_sentences(text: str, limit: int = 300) -> str:
     text = " ".join(text.split())
     if len(text) <= limit:
@@ -295,7 +361,7 @@ def build_messages(
     ruling: dict[str, Any],
     prior_: Prior,
     examples: list[dict[str, Any]],
-    feedback: list[dict[str, Any]],
+    glossary: dict[str, Any],
 ) -> list[Message]:
     parts = []
     # The ruling's own example summary is left out so the labelled period can be evaluated.
@@ -303,23 +369,16 @@ def build_messages(
     if shown:
         lines = "\n".join(f"- {e['docket']}: {_first_sentences(e['text_de'])}" for e in shown)
         parts.append(f"Beispiele früherer Urteile, die die Suva zusammengefasst hat:\n{lines}")
-    if feedback:
-        lines = "\n".join(
-            f"- {f['docket']} ({subject(f['text'] or '') or f['title'] or 'ohne Gegenstand'}): "
-            f"{'relevant' if f['verdict'] == 'relevant' else 'nicht relevant'}"
-            + (f", Score {f['corrected_score']}" if f["corrected_score"] is not None else "")
-            + (f". Kommentar: {f['comment']}" if f["comment"] else "")
-            for f in feedback
-        )
-        parts.append(
-            "Korrekturen der Juristinnen und Juristen der Suva an früheren Bewertungen "
-            f"(diese gehen deiner eigenen Einschätzung vor):\n{lines}"
-        )
+    text = excerpt(ruling.get("text") or "")
+    if terms := terminology(glossary, text):
+        lines = "\n".join(f"- {term}" for term in terms)
+        parts.append(f"Fachbegriffe Deutsch = Französisch für die Begründung:\n{lines}")
     parts.append(
         f"Zu bewertendes Urteil: {ruling['docket']} vom {ruling.get('decision_date') or '?'}\n"
         f"Hinweise aus der Vorprüfung: {', '.join(prior_.factors) or 'keine'}\n\n"
-        f"{excerpt(ruling.get('text') or '')}"
+        f"{text}"
     )
+    parts.append(REMINDER)
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": "\n\n".join(parts)},
@@ -348,6 +407,32 @@ def expected_level(logprobs: list[TokenLogprob] | None) -> float | None:
     return None
 
 
+_FUNCTION_WORDS = {
+    "de": re.compile(
+        r"\b(?:der|die|das|und|ist|nicht|ein|eine|einer|dem|den|zur|zum|mit|für|auf|sich|wird|"
+        r"werden|von|bei|auch|dass|nach|über|wurde|im)\b"
+    ),
+    "fr": re.compile(
+        r"\b(?:le|les|et|est|une|du|au|aux|pour|dans|que|qui|pas|sur|par|ne|été|sont|cette|ce|"
+        r"l|d|qu|il|elle)\b"
+    ),
+    "it": re.compile(r"\b(?:il|della|dei|degli|delle|che|non|per|con|sono|è|gli|nel|nella|alla)\b"),
+}
+
+
+def language(text: str) -> str | None:
+    """The language ("de", "fr" or "it") most of the text's function words belong to."""
+    counts = {lang: len(words.findall(text.lower())) for lang, words in _FUNCTION_WORDS.items()}
+    best = max(counts, key=counts.__getitem__)
+    return best if counts[best] >= 2 else None
+
+
+def _text(value: Any) -> str:
+    if isinstance(value, list):
+        value = " ".join(map(str, value))
+    return " ".join(str(value or "").split())
+
+
 def parse_result(
     data: Any, model: str | None, prior_score: int = 0, level: float | None = None
 ) -> TriageResult:
@@ -361,26 +446,33 @@ def parse_result(
         level = float(data["relevanz"])
     level = max(0.0, min(9.0, level))
     score = round(100 * ((1 - PRIOR_WEIGHT) * level / 9 + PRIOR_WEIGHT * prior_score / 100))
-    reasoning = data.get("reasoning") or ""
-    if isinstance(reasoning, list):
-        reasoning = " ".join(map(str, reasoning))
     return TriageResult(
         score=score,
         label="relevant" if score >= RELEVANCE_THRESHOLD else "not_relevant",
-        reasoning=" ".join(str(reasoning).split()),
+        reasoning_de=_text(data.get("reasoning_de")),
+        reasoning_fr=_text(data.get("reasoning_fr")),
         model=model,
     )
 
 
+def wrong_language(result: TriageResult) -> list[str]:
+    """The languages whose reasoning is missing or written in another language."""
+    return [lang for lang in LANGUAGES if language(getattr(result, f"reasoning_{lang}")) != lang]
+
+
 def prefiltered(prior_: Prior) -> TriageResult:
-    hints = ", ".join(prior_.factors) if prior_.factors else "keine"
     return TriageResult(
         score=prior_.score // 4,
         label="not_relevant",
-        reasoning=(
+        reasoning_de=(
             "In der Vorprüfung ausgeschieden: Das Urteil betrifft weder die Unfall- noch die "
             "Invaliden- oder Militärversicherung und hat zu wenig Bezug zur Suva oder zum UVG. "
-            f"Gefundene Hinweise: {hints}."
+            f"Gefundene Hinweise: {', '.join(prior_.factors) or 'keine'}."
+        ),
+        reasoning_fr=(
+            "Écarté lors de l'examen préliminaire: l'arrêt ne concerne ni l'assurance-accidents, "
+            "ni l'assurance-invalidité, ni l'assurance militaire et présente trop peu de lien "
+            f"avec la Suva ou la LAA. Indices relevés: {', '.join(prior_.factors_fr) or 'aucun'}."
         ),
         model=PREFILTER_MODEL,
     )
@@ -390,19 +482,36 @@ def triage_ruling(
     ruling: dict[str, Any],
     llm: LLMClient,
     examples: list[dict[str, Any]],
-    feedback: list[dict[str, Any]],
+    glossary: dict[str, Any],
 ) -> TriageResult:
     prior_ = prior(ruling)
     if prior_.score < PRIOR_CUTOFF:
         return prefiltered(prior_)
-    messages = build_messages(ruling, prior_, examples, feedback)
-    completion = llm.complete(messages, max_tokens=500, logprobs=True, top_logprobs=10)
-    return parse_result(
+    messages = build_messages(ruling, prior_, examples, glossary)
+    completion = llm.complete(messages, max_tokens=900, logprobs=True, top_logprobs=10)
+    result = parse_result(
         parse_json(completion.content),
         llm.model,
         prior_score=prior_.ranking,
         level=expected_level(completion.logprobs),
     )
+    if wrong := wrong_language(result):
+        # Ask once more for just the faulty fields; the level of the first answer stands.
+        fields = ", ".join(f'"reasoning_{lang}" auf {LANGUAGE_NAMES[lang]}' for lang in wrong)
+        retry = messages + [
+            {"role": "assistant", "content": completion.content},
+            {
+                "role": "user",
+                "content": f"Schreibe {fields} neu, mit demselben Inhalt. Antworte nur mit "
+                "einem JSON-Objekt mit diesen Feldern.",
+            },
+        ]
+        fixed = parse_json(llm.complete(retry, max_tokens=600).content)
+        for lang in wrong:
+            setattr(result, f"reasoning_{lang}", _text(fixed.get(f"reasoning_{lang}")))
+        if wrong := wrong_language(result):
+            raise ValueError(f"reasoning not written in {', '.join(wrong)}")
+    return result
 
 
 def triage(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> TriageResult:
@@ -410,8 +519,8 @@ def triage(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> TriageResul
     ruling = db.get_ruling(conn, docket)
     if ruling is None:
         raise KeyError(docket)
-    examples = load_examples(llm.settings.examples_path)
-    return triage_ruling(ruling, llm, examples, db.latest_feedback(conn))
+    path = llm.settings.examples_path
+    return triage_ruling(ruling, llm, load_examples(path), load_glossary(path))
 
 
 def triage_batch(
@@ -421,12 +530,12 @@ def triage_batch(
 
     A failed ruling yields its exception instead of stopping the batch; rerunning picks it up.
     """
-    examples = load_examples(llm.settings.examples_path)
-    feedback = db.latest_feedback(conn)
+    path = llm.settings.examples_path
+    examples, glossary = load_examples(path), load_glossary(path)
     rulings = [db.get_ruling(conn, docket) for docket in dockets]
     with ThreadPoolExecutor(workers) as pool:
         futures = {
-            pool.submit(triage_ruling, ruling, llm, examples, feedback): ruling["docket"]
+            pool.submit(triage_ruling, ruling, llm, examples, glossary): ruling["docket"]
             for ruling in rulings
             if ruling is not None
         }

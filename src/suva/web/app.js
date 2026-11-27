@@ -314,6 +314,9 @@ function rulingDivision(r) {
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
+// Triage explanation in the UI language; older results only have the German one.
+const reasoningText = (x) => (uiLang === "fr" && x?.reasoning_fr) || x?.reasoning_de || "";
+
 function band(score) {
   if (score == null) return "none";
   return score >= 70 ? "high" : score >= 40 ? "mid" : "low";
@@ -691,7 +694,7 @@ function renderTable() {
   };
   const terms = state.q.trim() ? state.q.trim().split(/\s+/) : [];
   const rows = items.slice(0, state.shown).map((r) => {
-    const reason = r.reasoning || r.reason || "";
+    const reason = reasoningText(r);
     const div = divisionCode(r.docket);
     return `<tr data-docket="${esc(r.docket)}" class="${band(r.score) === "low" ? "is-low" : ""}">
       <td class="c-score">${scoreBadge(r.score)}</td>
@@ -889,13 +892,14 @@ function relevanceCard(r) {
       </div>
       <div>
         <h3 class="card__title" style="margin-bottom:6px">${esc(t("r.reason"))}</h3>
-        <p class="reasoning">${highlight(tr.reasoning || "")}</p>
+        <p class="reasoning">${highlight(reasoningText(tr))}</p>
       </div>
       <div class="metaline">${tr.model ? `<span>${esc(t("m.model"))}: ${esc(tr.model)}</span>` : ""}${tr.prompt_version ? `<span>Prompt ${esc(tr.prompt_version)}</span>` : ""}${tr.created_at ? `<span>${esc(fmtDateTime(tr.created_at))}</span>` : ""}</div>
     </div>
   </section>`;
 }
 
+// Not rendered for now: lawyer feedback does not feed into the triage yet.
 function feedbackCard(r) {
   const hist = r.feedback || [];
   return `<section class="card feedback" id="feedbackCard">
@@ -1013,7 +1017,7 @@ async function renderDetail(docket, params) {
 
 function paintDetail(r, terms) {
   document.title = `${r.docket} · BGer-Monitor`;
-  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, r.triage?.reasoning, r.text);
+  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningText(r.triage), r.text);
   const div = divisionCode(r.docket);
   const tr = r.triage;
   app.innerHTML = `
@@ -1042,7 +1046,6 @@ function paintDetail(r, terms) {
       <aside class="daside">
         ${relevanceCard(r)}
         ${classificationCard(r.classification)}
-        ${feedbackCard(r)}
         ${statutesCard(statutes)}
         ${metaCard(r)}
       </aside>
@@ -1132,6 +1135,7 @@ function bindDetail(r, terms) {
 
   // Feedback
   const form = $("#fbForm");
+  if (!form) return;
   let verdict = null;
   const setVerdict = (v) => {
     verdict = v;

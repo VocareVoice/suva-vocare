@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS triage (
     docket TEXT NOT NULL REFERENCES rulings(docket) ON DELETE CASCADE,
     score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
     label TEXT NOT NULL CHECK (label IN ('relevant', 'not_relevant')),
-    reasoning TEXT NOT NULL,
+    reasoning_de TEXT NOT NULL,
+    reasoning_fr TEXT,
     model TEXT,
     prompt_version TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -124,7 +125,18 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
     conn.executescript(CLASSIFICATION_SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Bring databases created before the French triage explanation up to `SCHEMA`."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(triage)")}
+    with conn:
+        if "reasoning" in columns:
+            conn.execute("ALTER TABLE triage RENAME COLUMN reasoning TO reasoning_de")
+        if "reasoning_fr" not in columns:
+            conn.execute("ALTER TABLE triage ADD COLUMN reasoning_fr TEXT")
 
 
 def upsert_ruling(conn: sqlite3.Connection, ruling: dict[str, Any]) -> None:
@@ -177,9 +189,15 @@ def load_demo(conn: sqlite3.Connection, path: Path | str = DEMO_PATH) -> int:
             docket = record["docket"]
             if triage := record.get("triage"):
                 conn.execute(
-                    "INSERT INTO triage (docket, score, label, reasoning, model, prompt_version) "
-                    "VALUES (?, ?, ?, ?, 'demo', 'demo')",
-                    (docket, triage["score"], triage["label"], triage["reasoning"]),
+                    "INSERT INTO triage (docket, score, label, reasoning_de, reasoning_fr, model, "
+                    "prompt_version) VALUES (?, ?, ?, ?, ?, 'demo', 'demo')",
+                    (
+                        docket,
+                        triage["score"],
+                        triage["label"],
+                        triage["reasoning_de"],
+                        triage["reasoning_fr"],
+                    ),
                 )
             for lang, text in record.get("summaries", {}).items():
                 conn.execute(
@@ -278,7 +296,7 @@ def list_rulings(
     rows = conn.execute(
         f"""
         SELECT r.docket, r.decision_date, r.publication_date, r.division, r.language,
-               r.title, r.url, t.score, t.label, t.reasoning,
+               r.title, r.url, t.score, t.label, t.reasoning_de, t.reasoning_fr,
                EXISTS {_HAS_SUMMARY} AS has_summary,
                (SELECT verdict FROM feedback f WHERE f.docket = r.docket
                 ORDER BY f.id DESC LIMIT 1) AS feedback_verdict,
@@ -389,7 +407,8 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
     if ruling is None:
         return None
     triage = conn.execute(
-        "SELECT score, label, reasoning, model, prompt_version, created_at FROM triage "
+        "SELECT score, label, reasoning_de, reasoning_fr, model, prompt_version, created_at "
+        "FROM triage "
         "WHERE docket = ? ORDER BY id DESC LIMIT 1",
         (docket,),
     ).fetchone()
@@ -479,35 +498,35 @@ def untriaged_dockets(
     return [row["docket"] for row in rows]
 
 
-def latest_feedback(conn: sqlite3.Connection) -> list[dict[str, Any]]:
-    """The newest feedback per ruling, with the ruling's title and text."""
-    rows = conn.execute(
-        "SELECT f.docket, r.title, r.text, f.verdict, f.corrected_score, f.comment "
-        "FROM feedback f JOIN rulings r ON r.docket = f.docket "
-        "WHERE f.id = (SELECT MAX(id) FROM feedback WHERE docket = f.docket) ORDER BY f.id"
-    )
-    return [dict(row) for row in rows]
-
-
 def save_triage(
     conn: sqlite3.Connection,
     docket: str,
     *,
     score: int,
     label: str,
-    reasoning: str,
+    reasoning_de: str,
+    reasoning_fr: str | None,
     model: str | None,
     prompt_version: str | None,
 ) -> None:
     with conn:
         conn.execute(
-            "INSERT INTO triage (docket, score, label, reasoning, model, prompt_version) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (docket, score, label, reasoning, model, prompt_version),
+            "INSERT INTO triage (docket, score, label, reasoning_de, reasoning_fr, model, "
+            "prompt_version) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (docket, score, label, reasoning_de, reasoning_fr, model, prompt_version),
         )
 
 
-TRIAGE_FIELDS = ("docket", "score", "label", "reasoning", "model", "prompt_version", "created_at")
+TRIAGE_FIELDS = (
+    "docket",
+    "score",
+    "label",
+    "reasoning_de",
+    "reasoning_fr",
+    "model",
+    "prompt_version",
+    "created_at",
+)
 
 
 def export_triage(
@@ -541,16 +560,20 @@ def export_triage(
 
 def import_triage(conn: sqlite3.Connection, path: Path | str) -> int:
     """Load results written by `export_triage`. Rows for unknown rulings, or rulings that
-    already have a result of the same prompt version, are skipped."""
+    already have a result of the same prompt version, are skipped. Files from before the French
+    explanation carry the German one as `reasoning`."""
     count = 0
     with conn, open(path, encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
-            row = {field: json.loads(line).get(field) for field in TRIAGE_FIELDS}
+            record = json.loads(line)
+            record.setdefault("reasoning_de", record.get("reasoning"))
+            row = {field: record.get(field) for field in TRIAGE_FIELDS}
             cursor = conn.execute(
                 f"INSERT INTO triage ({', '.join(TRIAGE_FIELDS)}) "
-                "SELECT :docket, :score, :label, :reasoning, :model, :prompt_version, "
+                "SELECT :docket, :score, :label, :reasoning_de, :reasoning_fr, :model, "
+                ":prompt_version, "
                 "COALESCE(:created_at, datetime('now')) "
                 "WHERE EXISTS (SELECT 1 FROM rulings WHERE docket = :docket) "
                 "AND NOT EXISTS (SELECT 1 FROM triage WHERE docket = :docket "
