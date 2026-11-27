@@ -114,7 +114,6 @@ _SIMPLIFIED = _pattern(
     r"(?:la Présidente|le Président) prononce",
     r"(?:la|il) President[ea] pronuncia",
 )
-_UPHELD = _pattern(r"gutgeheissen", r"\badmis\b", r"\baccolto\b")
 _PANEL = re.compile(
     r"^(?:Besetzung|Composition|Composizione)\s*\n(.+?)(?:Gerichtsschreiber|Greffi|Cancellier|"
     r"\n\s*(?:Verfahrensbeteiligte|Participants|Parti)\b)",
@@ -130,6 +129,15 @@ _ROLE = re.compile(
 )
 LONG_RULING_CHARS = 12_000
 FIVE_JUDGES = 10
+# An invalidity insurance appeal by the IV office, the federal office (BSV) or a pension fund.
+# Insured persons appear anonymised ("A.________"), so a named appellant is an institution.
+INSURER_APPEAL = 15
+_APPELLANT = re.compile(
+    r"^(?:Verfahrensbeteiligte|Participants à la procédure|Parti)\s*\n(.+?)\n"
+    r"(?:gegen|contre|contro)\s*$",
+    re.MULTILINE | re.DOTALL,
+)
+_COUNSEL = re.compile(r"vertreten durch|représentée? par|patrocinat|rappresentat", re.IGNORECASE)
 
 _SUBJECT = re.compile(
     r"^\s*(?:Gegenstand|Objet|Oggetto)\s*\n(.+?)(?:\n\s*(?:Beschwerde|Recours|Ricorso|Revisionsgesuch|"
@@ -168,6 +176,12 @@ def panel_size(rubrum: str) -> int | None:
     return sum(bool(re.search(r"\w{2}", name)) for name in names)
 
 
+def insurer_appealed(rubrum: str) -> bool:
+    """The appellant of the party block is a named institution, not an anonymised person."""
+    match = _APPELLANT.search(rubrum)
+    return bool(match) and "____" not in _COUNSEL.split(match.group(1))[0]
+
+
 def prior(ruling: dict[str, Any]) -> Prior:
     """Cheap relevance prior from docket and text; it decides which rulings reach the LLM."""
     text = ruling.get("text") or ""
@@ -187,23 +201,28 @@ def prior(ruling: dict[str, Any]) -> Prior:
         factors.append(factor)
         factors_fr.append(factor_fr)
 
-    if ACCIDENT_INSURANCE.search(subj) or MVG.search(subj):
+    accident = bool(ACCIDENT_INSURANCE.search(subj) or MVG.search(subj))
+    invalidity = not accident and bool(INVALIDITY_INSURANCE.search(subj))
+    if accident:
         add(45, f"Gegenstand: {subj}", f"Objet: {subj}")
-    elif INVALIDITY_INSURANCE.search(subj):
+    elif invalidity:
         add(25, f"Gegenstand: {subj}", f"Objet: {subj}")
     division = (ruling.get("docket") or "")[:2]
     if points := DIVISION_PRIOR.get(division):
         add(points, f"Abteilung {division}", f"cour {division}")
-    if SUVA.search(sections.rubrum):
-        add(15, "Suva ist Partei", "la Suva est partie")
-    elif SUVA.search(text):
-        add(10, "Suva erwähnt", "Suva mentionnée")
-    if uvg := len(UVG.findall(text)):
-        add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)", f"LAA/OLAA citées ({uvg} fois)")
-    if MVG.search(text) and not MVG.search(subj):
-        add(10, "Militärversicherung erwähnt", "assurance militaire mentionnée")
-    if ACCIDENT_INSURANCE.search(text) and not ACCIDENT_INSURANCE.search(subj):
-        add(5, "Unfallversicherung erwähnt", "assurance-accidents mentionnée")
+    # Suva or accident insurance in the facts of an invalidity insurance ruling does not make it
+    # relevant: none of the 17 such rulings of Q4 2025 and Q1 2026 that name Suva is listed.
+    if not invalidity:
+        if SUVA.search(sections.rubrum):
+            add(15, "Suva ist Partei", "la Suva est partie")
+        elif SUVA.search(text):
+            add(10, "Suva erwähnt", "Suva mentionnée")
+        if uvg := len(UVG.findall(text)):
+            add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)", f"LAA/OLAA citées ({uvg} fois)")
+        if MVG.search(text) and not MVG.search(subj):
+            add(10, "Militärversicherung erwähnt", "assurance militaire mentionnée")
+        if ACCIDENT_INSURANCE.search(text) and not ACCIDENT_INSURANCE.search(subj):
+            add(5, "Unfallversicherung erwähnt", "assurance-accidents mentionnée")
     if ATSG.search(text):
         add(5, "ATSG zitiert", "LPGA citée")
 
@@ -211,12 +230,18 @@ def prior(ruling: dict[str, Any]) -> Prior:
         weigh(-20, "Nichteintreten oder Abschreibung", "irrecevabilité ou radiation du rôle")
     elif _SIMPLIFIED.search(text):
         weigh(-15, "vereinfachtes Verfahren", "procédure simplifiée")
-    elif _UPHELD.search(sections.operative[:600]):
+    elif classify.outcome(text) in ("upheld", "partly_upheld", "remanded"):
         weigh(5, "Beschwerde (teilweise) gutgeheissen", "recours (partiellement) admis")
     if len(clean(text)) >= LONG_RULING_CHARS:
         weigh(10, "ausführlich begründet", "motivation détaillée")
     if panel_size(sections.rubrum) == 5:
         weigh(FIVE_JUDGES, "Fünferbesetzung", "composition à cinq juges")
+    if invalidity and insurer_appealed(sections.rubrum):
+        weigh(
+            INSURER_APPEAL,
+            "Beschwerde der IV-Stelle, des BSV oder einer Vorsorgeeinrichtung",
+            "recours de l'office AI, de l'OFAS ou d'une institution de prévoyance",
+        )
     return Prior(score=min(score, 100), substance=substance, factors=factors, factors_fr=factors_fr)
 
 
