@@ -127,10 +127,18 @@ CREATE TABLE IF NOT EXISTS summary_proposals (
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'discarded')),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- The agent's knowledge (suva.agent.memory): one text, NULL for the default text.
+CREATE TABLE IF NOT EXISTS agent_knowledge (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    content TEXT,
+    updated_by TEXT NOT NULL DEFAULT 'default' CHECK (updated_by IN ('default', 'user', 'agent')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
-# prompt_version of a summary a user applied from an agent proposal. The summary pipeline never
-# overwrites these (see `dockets_to_summarize`).
+# prompt_version of a summary a user edited by hand or applied from an agent proposal. The
+# summary pipeline never overwrites these (see `dockets_to_summarize`).
 EDITED_VERSION = "edited"
 
 RULING_FIELDS = (
@@ -873,3 +881,24 @@ def apply_proposal(conn: sqlite3.Connection, proposal_id: int) -> dict[str, Any]
     )
     set_proposal_status(conn, proposal_id, "applied")
     return {**proposal, "status": "applied"}
+
+
+# ---------------------------------------------------------------- agent knowledge
+
+
+def get_knowledge(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    row = conn.execute(
+        "SELECT content, updated_by, updated_at FROM agent_knowledge WHERE id = 1"
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def save_knowledge(conn: sqlite3.Connection, content: str | None, *, updated_by: str) -> None:
+    """Store the agent's knowledge text; None means the default text."""
+    with conn:
+        conn.execute(
+            "INSERT INTO agent_knowledge (id, content, updated_by) VALUES (1, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET content = excluded.content, "
+            "updated_by = excluded.updated_by, updated_at = datetime('now')",
+            (content, updated_by),
+        )

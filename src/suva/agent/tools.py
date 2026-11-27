@@ -1,6 +1,7 @@
 """Tools of the side-panel agent. Each takes keyword arguments from the model's JSON call and
 returns plain text for the model to read. Lookups never write; `propose_summary` stores a
-proposal that changes nothing until the user applies it in the chat."""
+proposal that changes nothing until the user applies it in the chat; `update_memory` changes the
+agent's memory at once (the user sees the step and edits or resets it on the knowledge page)."""
 
 import json
 import sqlite3
@@ -9,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from suva import classify, db, laws
+from suva.agent import memory
 from suva.eval.metrics import citation_issues, word_count
 
 RULING_PAGE = 24_000  # characters of ruling text per read_ruling call
@@ -34,6 +36,18 @@ class Tool:
     signature: str
     description: str
     run: Callable[..., str]
+    parameters: dict[str, Any] = field(default_factory=dict)  # JSON schema of the arguments
+
+    def schema(self) -> dict[str, Any]:
+        """The tool as the OpenAI `tools` parameter declares it (native Apertus tool calling)."""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {"type": "object", "properties": {}, **self.parameters},
+            },
+        }
 
 
 def _require(value: Any, name: str) -> Any:
@@ -268,6 +282,35 @@ def propose_summary(
     return result
 
 
+# ---------------------------------------------------------------- memory
+
+# After saving, the model tended to go on researching the ruling open in the UI: stop it there.
+MEMORY_SAVED = (
+    "Er gilt ab der nächsten Frage. Hat der Benutzer nur um das Merken gebeten, bestätige ihm "
+    "jetzt in einem Satz, was du gespeichert hast, ohne weitere Tool-Aufrufe und ohne "
+    "Fallbeurteilung."
+)
+
+
+def update_memory(ctx: Context, content: str = "", mode: str = "append") -> str:
+    """Add to the agent's knowledge text or rewrite it."""
+    content = str(_require(content, "content")).strip()
+    if mode not in ("append", "replace"):
+        raise ToolError("mode muss «append» oder «replace» sein.")
+    old = memory.text(ctx.conn)
+    new = f"{old.rstrip()}\n\n{content}" if mode == "append" else content
+    if len(new) > memory.MAX_CONTENT:
+        raise ToolError(
+            f"Der Text würde zu lang (höchstens {memory.MAX_CONTENT} Zeichen, er kostet bei "
+            "jeder Frage Kontext). Fasse die Regel kürzer oder lass den Benutzer auf der Seite "
+            "«Agent-Wissen» kürzen."
+        )
+    memory.save(ctx.conn, new, updated_by="agent")
+    if mode == "append":
+        return f"Dein Wissen ist ergänzt. {MEMORY_SAVED}"
+    return f"Dein Wissen ist neu geschrieben. {MEMORY_SAVED}\n\nBisheriger Text:\n{old}"
+
+
 TOOLS: dict[str, Tool] = {
     tool.name: tool
     for tool in [
@@ -278,6 +321,14 @@ TOOLS: dict[str, Tool] = {
             '"UVG", "ATSG" oder "UVV" (ohne law: UVG), art die Nummer aus der Übersicht, '
             'z. B. "6" oder "1a". Nur für den Fall einschlägige Artikel.',
             read_article,
+            {
+                "properties": {
+                    "law": {"type": "string", "enum": list(laws.LAWS), "description": "Erlass"},
+                    "art": {"type": "string", "description": 'Artikelnummer, z. B. "6" oder "1a"'},
+                    "lang": {"type": "string", "enum": ["de", "fr"]},
+                },
+                "required": ["law", "art"],
+            },
         ),
         Tool(
             "list_rulings",
@@ -287,6 +338,17 @@ TOOLS: dict[str, Tool] = {
             "Stichwörter (alle müssen vorkommen), category: eine Kategorie aus der Liste, "
             "relevant_only=false: auch nicht relevante Urteile.",
             list_rulings,
+            {
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Stichwörter, alle müssen vorkommen",
+                    },
+                    "category": {"type": "string", "enum": list(classify.CATEGORIES)},
+                    "relevant_only": {"type": "boolean"},
+                    "limit": {"type": "integer"},
+                },
+            },
         ),
         Tool(
             "search_rulings",
@@ -294,6 +356,13 @@ TOOLS: dict[str, Tool] = {
             "Volltextsuche über den Text aller Urteile (auch nicht relevante), mit Textauszug. "
             "Wenige präzise Stichwörter, keine ganzen Sätze.",
             search_rulings,
+            {
+                "properties": {
+                    "query": {"type": "string", "description": "Wenige präzise Stichwörter"},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["query"],
+            },
         ),
         Tool(
             "read_ruling",
@@ -301,6 +370,16 @@ TOOLS: dict[str, Tool] = {
             "Ein Urteil lesen: Metadaten, aktuelle Zusammenfassungen DE/FR und der Urteilstext "
             f"in Abschnitten von {RULING_PAGE} Zeichen (weiter mit offset).",
             read_ruling,
+            {
+                "properties": {
+                    "docket": {
+                        "type": "string",
+                        "description": "Geschäftsnummer, z. B. 8C_129/2025",
+                    },
+                    "offset": {"type": "integer", "description": "Zeichen-Offset im Urteilstext"},
+                },
+                "required": ["docket"],
+            },
         ),
         Tool(
             "propose_summary",
@@ -309,6 +388,31 @@ TOOLS: dict[str, Tool] = {
             "Nur wenn der Benutzer darum bittet und nachdem du das Urteil mit read_ruling "
             "gelesen hast. Ändert nichts, bis der Benutzer den Vorschlag übernimmt.",
             propose_summary,
+            {
+                "properties": {
+                    "docket": {"type": "string"},
+                    "lang": {"type": "string", "enum": ["de", "fr"]},
+                    "text": {"type": "string", "description": "Die neue Zusammenfassung"},
+                    "rationale": {"type": "string", "description": "Was geändert wurde und warum"},
+                },
+                "required": ["docket", "lang", "text"],
+            },
+        ),
+        Tool(
+            "update_memory",
+            '{"content": "...", "mode": "append"}',
+            "Dein Wissen ändern: eine dauerhafte Vorgabe oder Vorliebe des Benutzers speichern. "
+            'mode "append" (Standard) hängt content am Ende an, "replace" ersetzt den ganzen '
+            "Text durch content. Nur wenn der Benutzer eine Vorgabe für künftige Antworten macht "
+            "oder dich bittet, dir etwas zu merken.",
+            update_memory,
+            {
+                "properties": {
+                    "content": {"type": "string", "description": "Der Text"},
+                    "mode": {"type": "string", "enum": ["append", "replace"]},
+                },
+                "required": ["content"],
+            },
         ),
     ]
 }

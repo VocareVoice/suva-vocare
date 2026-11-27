@@ -1,9 +1,11 @@
 // BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
 // Talks to the FastAPI JSON API in src/suva/api.py. The root view (relevant rulings by category)
-// lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js.
+// lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js,
+// the agent's knowledge page in knowledge.js.
 
-import { initAgent, paintAgent } from "./agent.js";
+import { askAgent, initAgent, paintAgent } from "./agent.js";
 import { branchLaw, buildRegister, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
+import { renderKnowledge } from "./knowledge.js";
 import { renderLaw } from "./law.js";
 import { loadKnowledgeBase, renderRelevant } from "./relevant.js";
 
@@ -13,6 +15,17 @@ const I18N = {
     "nav.rel": "Wissensbasis",
     "nav.all": "Alle Urteile",
     "nav.law": "Gesetze",
+    "nav.agent": "Agent-Wissen",
+    "mem.intro": "Dieser Text gilt für jede Antwort des Agenten, vor allem für Zusammenfassungen. Er geht bei jeder Frage mit, halten Sie ihn deshalb kurz. Standardmässig enthält er die wichtigsten Stilregeln der Suva-Zusammenfassungen; Sie können ihn frei ändern und jederzeit auf den Standard zurücksetzen. Bitten Sie den Agenten im Chat, sich etwas zu merken, ergänzt er den Text selbst.",
+    "mem.save": "Speichern",
+    "mem.undo": "Änderungen verwerfen",
+    "mem.reset": "Standard wiederherstellen",
+    "mem.saved": "Gespeichert",
+    "mem.status.default": "Standard",
+    "mem.status.dirty": "Nicht gespeicherte Änderungen",
+    "mem.by.agent": "Zuletzt vom Agenten geändert",
+    "mem.by.user": "Zuletzt von Hand geändert",
+    "mem.chars": (n, max) => `${n} von ${max} Zeichen`,
     "law.inforce": (d) => `Stand ${d}`,
     "law.filter": "Artikel oder Stichwort, z. B. 6 oder Heilbehandlung",
     "law.none": "Kein Artikel gefunden.",
@@ -41,6 +54,12 @@ const I18N = {
     "agent.step.read_ruling": (a) => `Urteil ${a.docket ?? ""} gelesen${a.offset ? " (Fortsetzung)" : ""}`,
     "agent.step.propose_summary": (a) => `Zusammenfassung ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) entworfen`,
     "agent.step.other": (name) => `Werkzeug ${name}`,
+    "agent.step.correction": "Antwort zurückgewiesen",
+    "agent.trace": (n, err) => `${n} Tool-Aufruf${n === 1 ? "" : "e"}${err ? ` · ${err} mit Fehler` : ""}`,
+    "agent.step.correction.format": "Tool-Aufruf ungültig, zurückgewiesen",
+    "agent.step.correction.json": "Antwort als JSON, zurückgewiesen",
+    "agent.step.correction.unseen": "Ungeprüfte Geschäftsnummern, zurückgewiesen",
+    "agent.step.correction.notool": "Kein Tool aufgerufen, zurückgewiesen",
     "agent.prop.title": (d, l) => `Vorschlag: neue Zusammenfassung ${l} für`,
     "agent.prop.apply": "Übernehmen",
     "agent.prop.discard": "Verwerfen",
@@ -48,6 +67,7 @@ const I18N = {
     "agent.prop.discarded": "Verworfen.",
     "agent.prop.current": "Bisherige Zusammenfassung",
     "agent.prop.none": "Noch keine Zusammenfassung.",
+    "agent.step.update_memory": (a) => `Agent-Wissen ${a.mode === "replace" ? "neu geschrieben" : "ergänzt"}`,
     "kb.empty": "Keine Urteile in der Wissensbasis",
     "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
     "brand.sub": "Rechtsprechung Unfallversicherung",
@@ -103,6 +123,18 @@ const I18N = {
     "d.words": (n) => `${n} Wörter`,
     "d.missing.lang": "Für diese Sprache liegt noch keine Zusammenfassung vor.",
     "d.regen": "Neu generieren",
+    "d.edit": "Bearbeiten",
+    "d.write": "Verfassen",
+    "d.writeOwn": "Selbst verfassen",
+    "d.edit.save": "Speichern",
+    "d.edit.cancel": "Abbrechen",
+    "d.edit.hint": "Absätze mit einer Leerzeile trennen.",
+    "d.edit.saved": "Zusammenfassung gespeichert",
+    "d.edit.err": "Speichern fehlgeschlagen",
+    "d.manual": "Von Hand bearbeitet",
+    "d.agentEdited": "Mit dem Agenten überarbeitet",
+    "d.askAgent": "Mit Agent überarbeiten",
+    "d.askAgent.prompt": (d) => `Überarbeite die Zusammenfassung von ${d} (DE und FR): `,
     "gen.title": "Noch keine Zusammenfassung",
     "gen.text": "Erstellen Sie eine deutsche und eine französische Zusammenfassung im Suva-Stil. Beide Fassungen werden eigenständig verfasst, nicht übersetzt.",
     "gen.btn": "Zusammenfassen",
@@ -128,6 +160,11 @@ const I18N = {
     "r.reason": "Begründung",
     "st.title": "Zitierte Normen",
     "st.none": "Keine Normen erkannt.",
+    "st.para": "Abs.",
+    "st.let": "lit.",
+    "pr.title": "Zitierte Leitentscheide",
+    "pr.prefix": "BGE",
+    "pr.open": "Auf bger.ch öffnen",
     "m.title": "Angaben",
     "m.docket": "Urteil",
     "m.subject": "Gegenstand",
@@ -153,6 +190,17 @@ const I18N = {
     "nav.rel": "Base de connaissances",
     "nav.all": "Tous les arrêts",
     "nav.law": "Lois",
+    "nav.agent": "Savoir de l'agent",
+    "mem.intro": "Ce texte vaut pour chaque réponse de l'agent, en particulier pour les résumés. Il accompagne chaque question, gardez-le donc court. Par défaut, il contient l'essentiel des règles de style des résumés de la Suva ; vous pouvez le modifier librement et le rétablir en tout temps. Si vous demandez à l'agent dans le chat de retenir quelque chose, il complète lui-même le texte.",
+    "mem.save": "Enregistrer",
+    "mem.undo": "Annuler les modifications",
+    "mem.reset": "Rétablir le standard",
+    "mem.saved": "Enregistré",
+    "mem.status.default": "Standard",
+    "mem.status.dirty": "Modifications non enregistrées",
+    "mem.by.agent": "Modifié en dernier par l'agent",
+    "mem.by.user": "Modifié en dernier à la main",
+    "mem.chars": (n, max) => `${n} sur ${max} caractères`,
     "law.inforce": (d) => `État le ${d}`,
     "law.filter": "Article ou mot-clé, p. ex. 6 ou traitement",
     "law.none": "Aucun article trouvé.",
@@ -181,6 +229,12 @@ const I18N = {
     "agent.step.read_ruling": (a) => `Arrêt ${a.docket ?? ""} lu${a.offset ? " (suite)" : ""}`,
     "agent.step.propose_summary": (a) => `Résumé ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) rédigé`,
     "agent.step.other": (name) => `Outil ${name}`,
+    "agent.step.correction": "Réponse renvoyée",
+    "agent.trace": (n, err) => `${n} appel${n === 1 ? "" : "s"} d'outil${err ? ` · ${err} en erreur` : ""}`,
+    "agent.step.correction.format": "Appel d'outil invalide, renvoyé",
+    "agent.step.correction.json": "Réponse en JSON, renvoyée",
+    "agent.step.correction.unseen": "Numéros de dossier non vérifiés, renvoyée",
+    "agent.step.correction.notool": "Aucun outil appelé, renvoyée",
     "agent.prop.title": (d, l) => `Proposition : nouveau résumé ${l} pour`,
     "agent.prop.apply": "Appliquer",
     "agent.prop.discard": "Rejeter",
@@ -188,6 +242,7 @@ const I18N = {
     "agent.prop.discarded": "Rejeté.",
     "agent.prop.current": "Résumé actuel",
     "agent.prop.none": "Pas encore de résumé.",
+    "agent.step.update_memory": (a) => `Savoir de l'agent ${a.mode === "replace" ? "réécrit" : "complété"}`,
     "kb.empty": "Aucun arrêt dans la base de connaissances",
     "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
     "brand.sub": "Jurisprudence assurance-accidents",
@@ -243,6 +298,18 @@ const I18N = {
     "d.words": (n) => `${n} mots`,
     "d.missing.lang": "Aucun résumé n'est encore disponible dans cette langue.",
     "d.regen": "Régénérer",
+    "d.edit": "Modifier",
+    "d.write": "Rédiger",
+    "d.writeOwn": "Rédiger soi-même",
+    "d.edit.save": "Enregistrer",
+    "d.edit.cancel": "Annuler",
+    "d.edit.hint": "Séparer les paragraphes par une ligne vide.",
+    "d.edit.saved": "Résumé enregistré",
+    "d.edit.err": "L'enregistrement a échoué",
+    "d.manual": "Modifié à la main",
+    "d.agentEdited": "Révisé avec l'agent",
+    "d.askAgent": "Réviser avec l'agent",
+    "d.askAgent.prompt": (d) => `Révise le résumé de ${d} (DE et FR) : `,
     "gen.title": "Pas encore de résumé",
     "gen.text": "Générez un résumé en allemand et en français dans le style de la Suva. Les deux versions sont rédigées séparément, et non traduites.",
     "gen.btn": "Résumer",
@@ -268,6 +335,11 @@ const I18N = {
     "r.reason": "Motivation",
     "st.title": "Normes citées",
     "st.none": "Aucune norme détectée.",
+    "st.para": "al.",
+    "st.let": "let.",
+    "pr.title": "Arrêts de principe cités",
+    "pr.prefix": "ATF",
+    "pr.open": "Ouvrir sur bger.ch",
     "m.title": "Informations",
     "m.docket": "Arrêt",
     "m.subject": "Objet",
@@ -436,6 +508,7 @@ export const API = {
   list: (params) => api(`/api/rulings?${new URLSearchParams(params)}`),
   detail: (docket) => api(`/api/rulings/${docketPath(docket)}`),
   summarize: (docket) => api(`/api/rulings/${docketPath(docket)}/summarize`, { method: "POST" }),
+  saveSummary: (docket, lang, text) => api(`/api/rulings/${docketPath(docket)}/summaries/${lang}`, { method: "PUT", body: JSON.stringify({ text }) }),
 };
 
 // ---------------------------------------------------------------- classification
@@ -447,7 +520,9 @@ function classChips(c, size = "chip--sm") {
 }
 
 // ---------------------------------------------------------------- statutes
-// Recognise citations such as "Art. 73 lit. b UVV", "art. 6 al. 1 LAA", "Art. 16 ATSG".
+// The cited statutes and precedents come with the classification (`classification.statutes`,
+// `classification.precedents`). This pattern only marks citations in the text, so a statute chip
+// can jump to its first occurrence: "Art. 73 lit. b UVV", "art. 6 al. 1 LAA", "Art. 16 ATSG".
 const LAWS = ["UVG", "LAA", "UVV", "OLAA", "ATSG", "LPGA", "ATSV", "OPGA", "IVG", "LAI", "IVV", "RAI", "AHVG", "LAVS",
   "BVG", "LPP", "KVG", "LAMal", "MVG", "LAM", "VVG", "LCA", "OR", "CO", "ZGB", "CC", "BV", "Cst\\.", "BGG", "LTF", "VwVG", "PA", "EMRK", "CEDH", "SVG", "LCR"];
 const LAW_PAIRS = { LAA: "UVG", OLAA: "UVV", LPGA: "ATSG", OPGA: "ATSV", LAI: "IVG", RAI: "IVV", LAVS: "AHVG", LPP: "BVG",
@@ -458,27 +533,6 @@ const CITE_RE = new RegExp(
   String.raw`\s+(?:des\s+|de\s+la\s+|du\s+|de\s+l')?(${LAWS.join("|")})(?![\wÀ-ÿ])`,
   "g",
 );
-function extractStatutes(...texts) {
-  const found = new Map();
-  for (const text of texts) {
-    if (!text) continue;
-    for (const m of text.matchAll(CITE_RE)) {
-      const law = m[3];
-      const canon = LAW_PAIRS[law] || law;
-      const key = `${canon} ${m[1].replace(/\s+/g, "")}`;
-      const e = found.get(key) || { law: canon, art: m[1].replace(/\s+/g, " "), forms: new Set(), count: 0 };
-      e.forms.add(m[0]); e.count++;
-      found.set(key, e);
-    }
-  }
-  const order = ["UVG", "UVV", "ATSG", "ATSV", "IVG", "IVV"];
-  return [...found.values()].sort((a, b) => {
-    const la = order.indexOf(a.law), lb = order.indexOf(b.law);
-    if (a.law !== b.law) return (la < 0 ? 99 : la) - (lb < 0 ? 99 : lb) || a.law.localeCompare(b.law);
-    return parseInt(a.art) - parseInt(b.art);
-  });
-}
-
 // Escape text, then mark statute citations and search terms.
 export function highlight(text, terms = []) {
   let html = esc(text);
@@ -574,7 +628,7 @@ function markNav() {
   const { path, params } = readHash();
   const onDetail = path.startsWith("/r/");
   const [refPath, refQuery = ""] = (onDetail ? state.lastListHash.slice(1) : `${path}?${params}`).split("?");
-  const section = refPath.startsWith("/all") ? "all" : refPath.startsWith("/law") ? "law" : "kb";
+  const section = refPath.startsWith("/all") ? "all" : refPath.startsWith("/law") ? "law" : refPath === "/agent" ? "agent" : "kb";
   const branch = section === "kb" ? new URLSearchParams(refQuery).get("branch") || "" : "";
   $$("[data-nav]").forEach((a) => {
     const on = a.dataset.nav === section && !(section === "kb" && branch) && !onDetail;
@@ -592,6 +646,9 @@ async function route() {
   markNav();
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
+  } else if (path === "/agent") {
+    state.lastListHash = location.hash;
+    await renderKnowledge(resetListeners());
   } else if (path.startsWith("/law")) {
     state.lastListHash = location.hash;
     await renderLaw(path.split("/")[2] || "uvg", params, resetListeners());
@@ -867,16 +924,29 @@ function plainExport(r) {
 
 let summaryView = localStorage.getItem("summaryView") || "both";
 
-function summaryBlock(r) {
+const PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+
+/** Who wrote the summary: the pipeline, the user by hand, or the user with the agent. */
+function originChip(sum) {
+  const icon = (svg) => svg.replace("<svg", '<svg width="13" height="13"');
+  if (sum.model === "manual") return `<span class="chip">${icon(PENCIL)}${esc(t("d.manual"))}</span>`;
+  if (sum.model === "agent") return `<span class="chip chip--accent">${icon(ICONS.spark)}${esc(t("d.agentEdited"))}</span>`;
+  return `<span class="chip chip--accent">${icon(ICONS.spark)}${esc(t("d.ai"))}</span>`;
+}
+
+function summaryBlock(r, writeOwn = false) {
   const s = r.summaries || {};
-  const has = s.de || s.fr;
+  const has = s.de || s.fr || writeOwn;
   if (!has) {
     return `<section class="card" id="summaryCard">
       <div class="card__head"><h2 class="card__title">${esc(t("d.summary"))}</h2></div>
       <div class="generate" id="generate">
         <h3>${esc(t("gen.title"))}</h3>
         <p>${esc(t("gen.text"))}</p>
-        <button type="button" class="btn btn--primary" id="genBtn">${ICONS.spark}${esc(t("gen.btn"))}</button>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <button type="button" class="btn btn--primary" id="genBtn">${ICONS.spark}${esc(t("gen.btn"))}</button>
+          <button type="button" class="btn" id="writeOwnBtn">${PENCIL}${esc(t("d.writeOwn"))}</button>
+        </p>
       </div>
     </section>`;
   }
@@ -885,11 +955,14 @@ function summaryBlock(r) {
     return `<article class="summary" lang="${lang}">
       <div class="summary__lang">
         <h3>${esc(t(`d.text.${lang}`))}</h3>
-        ${sum ? `<button type="button" class="btn btn--ghost btn--sm" data-copy="${lang}" title="${esc(t("d.copy"))}">${ICONS.copy}${esc(t("d.copy"))}</button>` : ""}
+        <span class="summary__tools">
+          <button type="button" class="btn btn--ghost btn--sm" data-edit="${lang}">${PENCIL}${esc(t(sum ? "d.edit" : "d.write"))}</button>
+          ${sum ? `<button type="button" class="btn btn--ghost btn--sm" data-copy="${lang}" title="${esc(t("d.copy"))}">${ICONS.copy}${esc(t("d.copy"))}</button>` : ""}
+        </span>
       </div>
       ${sum
         ? `<div class="summary__text">${sum.text.split(/\n\s*\n/).map((p) => `<p>${highlight(p.trim())}</p>`).join("")}</div>
-           <div class="summary__meta"><span class="chip chip--accent">${ICONS.spark.replace("<svg", '<svg width="13" height="13"')}${esc(t("d.ai"))}</span>
+           <div class="summary__meta">${originChip(sum)}
              <span>${esc(t("d.words", wordCount(sum.text)))}</span></div>`
         : `<p class="summary--missing">${esc(t("d.missing.lang"))}</p>`}
     </article>`;
@@ -909,6 +982,7 @@ function summaryBlock(r) {
       <span style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="btn btn--sm" data-copy="all">${ICONS.copy}${esc(t("d.copyAll"))}</button>
         <button type="button" class="btn btn--sm" id="exportBtn">${ICONS.down}${esc(t("d.export"))}</button>
+        <button type="button" class="btn btn--sm" id="askAgentBtn">${ICONS.spark}${esc(t("d.askAgent"))}</button>
         <button type="button" class="btn btn--ghost btn--sm" id="regenBtn">${ICONS.spark}${esc(t("d.regen"))}</button>
       </span>
     </div>
@@ -967,12 +1041,35 @@ function classificationCard(c, hideRationale = false) {
   </section>`;
 }
 
+// Statutes as the classification lists them, in its order (UVG, UVV, ATSG first):
+// {law, art, count, details?: [{para, let, count}]}. The paragraphs and letters go in the tooltip.
+const times = (n) => (n > 1 ? ` ×${n}` : "");
+function statuteDetail(d) {
+  return [d.para && `${t("st.para")} ${d.para}`, d.let && `${t("st.let")} ${d.let}`].filter(Boolean).join(" ") + times(d.count);
+}
 function statutesCard(statutes) {
   return `<section class="card">
     <div class="card__head"><h2 class="card__title">${esc(t("st.title"))}</h2></div>
     <div class="card__body">${statutes.length
-      ? `<div class="statutes">${statutes.map((s) => `<button type="button" class="chip" data-goto="${esc(s.law + " " + s.art.replace(/\s+/g, ""))}" title="${esc([...s.forms].join(", "))}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`).join("")}</div>`
+      ? `<div class="statutes">${statutes.map((s) => {
+        const title = [`Art. ${s.art} ${s.law}`, ...(s.details || []).map(statuteDetail)].join("\n");
+        return `<button type="button" class="chip" data-goto="${esc(s.law + " " + String(s.art).replace(/\s+/g, ""))}" title="${esc(title)}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`;
+      }).join("")}</div>`
       : `<p class="muted" style="margin:0">${esc(t("st.none"))}</p>`}</div>
+  </section>`;
+}
+
+// Cited leading decisions (BGE / ATF), e.g. {ref: "134 V 109", count: 2}; each opens on bger.ch.
+function bgeUrl(ref) {
+  const lang = uiLang === "fr" ? "fr" : "de";
+  return `https://search.bger.ch/ext/eurospider/live/${lang}/php/clir/http/index.php?highlight_docid=atf%3A%2F%2F${encodeURIComponent(ref.trim().replace(/\s+/g, "-"))}%3A${lang}&lang=${lang}&type=show_document`;
+}
+function precedentsCard(precedents) {
+  if (!precedents?.length) return "";
+  return `<section class="card">
+    <div class="card__head"><h2 class="card__title">${esc(t("pr.title"))}</h2></div>
+    <div class="card__body"><div class="statutes">${precedents.map((p) =>
+      `<a class="chip" href="${esc(bgeUrl(p.ref))}" target="_blank" rel="noopener" title="${esc(t("pr.open"))}">${esc(t("pr.prefix"))} ${esc(p.ref)}${p.count > 1 ? ` <span class="muted">×${p.count}</span>` : ""}</a>`).join("")}</div></div>
   </section>`;
 }
 
@@ -1038,7 +1135,6 @@ const fromAllRulings = () => state.lastListHash.startsWith("#/all");
 
 function paintDetail(r, terms) {
   document.title = `${r.docket} – BGer-Monitor`;
-  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningOf(r.triage), r.text);
   app.innerHTML = `
     <header class="dhead">
       <div class="dhead__id">
@@ -1062,32 +1158,81 @@ function paintDetail(r, terms) {
         ${fromAllRulings() ? relevanceCard(r) : ""}
         ${metaCard(r)}
         ${classificationCard(r.classification, headlineIsRationale(r))}
-        ${statutesCard(statutes)}
+        ${statutesCard(r.classification?.statutes || [])}
+        ${precedentsCard(r.classification?.precedents)}
       </aside>
     </div>`;
   bindDetail(r, terms);
 }
 
-function bindDetail(r, terms) {
+/** Open the editor for the summary in `lang`, in place of its text. */
+function editSummary(r, lang, terms) {
+  const art = $(`#summaryCard .summary[lang="${lang}"]`);
+  if (!art) return;
+  const current = r.summaries?.[lang]?.text || "";
+  art.innerHTML = `<div class="summary__lang"><h3>${esc(t(`d.text.${lang}`))}</h3></div>
+    <textarea class="summary__edit" spellcheck="true" lang="${lang}">${esc(current)}</textarea>
+    <div class="summary__editbar">
+      <span class="muted" data-words>${esc(t("d.words", wordCount(current)))} · ${esc(t("d.edit.hint"))}</span>
+      <span style="display:flex;gap:8px">
+        <button type="button" class="btn btn--ghost btn--sm" data-edit-cancel>${esc(t("d.edit.cancel"))}</button>
+        <button type="button" class="btn btn--primary btn--sm" data-edit-save>${esc(t("d.edit.save"))}</button>
+      </span>
+    </div>`;
+  const ta = $("textarea", art);
+  const fit = () => { ta.style.height = "auto"; ta.style.height = `${ta.scrollHeight + 2}px`; };
+  fit();
+  ta.focus();
+  ta.addEventListener("input", () => {
+    fit();
+    $("[data-words]", art).textContent = `${t("d.words", wordCount(ta.value))} · ${t("d.edit.hint")}`;
+  });
+  $("[data-edit-cancel]", art).addEventListener("click", () => repaintSummary(r, terms));
+  $("[data-edit-save]", art).addEventListener("click", async (e) => {
+    const text = ta.value.trim();
+    if (!text) { ta.focus(); return; }
+    e.currentTarget.disabled = true;
+    try {
+      const updated = await API.saveSummary(r.docket, lang, text);
+      toast(t("d.edit.saved"));
+      Object.assign(r, updated);
+      repaintSummary(r, terms);
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      toast(`${t("d.edit.err")}: ${err.message}`);
+    }
+  });
+}
+
+function repaintSummary(r, terms, writeOwn = false) {
+  $("#summaryCard").outerHTML = summaryBlock(r, writeOwn);
+  bindSummary(r, terms);
+}
+
+/** Listeners inside the summary card, which is re-rendered on its own. */
+function bindSummary(r, terms) {
   const on = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
+  const card = $("#summaryCard");
 
   // Summary tabs
-  $$("[data-view]").forEach((b) => b.addEventListener("click", () => {
+  $$("[data-view]", card).forEach((b) => b.addEventListener("click", () => {
     summaryView = b.dataset.view;
     localStorage.setItem("summaryView", summaryView);
-    $("#summaryCard").outerHTML = summaryBlock(r);
-    bindDetail(r, terms);
+    repaintSummary(r, terms);
   }));
-  $$("[data-copy]").forEach((b) => b.addEventListener("click", () => {
+  $$("[data-copy]", card).forEach((b) => b.addEventListener("click", () => {
     const l = b.dataset.copy;
     copyText(l === "all" ? plainExport(r) : r.summaries[l].text);
   }));
-  on("#exportBtn", () => download(`${r.docket.replace("/", "_")}_Zusammenfassung.html`, suvaExport(r)));
-  on("#printBtn", () => {
-    const body = $("#origBody");
-    body?.classList.remove("original__collapsed");
-    window.print();
+  $$("[data-edit]", card).forEach((b) => b.addEventListener("click", () => editSummary(r, b.dataset.edit, terms)));
+  on("#writeOwnBtn", () => {
+    const lang = r.language === "fr" ? "fr" : "de";
+    if (summaryView !== "both") summaryView = lang;
+    repaintSummary(r, terms, true);
+    editSummary(r, lang, terms);
   });
+  on("#askAgentBtn", () => askAgent(t("d.askAgent.prompt", r.docket)));
+  on("#exportBtn", () => download(`${r.docket.replace("/", "_")}_Zusammenfassung.html`, suvaExport(r)));
 
   // Summarise on demand
   const runSummarize = async () => {
@@ -1128,6 +1273,16 @@ function bindDetail(r, terms) {
   };
   on("#genBtn", runSummarize);
   on("#regenBtn", runSummarize);
+}
+
+function bindDetail(r, terms) {
+  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
+  bindSummary(r, terms);
+  on("#printBtn", () => {
+    const body = $("#origBody");
+    body?.classList.remove("original__collapsed");
+    window.print();
+  });
 
   // Original text toggle
   on("#origToggle", (e) => {
@@ -1137,10 +1292,14 @@ function bindDetail(r, terms) {
     if (collapsed) $("#original").scrollIntoView({ behavior: "smooth" });
   });
 
-  // Statute chips jump to first citation in the original text
+  // Statute chips jump to first citation in the original text. A statute the text marker does not
+  // recognise (a law outside LAWS, an unusual citation form) has nowhere to jump to.
+  const citeFor = (key) => $$(`#original .cite`).find((c) => c.dataset.cite === key) || $$(".cite").find((c) => c.dataset.cite === key);
+  $$("[data-goto]").forEach((b) => {
+    if (!citeFor(b.dataset.goto)) b.classList.add("chip--static");
+  });
   $$("[data-goto]").forEach((b) => b.addEventListener("click", () => {
-    const key = b.dataset.goto;
-    const target = $$(`#original .cite`).find((c) => c.dataset.cite === key) || $$(".cite").find((c) => c.dataset.cite === key);
+    const target = citeFor(b.dataset.goto);
     if (!target) return;
     $("#origBody")?.classList.remove("original__collapsed");
     const tg = $("#origToggle"); if (tg) tg.textContent = t("o.less");
