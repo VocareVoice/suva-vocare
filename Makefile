@@ -16,11 +16,8 @@ classify:
 run:
 	uv run suva serve
 
-test:
-	uv run pytest
-
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-.PHONY: install load triage classify run test lint
+.PHONY: install load triage classify run lint
