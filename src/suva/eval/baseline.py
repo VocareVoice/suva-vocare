@@ -282,7 +282,7 @@ def run_classify(args: argparse.Namespace, llm: MeteredClient) -> None:
 
 def write_blind(args: argparse.Namespace) -> None:
     """A reading packet with the two models' summaries as sides A and B, drawn at random per
-    ruling, and the key in a separate file to open after the reading."""
+    ruling, and the key next to the packet's directory, to open after the reading."""
     sides = [score_summaries.load_generated(p) for p in (args.first, args.second)]
     holdout = load_split()["holdout"]
     rulings = score_classification.load_rulings()
@@ -303,8 +303,9 @@ def write_blind(args: argparse.Namespace) -> None:
                 text = sides[index].get((docket, lang), "(not generated)")
                 lines += [f"### {label} ({lang})", "", text, ""]
     (args.out / "packet.md").write_text("\n".join(lines), encoding="utf-8")
-    (args.out / "key.json").write_text(json.dumps(key, indent=2), encoding="utf-8")
-    print(f"Wrote {args.out / 'packet.md'}; key in {args.out / 'key.json'}")
+    key_path = args.out.with_name(f"{args.out.name}-key.json")
+    key_path.write_text(json.dumps({"seed": args.seed, "sides": key}, indent=2), encoding="utf-8")
+    print(f"Wrote {args.out / 'packet.md'}; key in {key_path}")
 
 
 def usage(out: Path) -> str:
