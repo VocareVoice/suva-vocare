@@ -213,6 +213,7 @@ def test_llm_classification_passes_the_schema_and_hints():
     assert result.outcome == "dismissed"
     messages, params = llm.calls[0]
     assert params["response_format"]["json_schema"]["schema"]["properties"]["branch"]["enum"]
+    assert "Vom Gegenstand genannter Zweig: uv" in messages[1]["content"]
     assert "Vom Gegenstand genannte Kategorie: adaequate-kausalitaet" in messages[1]["content"]
     assert "Art. 6 UVG" in messages[1]["content"]
 
@@ -236,11 +237,24 @@ def test_llm_classification_falls_back_to_the_subject_after_invalid_replies():
     assert (result.method, result.primary) == ("subject", "natuerliche-kausalitaet")
 
 
-def test_prefiltered_rulings_never_reach_the_llm(conn):
+def test_rulings_outside_the_social_law_divisions_never_reach_the_llm(conn):
     llm = FakeLLM({"branch": "uv", "primary": "andere", "secondary": []})
     result = classify.classify(conn, "4A_106/2025", llm)
     assert llm.calls == []
-    assert (result.branch, result.method) == ("other", "rule")
+    assert (result.branch, result.primary, result.secondary, result.method) == (
+        "other",
+        "andere",
+        [],
+        "rule",
+    )
+    assert result.statutes == classify.facts(db.get_ruling(conn, "4A_106/2025")).statutes
+
+
+def test_every_social_law_ruling_reaches_the_llm():
+    llm = FakeLLM({"branch": "iv", "primary": "verfahren", "secondary": []})
+    r = ruling(docket="9F_1/2026", title="Revision", first="Das Revisionsgesuch wird abgewiesen.")
+    assert classify.classify_ruling(r, llm).method == "llm"
+    assert len(llm.calls) == 1
 
 
 def save(conn, docket, **values):
