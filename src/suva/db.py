@@ -588,15 +588,14 @@ def dockets_to_summarize(
     date_from: str | None = None,
     date_to: str | None = None,
     table: Literal["summaries", "headlines"] = "summaries",
+    limit: int | None = None,
 ) -> list[str]:
-    """Rulings whose latest triage score is at least `min_score` and that have no summary (or
-    headline) of `prompt_version` and no summary a user edited, highest score first."""
-    where = [
-        "t.score >= ?",
-        f"NOT EXISTS (SELECT 1 FROM {table} s WHERE s.docket = r.docket "
-        "AND s.prompt_version IN (?, ?))",
-    ]
-    params: list[Any] = [min_score, prompt_version, EDITED_VERSION]
+    """Rulings among the `limit` highest-scored with a latest triage score of at least
+    `min_score` that have no summary (or headline) of `prompt_version` and no summary a user
+    edited, highest score first. The top N are taken before the skip, so a rerun after a new
+    triage only writes what the new top N lacks."""
+    where = ["t.score >= ?"]
+    params: list[Any] = [min_score]
     date = "COALESCE(r.publication_date, r.decision_date)"
     if date_from:
         where.append(f"{date} >= ?")
@@ -604,9 +603,12 @@ def dockets_to_summarize(
     if date_to:
         where.append(f"{date} <= ?")
         params.append(date_to)
+    params += [-1 if limit is None else limit, prompt_version, EDITED_VERSION]
     rows = conn.execute(
-        f"SELECT r.docket FROM rulings r JOIN triage t ON {_LATEST_TRIAGE} "
-        f"WHERE {' AND '.join(where)} ORDER BY t.score DESC, r.docket",
+        f"SELECT docket FROM (SELECT r.docket, t.score FROM rulings r JOIN triage t "
+        f"ON {_LATEST_TRIAGE} WHERE {' AND '.join(where)} ORDER BY t.score DESC, r.docket "
+        f"LIMIT ?) r WHERE NOT EXISTS (SELECT 1 FROM {table} s WHERE s.docket = r.docket "
+        "AND s.prompt_version IN (?, ?)) ORDER BY score DESC, docket",
         params,
     )
     return [row["docket"] for row in rows]

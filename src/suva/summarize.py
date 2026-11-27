@@ -12,6 +12,8 @@ operative part. A one-line headline per language is written from the extracted c
 import json
 import re
 import sqlite3
+from bisect import bisect_left
+from collections import Counter
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
@@ -21,6 +23,7 @@ from string import Template
 from typing import NamedTuple
 
 from suva import db
+from suva.config import get_settings
 from suva.eval.examples import EXAMPLES_PATH, SPLIT_PATH, load_split, read_jsonl
 from suva.eval.glossary import load_glossary
 from suva.eval.metrics import citation_issues, contains_term, foreign_statutes, term_forms
@@ -29,8 +32,8 @@ from suva.llm import LLMClient, Message
 # Pinned like classify.MODEL, whatever LLM_NAME says: the thinking variant wrote no better
 # summaries.
 MODEL = "apertus-v1-5-70b"
-PROMPT_VERSION = "v2"
-HEADLINE_VERSION = "v2"
+PROMPT_VERSION = "v6"
+HEADLINE_VERSION = "v3"
 LANGUAGES = ("de", "fr")
 LANGUAGE_NAMES = {"de": "German", "fr": "French", "it": "Italian"}
 PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -42,7 +45,7 @@ CHUNK_SIZE = 40_000
 # summary, 8C_613/2025, is in the evaluation hold-out and therefore not used.
 STYLE_EXAMPLES = ("8C_7/2025", "8C_172/2025")
 LENGTH = {"de": "150 to 200 words, about 180", "fr": "160 to 220 words, about 190"}
-MAX_WORDS = {"de": 230, "fr": 250}
+MAX_WORDS = {"de": 200, "fr": 220}
 FIVE_JUDGES = {"de": "Fünfer-Entscheid.", "fr": "Décision à cinq."}
 HEADLINE_WORDS = 12
 # The prompt asks for 12 words; a remand on two points needs a few more, French more than German.
@@ -139,7 +142,7 @@ APPELLANTS = {
     ),
     "iv": ("the IV office", "der IV-Stelle", "de l'office AI", r"IV-Stelle|office AI"),
     "insurer": (
-        "an accident insurer other than Suva",
+        "the accident insurer",
         "des Unfallversicherers",
         "de l'assureur-accidents",
         r"Beschwerde des Unfallversicherers|recours de l.assureur",
@@ -199,6 +202,8 @@ class Case:
     operative: str  # first point of the operative part
     result: str | None  # key of OUTCOMES
     suva_party: bool = False  # Suva is a party, so the summary may name it
+    # The ruling cites the Italian IV ordinance as OAI, which in French is also the IV office.
+    oai_ordinance: bool = False
     holdings: str = ""  # the Court's conclusions, consideration by consideration
 
 
@@ -261,6 +266,7 @@ def prepare_case(ruling: dict, sections: dict[str, str], llm: LLMClient) -> Case
         operative=operative,
         result=result(operative),
         suva_party=bool(re.search(SUVA, parties(sections["header"]))),
+        oai_ordinance=bool(re.search(r"\d\w*(?:\s+cpv\.\s*\d+)?\s+OAI\b", sections["reasons"])),
     )
     # Writing from a list of the Court's conclusions keeps the model from merging
     # considerations (8C_185/2025: "duty to notify violated" became "not violated").
@@ -302,7 +308,8 @@ def summarize_ruling(ruling: dict, llm: LLMClient) -> Result:
     # Suva flags five-judge rulings (questions of principle); the bench is in the header.
     five = five_judges(sections["header"])
     texts = {
-        lang: clean(summaries[lang], lang) + (f"\n\n{FIVE_JUDGES[lang]}" if five else "")
+        lang: superscripts(clean(fit(llm, lang, summaries[lang]), lang), lang)
+        + (f"\n\n{FIVE_JUDGES[lang]}" if five else "")
         for lang in LANGUAGES
     }
     return Result(texts, titles)
@@ -343,26 +350,119 @@ def review(llm: LLMClient, case: Case, system: Message, lang: str, draft: str) -
             break
         text = revise(llm, case, system, lang, text, issues)
         issues = [i for i in form_issues(text, case, lang) if not i.startswith("The summary has")]
-    for _ in range(2):
+    return shorten(llm, system, lang, text) or draft
+
+
+def shorten(llm: LLMClient, system: Message, lang: str, text: str) -> str:
+    """Cut a summary over MAX_WORDS. A shorter version that lost the paragraphs or the
+    consideration references is drawn again with some sampling: at temperature 0 the same
+    request gives the same answer, and stopping there left French summaries at 265 to 299
+    words."""
+    rejected = False
+    for _ in range(4):
         words = len(text.split())
         if words <= MAX_WORDS[lang]:
             break
         task = (
-            f"This summary has {words} words. Shorten it to {LENGTH[lang]}. Cut in this "
-            "order: dates and amounts the result does not turn on, procedural history, the "
-            "cantonal court's reasoning, repetitions. Keep the paragraphs separated by blank "
-            "lines, the legal principles, the decisive reasons, the consideration references "
-            f"and the closing outcome sentence. Output only the shortened {LANGUAGE_NAMES[lang]} "
-            f"summary.\n\n{text}"
+            f"This summary has {words} words. Shorten it to {LENGTH[lang]}, at most "
+            f"{MAX_WORDS[lang]} words. Cut in this order: dates and amounts the result does not "
+            "turn on, procedural history, the cantonal court's reasoning, repetitions. Keep at "
+            "least three paragraphs separated by blank lines (facts and cantonal court, Federal "
+            "Supreme Court, outcome), the legal principles, the decisive reasons, the "
+            "consideration references and the closing outcome sentence. Output only the "
+            f"shortened {LANGUAGE_NAMES[lang]} summary.\n\n{text}"
         )
-        reply = llm.chat([system, {"role": "user", "content": task}], max_tokens=1500)
+        reply = llm.chat(
+            [system, {"role": "user", "content": task}],
+            max_tokens=1500,
+            temperature=0.4 if rejected else 0.0,
+        )
         shorter = clean(reply, lang)
-        if (consideration_refs(text) and not consideration_refs(shorter)) or paragraphs(
+        rejected = (consideration_refs(text) and not consideration_refs(shorter)) or paragraphs(
             shorter
-        ) < min(3, paragraphs(text)):
+        ) < min(3, paragraphs(text))
+        if not rejected:
+            text = shorter
+    return text
+
+
+def fit(llm: LLMClient, lang: str, text: str) -> str:
+    """The final text cut by whole sentences when the rewrites left it too long: Apertus often
+    returned the text unchanged (8C_718/2025 stayed at 250 words through every rewrite)."""
+    for _ in range(2):
+        if len(text.split()) <= MAX_WORDS[lang]:
             break
-        text = shorter
-    return text or draft
+        text = drop_sentences(llm, lang, text)
+    return text
+
+
+# A sentence ends at ".", ";" or "!" before a capital, but not after an abbreviation ("St.
+# Gallen", "Dr. med.").
+_SENTENCE_END = re.compile(
+    r"(?<!\bSt\.)(?<!\bDr\.)(?<!\bNr\.)(?<!\bvgl\.)(?<=[.!])\s+(?=[A-ZÀ-ÝÄÖÜ«\"])"
+)
+
+
+def drop_sentences(llm: LLMClient, lang: str, text: str) -> str:
+    """Delete whole sentences, least needed first by the model's ranking, until the summary
+    fits. Asked for sentences to delete, the model named half of them (8C_718/2025 fell to 88
+    words). The first sentence of each paragraph, the cantonal court's decision, the
+    principles the Court recalls, the closing outcome paragraph, the last sentence of a
+    paragraph and the last consideration reference stay."""
+    paras = [_SENTENCE_END.split(p.strip()) for p in text.split("\n\n") if p.strip()]
+    numbered = [(i, sentence) for i, para in enumerate(paras) for sentence in para]
+    words = len(text.split())
+    listed = "\n".join(f"[{n}] {sentence}" for n, (_, sentence) in enumerate(numbered, 1))
+    task = (
+        f"This {LANGUAGE_NAMES[lang]} case-law summary has {words} words, numbered by sentence "
+        f"below. Rank all sentences from the least to the most needed for Suva's lawyers: least "
+        "needed are dates and amounts the result does not turn on, procedural history, the "
+        "cantonal court's reasoning and repetitions; most needed are the legal principles, the "
+        f"decisive reasons and the outcome.\n\n{listed}\n\nAnswer with JSON only: "
+        '{"order": [<all sentence numbers, least needed first>]}'
+    )
+    try:
+        reply = llm.chat_json([{"role": "user", "content": task}], max_tokens=300)
+    except ValueError:
+        return text
+    order = reply.get("order") if isinstance(reply, dict) else None
+    ranking = [n - 1 for n in order or [] if isinstance(n, int) and 0 < n <= len(numbered)]
+    deleted: set[int] = set()
+    for n in dict.fromkeys(ranking):
+        if words <= MAX_WORDS[lang]:
+            break
+        i, sentence = numbered[n]
+        rest = [m for m, (k, _) in enumerate(numbered) if k == i and m not in deleted | {n}]
+        protected = (
+            sentence == paras[i][0]
+            or i == len(paras) - 1
+            or (i == 0 and re.search(r"kantonal|Kantonsgericht|Vorinstanz|cantonal|Cour", sentence))
+            or not rest
+            or re.search(r"\berinner|\brappel", sentence)
+            or (
+                consideration_refs(sentence)
+                and not any(
+                    consideration_refs(numbered[m][1])
+                    for m in range(len(numbered))
+                    if m not in deleted | {n}
+                )
+            )
+        )
+        if not protected:
+            deleted.add(n)
+            words -= len(sentence.split())
+    kept: list[list[str]] = [[] for _ in paras]
+    for n, (i, sentence) in enumerate(numbered):
+        if n in deleted:
+            continue
+        # The deleted sentence before named the Court ("Das Bundesgericht ...").
+        court_before = n - 1 in deleted and re.match(
+            r"(?:Das Bundesgericht|Le Tribunal fédéral)\b", numbered[n - 1][1]
+        )
+        if court_before and sentence.startswith(("Es ", "Il ")):
+            sentence = _COURT_NAMES[sentence[:2]] + sentence[3:]
+        kept[i].append(sentence)
+    return "\n\n".join(" ".join(para) for para in kept if para)
 
 
 def finish(llm: LLMClient, case: Case, system: Message, lang: str, text: str) -> str:
@@ -370,6 +470,8 @@ def finish(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
     issues = [i for i in form_issues(text, case, lang) if not i.startswith("The summary has")]
     if issues:
         text = revise(llm, case, system, lang, text, issues)
+    # The revisions above and the consistency fix lengthen the text again.
+    text = shorten(llm, system, lang, text)
     if names := sorted(set(_NAMES.findall(text))):
         task = (
             f"{case.source}\n\n---\nSummary:\n\n{text}\n\n---\nReplace each of these anonymised "
@@ -382,7 +484,54 @@ def finish(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
         renamed = clean(reply, lang)
         if not _NAMES.search(renamed) and len(renamed.split()) >= 0.8 * len(text.split()):
             text = renamed
+    text = fix_copied_words(text, case.source, lang)
+    if case.oai_ordinance:
+        text = fix_ordinance(text, lang)
+    if not case.suva_party:
+        # From the prompt's former "an accident insurer other than Suva" (8C_63/2026).
+        text = re.sub(r" (?:autre que la Suva|als die Suva)\b", "", text)
     return fix_outcome(fix_court_sentences(text, case, lang), case, lang)
+
+
+def fix_ordinance(text: str, lang: str) -> str:
+    """OAI for the IV ordinance becomes RAI / IVV: the model kept the Italian abbreviation
+    without an article number ("la révision de l'OAI", 8C_254/2025)."""
+    if lang == "de":
+        return re.sub(r"\bOAI\b", "IVV", text)
+    text = re.sub(r"\b([Dd])e l['’]OAI\b", r"\1u RAI", text)
+    text = re.sub(r"(\b[Àà]) l['’]OAI\b", lambda m: "Au RAI" if m[1] == "À" else "au RAI", text)
+    text = re.sub(r"\b([Ll])['’]OAI\b", r"\1e RAI", text)
+    return re.sub(r"\bOAI\b", "RAI", text)
+
+
+def fix_copied_words(text: str, source: str, lang: str) -> str:
+    """Words of the ruling copied with a letter too many or too few ("Beimmann" for the
+    occupation "Beimann", 8C_343/2025): a word of six letters or more that neither the ruling
+    nor the corpus contains, where the ruling has exactly one word that differs by one letter
+    before the last three (so inflected endings are never touched)."""
+    known = {word.lower(): word for word in re.findall(r"[^\W\d_]{5,}", source)}
+    shorter: dict[str, set[str]] = {}
+    for word in known:
+        for i in range(1, len(word) - 3):
+            shorter.setdefault(word[:i] + word[i + 1 :], set()).add(word)
+
+    def repair(match: re.Match) -> str:
+        word = match[0]
+        lowered = word.lower()
+        if lowered in known or is_known(lowered, vocabulary(lang), compounds=False):
+            return word
+        candidates = set(shorter.get(lowered, ()))
+        candidates |= {
+            lowered[:i] + lowered[i + 1 :]
+            for i in range(1, len(lowered) - 3)
+            if lowered[:i] + lowered[i + 1 :] in known
+        }
+        if len(candidates) != 1:
+            return word
+        fixed = known[candidates.pop()]
+        return (fixed[0].upper() if word[0].isupper() else fixed[0].lower()) + fixed[1:]
+
+    return re.sub(r"[^\W\d_]{6,}", repair, text)
 
 
 def contradicts(sentence: str, case: Case) -> bool:
@@ -394,6 +543,9 @@ def contradicts(sentence: str, case: Case) -> bool:
         if key != case.appellant and pattern
     )
     return bool(case.result) and (result(sentence) not in (None, case.result) or other_party)
+
+
+_COURT_NAMES = {"Es": "Das Bundesgericht ", "Il": "Le Tribunal fédéral "}
 
 
 def fix_court_sentences(text: str, case: Case, lang: str) -> str:
@@ -408,7 +560,20 @@ def fix_court_sentences(text: str, case: Case, lang: str) -> str:
     for sentence in _COURT_DECIDES.findall(text):
         if sentence[0].isupper() and contradicts(sentence, case):
             text = text.replace(sentence, stated)
-    return text
+    # The outcome belongs to the closing sentence only; a bare "Das Bundesgericht heisst die
+    # Beschwerde der Suva gut." before the reasons repeated it (8C_254/2025).
+    body = text[: text.rfind("\n\n")] if "\n\n" in text else ""
+    for sentence in _COURT_DECIDES.findall(body):
+        short = sentence[0].isupper() and len(sentence.split()) <= 15
+        if short and result(sentence) == case.result and not contradicts(sentence, case):
+            # The next sentence's "Es" / "Il" referred to the Court.
+            text = re.sub(
+                re.escape(sentence) + r" ?(?:(Es|Il) )?",
+                lambda m: _COURT_NAMES.get(m[1], ""),
+                text,
+                count=1,
+            )
+    return re.sub(r" +\n", "\n", re.sub(r"\n{3,}", "\n\n", text)).strip()
 
 
 def paragraphs(text: str) -> int:
@@ -431,6 +596,10 @@ def fix_outcome(text: str, case: Case, lang: str) -> str:
         if key != case.appellant and pattern
     )
     if result(closing) == case.result and not other_party and not _COSTS_WORDS.search(closing):
+        before = text[:start].rstrip() if start is not None else ""
+        # The outcome is a paragraph of its own (8C_686/2025 had two paragraphs).
+        if start is not None and start > last and before.endswith((".", ")")):
+            return f"{before}\n\n{text[start:]}"
         return text
     kept = text[:start].rstrip() if start is not None else text.rstrip()
     return f"{kept}\n\n{expected}" if kept else expected
@@ -550,14 +719,27 @@ def headline(
         f"{outcome}\n\nThe Court's conclusions, consideration by consideration:\n{case.holdings}"
     )
     request = f"{context}\n\n---\n{task}"
+    usable = None
     for attempt in range(3):
         messages: list[Message] = [{"role": "user", "content": request}]
         # Some sampling on the corrections: at temperature 0 the model kept the same draft.
         reply = llm.chat(messages, max_tokens=100, temperature=0.4 if attempt else 0.0)
         text = clean_headline(reply, lang)
-        issues = headline_issues(text, lang)
-        if not issues:
+        if case.oai_ordinance:
+            text = fix_ordinance(text, lang)
+        issues = headline_issues(text, lang, procedural=case.result == "inadmissible")
+        # Words the corpus does not know are asked about, but a legitimate rare word (an
+        # occupation, a German compound) must not cost the headline.
+        unknown = unknown_words(text, lang)
+        if not issues and not unknown:
             return text
+        if not issues:
+            usable = usable or text
+        issues += [
+            f'"{word}" is not a {LANGUAGE_NAMES[lang]} legal term; use the established '
+            "term (see Terminology)."
+            for word in unknown
+        ]
         # A fresh request rather than a follow-up turn: in a conversation the model repeated
         # its overlong headline unchanged.
         listed = "\n".join(f"- {issue}" for issue in issues)
@@ -565,7 +747,7 @@ def headline(
             f"{context}\n\n---\n{task}\n\nThis draft headline breaks the rules:\n{text}\n"
             f"Problems:\n{listed}\nWrite a new headline of at most {HEADLINE_WORDS} words."
         )
-    return None
+    return usable
 
 
 def clean_headline(text: str, lang: str) -> str:
@@ -600,7 +782,17 @@ _HEADLINE_DATE = re.compile(
 )
 
 
-def headline_issues(text: str, lang: str) -> list[str]:
+# Procedural wording a headline leaves out: who appealed and how the appeal ended.
+_PROCEDURAL = re.compile(
+    r"\bBeschwerde\w* (?:\w+ )?(?:abgewiesen|gutgeheissen)|\bBeschwerde(?:führer|gegner)\w*"
+    r"|\bVorinstanz|\brecours (?:\w+ )?(?:rejeté|admis)\b|\b(?:Rejet|Admission) du recours"
+    r"|\b(?:recourante?|intimée?)\b|\barrêt cantonal",
+    re.I,
+)
+
+
+def headline_issues(text: str, lang: str, *, procedural: bool = False) -> list[str]:
+    """Rule violations of a headline; `procedural` allows the procedure (inadmissible appeals)."""
     if not text:
         return ["The headline is empty."]
     issues = []
@@ -624,7 +816,56 @@ def headline_issues(text: str, lang: str) -> list[str]:
     other = "fr" if lang == "de" else "de"
     if sum(t in _MARKERS[other] for t in tokens) > sum(t in _MARKERS[lang] for t in tokens):
         issues.append(f"Write the headline in {LANGUAGE_NAMES[lang]}.")
+    if not procedural and (found := _PROCEDURAL.search(text)):
+        issues.append(
+            f'Leave out the procedure ("{found[0]}"): state the legal point the Court decided.'
+        )
     return issues + term_issues(text, lang)
+
+
+def unknown_words(text: str, lang: str) -> list[str]:
+    """Words of a headline that no two rulings of the corpus in `lang` use ("Prémiums" for
+    "primes", 8C_470/2025)."""
+    known = vocabulary(lang)
+    if not known:
+        return []
+    words = [w for w in re.findall(r"[^\W\d_]{4,}", text) if not w.isupper()]
+    return [word for word in words if not is_known(word.lower(), known, compounds=lang == "de")]
+
+
+def is_known(word: str, known: tuple[str, ...], *, compounds: bool) -> bool:
+    """Whether a sorted vocabulary has `word` up to its last two letters (another inflection),
+    or, with `compounds`, both parts of a German compound with an optional linking s."""
+
+    def stem(part: str) -> bool:
+        prefix = part[: max(3, len(part) - 2)]
+        i = bisect_left(known, prefix)
+        return i < len(known) and known[i].startswith(prefix)
+
+    def exact(part: str) -> bool:
+        i = bisect_left(known, part)
+        return i < len(known) and known[i] == part
+
+    return (
+        stem(word)
+        or compounds
+        and any(
+            (exact(word[:i]) or (word[i - 1] == "s" and exact(word[: i - 1]))) and stem(word[i:])
+            for i in range(3, len(word) - 3)
+        )
+    )
+
+
+@cache
+def vocabulary(lang: str) -> tuple[str, ...]:
+    """Sorted lower-case words of three letters or more used by at least two rulings in
+    `lang`."""
+    conn = db.connect(get_settings().db_path)
+    counts: Counter[str] = Counter()
+    for row in conn.execute("SELECT text FROM rulings WHERE language = ?", (lang,)):
+        counts.update(set(re.findall(r"[^\W\d_]{3,}", row["text"].lower())))
+    conn.close()
+    return tuple(sorted(word for word, count in counts.items() if count >= 2))
 
 
 def parties(header: str) -> str:
@@ -728,6 +969,20 @@ def form_issues(draft: str, case: Case, lang: str) -> list[str]:
         )
     if personal := _PERSONAL.findall(draft):
         issues.append(f"Remove the personal details ({', '.join(personal)}).")
+    if not re.search(r"\berinner|\brappel", draft):
+        recall = (
+            "Das Bundesgericht erinnert daran, dass"
+            if lang == "de"
+            else "Le Tribunal fédéral rappelle que"
+        )
+        issues.append(
+            f'State the principle the Court recalls before applying it ("{recall} ..."), with '
+            "its consideration."
+        )
+    if lang == "de" and (adjective := re.search(r"\d+\s?%-?ig\w*", draft)):
+        issues.append(
+            f'Write the percentage as a noun phrase ("ein Abzug von 10 %"), not "{adjective[0]}".'
+        )
     issues += [
         f"The figure or date {figure} does not appear in the ruling; correct or remove it."
         for figure in sorted(figures(draft) - figures(source))
@@ -867,6 +1122,12 @@ def clean(text: str, lang: str) -> str:
     )
     # An anonymised place or employer goes without its preposition ("in U.________").
     text = re.sub(r" (?:in|bei|à|chez|auprès de) [A-Z]\._+", "", text)
+    # The canton of an anonymised employer or place ("bei einer Firma (TI)", 8C_254/2025).
+    text = re.sub(
+        r" \((?:AG|AI|AR|BE|BL|BS|FR|GE|GL|GR|JU|LU|NE|NW|OW|SG|SH|SO|SZ|TG|TI|UR|VD|VS|ZG|ZH)\)",
+        "",
+        text,
+    )
     # Names in apposition or brackets go without touching the grammar ("der Suvaarzt,
     # Dr. med. D., hielt fest"); others are replaced by the person's role in `finish`.
     text = re.sub(
@@ -882,6 +1143,11 @@ def clean(text: str, lang: str) -> str:
         # The same for anonymised names the model kept ("des Spitals E.________", "der
         # C.________ GmbH"); `finish` only asks for roles, and its answer is not always usable.
         text = re.sub(r"\b([A-ZÄÖÜ][a-zäöüß]{3,}) [A-Z]\._+(?! (?:AG|GmbH)\b)", r"\1", text)
+        text = re.sub(
+            r"\b([Dd])(er|ie) [A-Z]\._+ (AG|GmbH)\b",
+            lambda m: f"{'E' if m[1] == 'D' else 'e'}ine{'r' if m[2] == 'er' else ''} {m[3]}",
+            text,
+        )
         text = re.sub(r"\b[A-Z]\._+ (AG|GmbH)\b", r"\1", text)
         # "wies die Beschwerde ... gut" mixes up "hiess ... gut" and "wies ... ab".
         text = re.sub(r"\bwies\b([^.]*?)\bgut\b", r"hiess\1gut", text)
@@ -899,6 +1165,16 @@ def clean(text: str, lang: str) -> str:
         )
         text = re.sub(r"(?:(?<=[a-zà-ÿ,;] )|(?<=['’]))Art\. (?=\d)", "art. ", text)
     return text.strip()
+
+
+def superscripts(text: str, lang: str) -> str:
+    """Superscripts the ruling text lost: "1 er août", "la I e Cour" (8C_256/2025). Only on the
+    final text, so that the model calls before stay the same."""
+    if lang != "fr":
+        return text
+    text = re.sub(r"\b(\d{1,2}) er\b", r"\1er", text)
+    text = re.sub(r"\bI e (?=Cour|Chambre|Section)", "Ire ", text)
+    return re.sub(r"\b(II|III|IV|V|VI) e (?=Cour|Chambre|Section)", r"\1e ", text)
 
 
 def consideration_refs(text: str) -> set[str]:

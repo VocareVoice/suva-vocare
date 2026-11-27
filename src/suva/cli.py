@@ -75,7 +75,9 @@ def main() -> None:
     )
     for sub in (summ_all, heads):
         sub.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
-        sub.add_argument("--limit", type=int, help="only the top N rulings")
+        sub.add_argument(
+            "--limit", type=int, help="only the top N rulings, skipping those already done"
+        )
         sub.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
         sub.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
         sub.add_argument("--workers", type=int, default=4, help="rulings in parallel")
@@ -189,7 +191,8 @@ def main() -> None:
             date_from=args.date_from,
             date_to=args.date_to,
             table="headlines" if headlines_only else "summaries",
-        )[: args.limit]
+            limit=args.limit,
+        )
         task = "Writing headlines for" if headlines_only else "Summarising"
         print(f"{task} {len(dockets)} rulings with {llm.model}")
         failed = 0
