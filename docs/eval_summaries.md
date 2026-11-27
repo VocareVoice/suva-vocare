@@ -303,6 +303,14 @@ considerations that do not exist or to the costs (that run: 36 errors, preferred
 summary of a partly upheld appeal, the first run's revision also added "... und weist die
 Beschwerde ab" to the body; the final rule removes such sentences.
 
+The top 30 rulings of April-June 2026 (v5 triage ranking) were regenerated with v7 into
+`data/results/summaries_2026q2.jsonl`; no text has an anonymised name left (a French opening
+"A.________, coffreur, s'est blessé" becomes "Un assuré, coffreur, ..." by rule). 5 of the 60
+texts have no consideration reference (8C_703/2025 de and fr, 8C_137/2025 fr, 8C_681/2025 fr,
+8C_470/2025 de): the fact revision dropped them, and the finishing step's request to cite the
+considerations did not bring them back. The rule checks above do not remove an existing
+reference.
+
 ## Side by side
 
 ### 8C_613/2025 - VIL's own summary (hold-out)
