@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from suva import db, summarize
+from suva import classify, db, summarize
 from suva.config import get_settings
 from suva.llm import LLMClient
 
@@ -55,6 +55,8 @@ def list_rulings(
     division: str | None = None,
     language: Literal["de", "fr", "it"] | None = None,
     has_summary: bool | None = None,
+    branch: str | None = None,
+    category: str | None = None,
     sort: Literal["score", "date", "docket", "title", "language", "summary"] = "score",
     order: Literal["asc", "desc"] = "desc",
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
@@ -70,6 +72,8 @@ def list_rulings(
         "division": division,
         "language": language,
         "has_summary": has_summary,
+        "branch": branch,
+        "category": category,
     }
     total, items = db.list_rulings(
         conn, sort=sort, order=order, limit=limit, offset=offset, **filters
@@ -79,7 +83,9 @@ def list_rulings(
 
 @app.get("/api/facets")
 def facets(conn: Conn) -> dict[str, Any]:
-    return db.facets(conn)
+    result = db.facets(conn)
+    result["classification"] = classify.taxonomy(result["classification"])
+    return result
 
 
 def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
