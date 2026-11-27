@@ -100,7 +100,7 @@ function table(items) {
 
 export async function renderAdjustments(opts) {
   const app = $("#app");
-  document.title = `${t("nav.adjust")} – BGer-Monitor`;
+  document.title = `${t("nav.adjust")} – Praecedens`;
   app.innerHTML = `<header class="pagehead">
       <h1>${esc(t("nav.adjust"))}</h1>
       <p class="pagehead__lede">${esc(t("adj.intro"))}</p>
