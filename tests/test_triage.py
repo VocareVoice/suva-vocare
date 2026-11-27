@@ -1,9 +1,11 @@
 import json
+import math
 from types import SimpleNamespace
 
 import pytest
 
 from suva import db, triage
+from suva.llm import Completion, TokenLogprob
 
 RULING_TEXT = """Bundesgericht
 8C_1/2026
@@ -35,6 +37,7 @@ class FakeLLM:
 
     def __init__(self, reply, tmp_path):
         self.reply = reply
+        self.logprobs = None
         self.calls = []
         examples = tmp_path / "examples.jsonl"
         examples.write_text(
@@ -45,11 +48,11 @@ class FakeLLM:
         )
         self.settings = SimpleNamespace(examples_path=examples)
 
-    def chat_json(self, messages, **params):
+    def complete(self, messages, **params):
         self.calls.append(messages)
         if isinstance(self.reply, Exception):
             raise self.reply
-        return self.reply
+        return Completion(json.dumps(self.reply), self.logprobs)
 
 
 def ruling(docket="8C_1/2026", title="Unfallversicherung (Kausalzusammenhang)", filler=""):
@@ -104,33 +107,50 @@ def test_split_sections_and_excerpt_keep_rubrum_and_operative_part():
 
 
 @pytest.mark.parametrize(
-    ("reply", "score", "label"),
+    ("reply", "prior", "score", "label"),
     [
-        ({"score": 88, "label": "relevant", "reasoning": "Klar."}, 88, "relevant"),
-        ({"score": "40", "label": "relevant", "reasoning": "Grenzfall."}, 40, "not_relevant"),
-        ({"score": 140.4, "reasoning": ["Satz eins.", "Satz zwei."]}, 100, "relevant"),
-        ({"score": -3, "reasoning": "Nein."}, 0, "not_relevant"),
+        ({"relevanz": 9, "reasoning": "Klar."}, 100, 100, "relevant"),
+        ({"relevanz": "6", "reasoning": "Grenzfall."}, 40, 60, "relevant"),
+        ({"relevanz": 3, "reasoning": ["Satz eins.", "Satz zwei."]}, 40, 35, "not_relevant"),
+        ({"relevanz": 12, "reasoning": "Zu hoch."}, 0, 75, "relevant"),
+        ({"relevanz": -1, "reasoning": "Nein."}, 0, 0, "not_relevant"),
     ],
 )
-def test_parse_result_clamps_score_and_derives_label(reply, score, label):
-    result = triage.parse_result(reply, "m")
+def test_parse_result_blends_level_and_prior(reply, prior, score, label):
+    result = triage.parse_result(reply, "m", prior_score=prior)
     assert (result.score, result.label, result.model) == (score, label, "m")
-    assert result.reasoning
+    assert "  " not in result.reasoning
 
 
-@pytest.mark.parametrize("reply", [[1, 2], {"label": "relevant"}, {"score": "hoch"}])
+@pytest.mark.parametrize("reply", [[1, 2], {"reasoning": "kein Score"}, {"relevanz": "hoch"}])
 def test_parse_result_rejects_malformed_replies(reply):
     with pytest.raises((ValueError, KeyError)):
         triage.parse_result(reply, "m")
 
 
+def test_expected_level_weights_the_digit_by_its_probability():
+    tokens = ['{"', "reasoning", '":', ' "Ein Satz 7."', ', "', "relevanz", '":', " 7", "}"]
+    logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens]
+    logprobs[7] = TokenLogprob(" 7", {" 7": math.log(0.5), "8": math.log(0.5), "x": -1.0})
+    assert triage.expected_level(logprobs) == pytest.approx(7.5)
+    # The digit inside the reasoning is not the level.
+    assert triage.expected_level(logprobs[:7]) is None
+    assert triage.expected_level(None) is None
+
+
 def test_triage_calls_the_llm_with_examples_and_feedback(conn, tmp_path):
     db.save_feedback(conn, "8C_135/2025", verdict="relevant", corrected_score=90, comment="BGE")
-    llm = FakeLLM({"score": 91, "label": "relevant", "reasoning": "Suva-Fall."}, tmp_path)
+    llm = FakeLLM({"reasoning": "Suva-Fall.", "relevanz": 9}, tmp_path)
+    tokens = ['{"reasoning": "Suva-Fall.", "relevanz": ', "9", "}"]
+    llm.logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens]
+    llm.logprobs[1] = TokenLogprob("9", {"9": math.log(0.5), "6": math.log(0.5)})
 
     result = triage.triage(conn, "8C_129/2025", llm)
 
-    assert (result.score, result.label, result.model) == (91, "relevant", "fake-apertus")
+    prior = triage.prior(db.get_ruling(conn, "8C_129/2025")).score
+    w = triage.PRIOR_WEIGHT
+    expected = round(100 * ((1 - w) * 7.5 / 9 + w * prior / 100))
+    assert (result.score, result.label, result.model) == (expected, "relevant", "fake-apertus")
     prompt = llm.calls[0][1]["content"]
     assert "8C_9/2025: Der Unfallbegriff" in prompt
     # The ruling's own example summary must not leak into its prompt.
@@ -140,7 +160,7 @@ def test_triage_calls_the_llm_with_examples_and_feedback(conn, tmp_path):
 
 
 def test_prefiltered_rulings_never_reach_the_llm(conn, tmp_path):
-    llm = FakeLLM({"score": 99}, tmp_path)
+    llm = FakeLLM({"relevanz": 9}, tmp_path)
     result = triage.triage(conn, "4A_106/2025", llm)
     assert result.label == "not_relevant"
     assert result.model == triage.PREFILTER_MODEL

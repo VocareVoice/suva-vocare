@@ -7,6 +7,7 @@ of Suva's own example summaries and the lawyers' feedback as context.
 """
 
 import json
+import math
 import re
 import sqlite3
 from collections.abc import Iterator
@@ -16,13 +17,15 @@ from pathlib import Path
 from typing import Any, Literal
 
 from suva import db
-from suva.llm import LLMClient, Message
+from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 PREFILTER_MODEL = "prefilter"
 RELEVANCE_THRESHOLD = 50
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
+# Share of the final score that comes from the keyword prior rather than the LLM.
+PRIOR_WEIGHT = 0.25
 
 
 @dataclass
@@ -204,14 +207,26 @@ Grundsatzcharakter.
 - Urteile, die nur den konkreten Sachverhalt würdigen, ohne für die Praxis der Suva etwas \
 Neues oder Bestätigenswertes zu sagen.
 
-Bewerte die Relevanz mit einem Score von 0 bis 100:
-85-100 klar relevant, gehört in die Übersicht; 60-84 eher relevant; 30-59 Grenzfall; \
-0-29 nicht relevant.
+Erfahrungswerte: Von den Urteilen zur Unfallversicherung mit materieller Beurteilung nimmt die \
+Suva die meisten auf, von den Urteilen zur Invalidenversicherung nur etwa jedes zehnte, nämlich \
+die mit Aussagen, die auch in der Unfallversicherung gelten (Invaliditätsbemessung, \
+Verwertbarkeit der Restarbeitsfähigkeit, Hilflosenentschädigung, Beweiswert von Gutachten, \
+Revision, Verfahren nach ATSG).
 
-Antworte nur mit einem JSON-Objekt:
-{"score": <0-100>, "label": "relevant" | "not_relevant", \
-"reasoning": "<2-4 Sätze auf Deutsch: worum es geht und warum das Urteil für die Suva relevant \
-ist oder nicht>", "key_factors": ["<Stichwort>", ...]}"""
+Ordne das Urteil einer Relevanzstufe zu:
+9 = Leitentscheid oder neue Rechtsfrage der Unfall- oder Militärversicherung
+7-8 = materielles Urteil zur Unfallversicherung mit Grundsätzen, die für die Praxis der Suva \
+nützlich sind
+5-6 = Grenzfall, z.B. Urteil einer anderen Sozialversicherung mit klar übertragbaren Grundsätzen
+3-4 = Bezug zur Unfallversicherung, aber nur Würdigung des Einzelfalls, oder IV-Urteil ohne \
+Bedeutung für die Unfallversicherung
+0-2 = kein Bezug zur Unfallversicherung oder rein prozessuale Erledigung (Nichteintreten, \
+Abschreibung, vereinfachtes Verfahren)
+
+Antworte nur mit einem JSON-Objekt in dieser Reihenfolge:
+{"reasoning": "<2-3 Sätze auf Deutsch, höchstens 70 Wörter: worum es geht und warum das Urteil \
+für die Suva relevant ist oder nicht>", "key_factors": ["<Stichwort>", ...], \
+"relevanz": <Stufe 0-9>}"""
 
 
 def load_examples(path: Path) -> list[dict[str, str]]:
@@ -265,11 +280,41 @@ def build_messages(
     ]
 
 
-def parse_result(data: Any, model: str | None) -> TriageResult:
-    """Validate the model's JSON reply; the label always follows the score."""
+_LEVEL_KEY = re.compile(r'"relevanz"\s*:\s*"?$')
+
+
+def expected_level(logprobs: list[TokenLogprob] | None) -> float | None:
+    """Probability-weighted relevance level from the logprobs of the digit the model wrote.
+
+    The generated digit alone clusters on a few values; the expectation ranks within them.
+    """
+    text = ""
+    for token in logprobs or []:
+        if token.token.strip().isdigit() and _LEVEL_KEY.search(text):
+            probs = {
+                int(t.strip()): math.exp(lp)
+                for t, lp in token.top.items()
+                if t.strip().isdigit() and len(t.strip()) == 1
+            }
+            total = sum(probs.values())
+            return sum(level * p for level, p in probs.items()) / total if total else None
+        text += token.token
+    return None
+
+
+def parse_result(
+    data: Any, model: str | None, prior_score: int = 0, level: float | None = None
+) -> TriageResult:
+    """Validate the model's reply and blend its relevance level with the prior into a score.
+
+    The label always follows the score.
+    """
     if not isinstance(data, dict):
         raise ValueError(f"expected a JSON object, got {data!r}")
-    score = max(0, min(100, round(float(data["score"]))))
+    if level is None:
+        level = float(data["relevanz"])
+    level = max(0.0, min(9.0, level))
+    score = round(100 * ((1 - PRIOR_WEIGHT) * level / 9 + PRIOR_WEIGHT * prior_score / 100))
     reasoning = data.get("reasoning") or ""
     if isinstance(reasoning, list):
         reasoning = " ".join(map(str, reasoning))
@@ -305,7 +350,13 @@ def triage_ruling(
     if prior_.score < PRIOR_CUTOFF:
         return prefiltered(prior_)
     messages = build_messages(ruling, prior_, examples, feedback)
-    return parse_result(llm.chat_json(messages, max_tokens=600), llm.model)
+    completion = llm.complete(messages, max_tokens=500, logprobs=True, top_logprobs=10)
+    return parse_result(
+        parse_json(completion.content),
+        llm.model,
+        prior_score=prior_.score,
+        level=expected_level(completion.logprobs),
+    )
 
 
 def triage(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> TriageResult:
