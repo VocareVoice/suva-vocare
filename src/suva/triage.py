@@ -20,6 +20,7 @@ from typing import Any, Literal
 from suva import db
 from suva.eval.metrics import contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
+from suva.segment import clean, segment
 
 PROMPT_VERSION = "v4"
 PREFILTER_MODEL = "prefilter"
@@ -92,11 +93,6 @@ INVALIDITY_INSURANCE = _pattern(
 
 DIVISION_PRIOR = {"8C": 10, "9C": 5}
 
-_FACTS = re.compile(r"^\s*(?:Sachverhalt|Faits|Fatti)\s*:", re.MULTILINE)
-_REASONS = re.compile(
-    r"^\s*(?:Erwägungen?|Considérant en droit|Considérants?|Diritto|Considerando in diritto)\s*:",
-    re.MULTILINE,
-)
 _INADMISSIBLE = _pattern(
     r"nicht eingetreten",
     r"abgeschrieben",
@@ -132,16 +128,11 @@ _ROLE = re.compile(
 LONG_RULING_CHARS = 12_000
 FIVE_JUDGES = 10
 
-_OPERATIVE = re.compile(r"^\s*(?:Demnach erkennt|Par ces motifs|Per questi motivi)", re.MULTILINE)
 _SUBJECT = re.compile(
     r"^\s*(?:Gegenstand|Objet|Oggetto)\s*\n(.+?)(?:\n\s*(?:Beschwerde|Recours|Ricorso|Revisionsgesuch|"
     r"Demande|Domanda)|\Z)",
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
 )
-
-
-def _clean(text: str) -> str:
-    return re.sub(r"[ \t\xa0]*\n[\s\xa0]*", "\n", text).strip()
 
 
 @dataclass
@@ -154,23 +145,14 @@ class Sections:
 
 def split_sections(text: str) -> Sections:
     """Split a ruling into rubrum (parties, subject), facts, reasons and operative part."""
-    text = _clean(text)
-    operative = _OPERATIVE.search(text)
-    end = operative.start() if operative else len(text)
-    reasons = _REASONS.search(text, 0, end)
-    facts = _FACTS.search(text, 0, reasons.start() if reasons else end)
-    rubrum_end = min(m.start() for m in (facts, reasons) if m) if (facts or reasons) else 0
-    return Sections(
-        rubrum=text[:rubrum_end],
-        facts=text[facts.start() : reasons.start() if reasons else end] if facts else "",
-        reasons=text[reasons.start() : end] if reasons else text[rubrum_end:end],
-        operative=text[end:],
-    )
+    s = segment(text)
+    operative = "\n".join(part for part in (s.dispositive, s.signature) if part)
+    return Sections(rubrum=s.rubrum, facts=s.facts, reasons=s.reasons, operative=operative)
 
 
 def subject(text: str) -> str:
     """The "Gegenstand" line of the rubrum, e.g. "Unfallversicherung (Kausalzusammenhang)"."""
-    match = _SUBJECT.search(_clean(text)[:6000])
+    match = _SUBJECT.search(clean(text)[:6000])
     return " ".join(match.group(1).split()).rstrip(",") if match else ""
 
 
@@ -228,7 +210,7 @@ def prior(ruling: dict[str, Any]) -> Prior:
         weigh(-15, "vereinfachtes Verfahren", "procédure simplifiée")
     elif _UPHELD.search(sections.operative[:600]):
         weigh(5, "Beschwerde (teilweise) gutgeheissen", "recours (partiellement) admis")
-    if len(_clean(text)) >= LONG_RULING_CHARS:
+    if len(clean(text)) >= LONG_RULING_CHARS:
         weigh(10, "ausführlich begründet", "motivation détaillée")
     if panel_size(sections.rubrum) == 5:
         weigh(FIVE_JUDGES, "Fünferbesetzung", "composition à cinq juges")
@@ -237,7 +219,7 @@ def prior(ruling: dict[str, Any]) -> Prior:
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
     """The parts of a ruling that matter for triage, within `limit` characters."""
-    text = _clean(text)
+    text = clean(text)
     if len(text) <= limit:
         return text
     s = split_sections(text)
