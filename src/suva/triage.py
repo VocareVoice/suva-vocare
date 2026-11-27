@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from suva import db
-from suva.eval.metrics import contains_term, term_forms
+from suva.eval.metrics import contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 
 PROMPT_VERSION = "v4"
@@ -130,6 +130,7 @@ _ROLE = re.compile(
     re.IGNORECASE,
 )
 LONG_RULING_CHARS = 12_000
+FIVE_JUDGES = 10
 
 _OPERATIVE = re.compile(r"^\s*(?:Demnach erkennt|Par ces motifs|Per questi motivi)", re.MULTILINE)
 _SUBJECT = re.compile(
@@ -229,6 +230,8 @@ def prior(ruling: dict[str, Any]) -> Prior:
         weigh(5, "Beschwerde (teilweise) gutgeheissen", "recours (partiellement) admis")
     if len(_clean(text)) >= LONG_RULING_CHARS:
         weigh(10, "ausführlich begründet", "motivation détaillée")
+    if panel_size(sections.rubrum) == 5:
+        weigh(FIVE_JUDGES, "Fünferbesetzung", "composition à cinq juges")
     return Prior(score=min(score, 100), substance=substance, factors=factors, factors_fr=factors_fr)
 
 
@@ -296,9 +299,10 @@ Abschreibung, vereinfachtes Verfahren)
 Die Begründung schreibst du zweimal, als zwei Originale mit demselben Inhalt: auf Deutsch und \
 auf Französisch. Jede Fassung besteht aus zwei Sätzen: Der erste nennt den Versicherungszweig, \
 die Rolle des Versicherers und die Rechtsfrage, der zweite sagt, warum das Urteil für die Suva \
-relevant ist oder nicht. Jede Fassung verwendet die Fachbegriffe, Gesetzesabkürzungen und \
-Zitierweise ihrer Sprache (UVG/LAA, UVV/OLAA, ATSG/LPGA, IVG/LAI, BGG/LTF; "Art. 6 Abs. 2 UVG" / \
-"art. 6 al. 2 LAA") und ist keine wörtliche Übersetzung der anderen.
+relevant ist oder nicht; die Relevanzstufe gehört nicht in die Begründung. Jede Fassung \
+verwendet nur die Fachbegriffe, Gesetzesabkürzungen und Zitierweise ihrer eigenen Sprache \
+(deutsch: UVG, UVV, ATSG, IVG, BGG, "Art. 6 Abs. 2 UVG"; französisch: LAA, OLAA, LPGA, LAI, \
+LTF, "art. 6 al. 2 LAA") und ist keine wörtliche Übersetzung der anderen.
 
 Antworte nur mit einem JSON-Objekt in dieser Reihenfolge:
 {"reasoning_de": "<zwei Sätze auf Deutsch>", "reasoning_fr": "<deux phrases en français>", \
@@ -396,35 +400,39 @@ def expected_level(logprobs: list[TokenLogprob] | None) -> float | None:
     text = ""
     for token in logprobs or []:
         if token.token.strip().isdigit() and _LEVEL_KEY.search(text):
-            probs = {
-                int(t.strip()): math.exp(lp)
-                for t, lp in token.top.items()
-                if t.strip().isdigit() and len(t.strip()) == 1
-            }
-            total = sum(probs.values())
-            return sum(level * p for level, p in probs.items()) / total if total else None
+            # Alternatives such as "9" and the full-width "９" are the same level, so they add up.
+            probs = [0.0] * 10
+            for t, lp in token.top.items():
+                if t.strip().isdigit() and len(t.strip()) == 1:
+                    probs[int(t.strip())] += math.exp(lp)
+            total = sum(probs)
+            return sum(level * p for level, p in enumerate(probs)) / total if total else None
         text += token.token
     return None
 
 
 _FUNCTION_WORDS = {
     "de": re.compile(
-        r"\b(?:der|die|das|und|ist|nicht|ein|eine|einer|dem|den|zur|zum|mit|für|auf|sich|wird|"
-        r"werden|von|bei|auch|dass|nach|über|wurde|im)\b"
+        r"\b(?:der|die|das|und|oder|aber|ist|sind|wird|werden|wurde|hat|nicht|kein|keine|keinen|"
+        r"ein|eine|einer|einem|einen|eines|dem|den|zur|zum|vom|beim|im|mit|für|auf|aus|bei|von|"
+        r"nach|über|durch|gegen|ohne|seit|trotz|wegen|mangels|sowie|auch|dass|sich|es|sie|er)\b"
     ),
     "fr": re.compile(
-        r"\b(?:le|les|et|est|une|du|au|aux|pour|dans|que|qui|pas|sur|par|ne|été|sont|cette|ce|"
-        r"l|d|qu|il|elle)\b"
+        r"\b(?:le|la|les|et|ou|est|sont|été|a|ont|une|un|de|du|des|au|aux|pour|dans|par|sur|"
+        r"avec|sans|que|qui|ne|pas|ni|ce|cette|ces|son|sa|ses|il|elle|l|d|qu|n)\b"
     ),
-    "it": re.compile(r"\b(?:il|della|dei|degli|delle|che|non|per|con|sono|è|gli|nel|nella|alla)\b"),
+    "it": re.compile(
+        r"\b(?:il|lo|gli|della|dello|dei|degli|delle|che|non|per|con|sono|è|nel|nella|alla|"
+        r"del|una|uno)\b"
+    ),
 }
 
 
 def language(text: str) -> str | None:
     """The language ("de", "fr" or "it") most of the text's function words belong to."""
     counts = {lang: len(words.findall(text.lower())) for lang, words in _FUNCTION_WORDS.items()}
-    best = max(counts, key=counts.__getitem__)
-    return best if counts[best] >= 2 else None
+    first, second = sorted(counts.values(), reverse=True)[:2]
+    return max(counts, key=counts.__getitem__) if first >= 2 and first > second else None
 
 
 def _text(value: Any) -> str:
@@ -458,6 +466,44 @@ def parse_result(
 def wrong_language(result: TriageResult) -> list[str]:
     """The languages whose reasoning is missing or written in another language."""
     return [lang for lang in LANGUAGES if language(getattr(result, f"reasoning_{lang}")) != lang]
+
+
+_LEVEL = (
+    r"(?:Relevanz(?:stufe)?|Stufe|Niveau(?: de pertinence)?|Pertinence)\s*:?\s*\d(?:\s*-\s*\d)?"
+)
+# "Stufe 7." or "Relevanz: 8 (...)." as a sentence of its own, or "(Stufe 5-6)" inside one.
+_LEVEL_SENTENCE = re.compile(
+    rf"(?:^|(?<=[.;!?]))\s*(?:Daher\s+|Donc\s+)?{_LEVEL}\s*(?:\([^)]*\))?\s*[.;]?", re.IGNORECASE
+)
+_LEVEL_ASIDE = re.compile(rf"\s*\({_LEVEL}\)", re.IGNORECASE)
+
+
+def without_level(text: str) -> str:
+    """Drop the relevance level the model sometimes writes into its explanation."""
+    return " ".join(_LEVEL_ASIDE.sub("", _LEVEL_SENTENCE.sub(" ", text)).split())
+
+
+# Italian abbreviations that differ from the French ones, by German abbreviation.
+ITALIAN_STATUTES = {"LAINF": "UVG", "OAINF": "UVV", "OAI": "IVV", "LADI": "AVIG", "CEDU": "EMRK"}
+
+
+def native_statutes(text: str, glossary: dict[str, Any], lang: str) -> str:
+    """Replace the other languages' statute abbreviations: "Art. 73 lit. b OLAA" in German
+    becomes "Art. 73 lit. b UVV", a pair such as "UVG/LAA" becomes "UVG", and "OAI" from an
+    Italian ruling becomes "IVV" or "RAI".
+
+    The model keeps such abbreviations even when asked to rewrite, and they map one to one.
+    """
+    other = "fr" if lang == "de" else "de"
+    for foreign in foreign_statutes(text, glossary, lang):
+        native = next(s[lang] for s in glossary["statutes"] if s[other] == foreign)
+        n, f = re.escape(native), re.escape(foreign)
+        text = re.sub(rf"(?<![\w-])(?:{n}\s*/\s*{f}|{f}\s*/\s*{n})(?![\w-])", native, text)
+        text = re.sub(rf"(?<![\w-]){f}(?![\w-])", native, text)
+    for italian, german in ITALIAN_STATUTES.items():
+        if native := next((s[lang] for s in glossary["statutes"] if s["de"] == german), None):
+            text = re.sub(rf"(?<![\w-]){italian}(?![\w-])", native, text)
+    return text
 
 
 def prefiltered(prior_: Prior) -> TriageResult:
@@ -511,6 +557,9 @@ def triage_ruling(
             setattr(result, f"reasoning_{lang}", _text(fixed.get(f"reasoning_{lang}")))
         if wrong := wrong_language(result):
             raise ValueError(f"reasoning not written in {', '.join(wrong)}")
+    for lang in LANGUAGES:
+        text = without_level(getattr(result, f"reasoning_{lang}"))
+        setattr(result, f"reasoning_{lang}", native_statutes(text, glossary, lang))
     return result
 
 

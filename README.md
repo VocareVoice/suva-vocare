@@ -69,7 +69,8 @@ rulings with hand-written demo triage and Suva's reference summaries (marked as 
 
 Triage (`triage.py`, results and metrics in `docs/eval_triage.md`) runs in two stages: a
 keyword prior from subject, statutes and parties drops rulings without an accident-insurance
-link, then Apertus rates the rest. `uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
+link, then Apertus rates the rest and explains each rating in German and in French.
+`uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
 a period (resumable, responses cached), `uv run suva export-triage PATH --from ... --to ...`
 writes the results as JSONL and `uv run suva import-triage PATH` loads them.
 `data/results/triage_2026q2.jsonl` holds the April-June 2026 triage, so the UI works without

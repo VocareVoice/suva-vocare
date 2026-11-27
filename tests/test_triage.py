@@ -57,7 +57,11 @@ class FakeLLM:
         split = {"fewshot_pool": ["8C_129/2025", "8C_9/2025"], "holdout": ["8C_78/2025"]}
         (tmp_path / "split.json").write_text(json.dumps(split))
         glossary = {
-            "statutes": [{"de": "UVG", "fr": "LAA"}, {"de": "IVG", "fr": "LAI"}],
+            "statutes": [
+                {"de": "UVG", "fr": "LAA"},
+                {"de": "IVG", "fr": "LAI"},
+                {"de": "IVV", "fr": "RAI"},
+            ],
             "terms": [
                 {"de": "Kausalzusammenhang", "fr": "lien de causalité", "support": 3},
                 {"de": "Taggeld", "fr": "indemnité journalière", "support": 5},
@@ -168,6 +172,10 @@ def test_parse_result_rejects_malformed_replies(reply):
     [
         (DE, "de"),
         (FR, "fr"),
+        (
+            "IV-Urteil, keine Änderung seit 2019, Gutachten massgeblich, Beschwerde abgewiesen.",
+            "de",
+        ),
         ("Assicurazione contro gli infortuni: la sentenza non è rilevante per la Suva.", "it"),
         ("Unfallversicherung (UVG).", None),
         ("", None),
@@ -177,11 +185,29 @@ def test_language_of_an_explanation(text, lang):
     assert triage.language(text) == lang
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Die Suva ist Partei. Stufe 7.", "Die Suva ist Partei."),
+        ("Daher Grenzfall (Stufe 5-6).", "Daher Grenzfall."),
+        ("La Suva est partie. Niveau de pertinence: 7.", "La Suva est partie."),
+        ("Klärt die Adäquanz. Relevanz: 8 (materielles Urteil).", "Klärt die Adäquanz."),
+        ("Pour une personne qualifiée, le niveau 2 est approprié.", None),
+        ("Art. 6 Abs. 2 UVG ist anwendbar.", None),
+    ],
+)
+def test_the_level_is_dropped_from_the_explanation(text, expected):
+    assert triage.without_level(text) == (expected or text)
+
+
 def test_expected_level_weights_the_digit_by_its_probability():
     tokens = ['{"', "reasoning_de", '":', ' "Ein Satz 7."', ', "', "relevanz", '":', " 7", "}"]
     logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens]
     logprobs[7] = TokenLogprob(" 7", {" 7": math.log(0.5), "8": math.log(0.5), "x": -1.0})
     assert triage.expected_level(logprobs) == pytest.approx(7.5)
+    # A full-width digit among the alternatives must not replace the probability of its ASCII twin.
+    logprobs[7] = TokenLogprob("9", {"9": -1e-6, "0": -15.6, "８": -16.0, "９": -21.4})
+    assert triage.expected_level(logprobs) == pytest.approx(9.0, abs=1e-3)
     # The digit inside the reasoning is not the level.
     assert triage.expected_level(logprobs[:7]) is None
     assert triage.expected_level(None) is None
@@ -222,6 +248,21 @@ def test_reasoning_in_the_wrong_language_is_rewritten(conn, tmp_path):
     assert (result.reasoning_de, result.reasoning_fr) == (DE, FR)
     assert "reasoning_de" in llm.calls[1][-1]["content"]
     assert "reasoning_fr" not in llm.calls[1][-1]["content"]
+
+
+def test_the_other_languages_statute_abbreviations_are_replaced(conn, tmp_path):
+    llm = FakeLLM(
+        {
+            "reasoning_de": DE + " Art. 6 LAA, IVG/LAI, OAI.",
+            "reasoning_fr": FR + " LAA/UVG",
+            "relevanz": 8,
+        },
+        tmp_path=tmp_path,
+    )
+    result = triage.triage(conn, "8C_135/2025", llm)
+    assert result.reasoning_de.endswith("Art. 6 UVG, IVG, IVV.")
+    assert result.reasoning_fr.endswith(" LAA")
+    assert len(llm.calls) == 1
 
 
 def test_reasoning_that_stays_in_the_wrong_language_fails(conn, tmp_path):
