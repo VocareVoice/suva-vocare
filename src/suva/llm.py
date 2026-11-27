@@ -4,13 +4,24 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from openai import OpenAI
 
 from suva.config import Settings, get_settings
 
 Message = dict[str, str]
+
+
+class TokenLogprob(NamedTuple):
+    token: str
+    top: dict[str, float]  # alternative token -> logprob, including the chosen token
+
+
+class Completion(NamedTuple):
+    content: str
+    logprobs: list[TokenLogprob] | None = None
+
 
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
@@ -36,20 +47,35 @@ class LLMClient:
 
     def chat(self, messages: list[Message], **params: Any) -> str:
         """Return the assistant message content. `params` go to chat.completions.create."""
+        return self.complete(messages, **params).content
+
+    def complete(self, messages: list[Message], **params: Any) -> Completion:
+        """Like `chat`, but also returns token logprobs when `logprobs=True` is passed."""
         params.setdefault("temperature", 0.0)
         cache_file = self._cache_file(messages, params)
         if cache_file and cache_file.exists():
-            return json.loads(cache_file.read_text())["content"]
+            cached = json.loads(cache_file.read_text())
+            logprobs = cached.get("logprobs")
+            return Completion(
+                cached["content"], [TokenLogprob(*t) for t in logprobs] if logprobs else None
+            )
 
         response = self.client.chat.completions.create(
             model=self.model, messages=messages, **params
         )
-        content = response.choices[0].message.content or ""
+        choice = response.choices[0]
+        logprobs = None
+        if choice.logprobs and choice.logprobs.content:
+            logprobs = [
+                TokenLogprob(t.token, {top.token: top.logprob for top in t.top_logprobs or []})
+                for t in choice.logprobs.content
+            ]
+        completion = Completion(choice.message.content or "", logprobs)
 
         if cache_file:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
-            cache_file.write_text(json.dumps({"content": content}, ensure_ascii=False))
-        return content
+            cache_file.write_text(json.dumps(completion._asdict(), ensure_ascii=False))
+        return completion
 
     def chat_json(self, messages: list[Message], **params: Any) -> Any:
         """Chat and parse the reply as JSON, tolerating code fences and surrounding prose."""
@@ -69,12 +95,13 @@ class LLMClient:
 def parse_json(text: str) -> Any:
     if fenced := _JSON_FENCE.search(text):
         text = fenced.group(1)
+    # strict=False: models sometimes put raw newlines or tabs inside JSON strings.
     try:
-        return json.loads(text)
+        return json.loads(text, strict=False)
     except json.JSONDecodeError:
         starts = [i for i in (text.find("{"), text.find("[")) if i != -1]
         if not starts:
             raise
         start = min(starts)
         end = max(text.rfind("}"), text.rfind("]"))
-        return json.loads(text[start : end + 1])
+        return json.loads(text[start : end + 1], strict=False)

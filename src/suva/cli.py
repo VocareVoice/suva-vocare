@@ -20,7 +20,20 @@ def main() -> None:
         "hand-written triage and Suva reference summaries (refuses a database with real data)",
     )
 
-    commands.add_parser("triage", help="score every ruling that has no triage result yet")
+    tri = commands.add_parser(
+        "triage", help="score every ruling without a result of the current prompt version"
+    )
+    tri.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
+    tri.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
+    tri.add_argument("--workers", type=int, default=8, help="parallel LLM calls")
+
+    export = commands.add_parser("export-triage", help="write the latest triage results as JSONL")
+    export.add_argument("path", type=Path)
+    export.add_argument("--from", dest="date_from")
+    export.add_argument("--to", dest="date_to")
+
+    imp = commands.add_parser("import-triage", help="load triage results from export-triage")
+    imp.add_argument("path", type=Path)
 
     summ = commands.add_parser("summarize", help="summarise one ruling in German and French")
     summ.add_argument("docket")
@@ -41,18 +54,36 @@ def main() -> None:
         print(f"Loaded {db.load_corpus(conn, args.path)} rulings into {settings.db_path}")
     elif args.command == "triage":
         llm = LLMClient(settings)
-        for docket in db.untriaged_dockets(conn):
-            result = triage.triage(conn, docket, llm)
+        dockets = db.untriaged_dockets(
+            conn,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            prompt_version=triage.PROMPT_VERSION,
+        )
+        print(f"Triaging {len(dockets)} rulings with {llm.model}")
+        failed = 0
+        for docket, result in triage.triage_batch(conn, dockets, llm, workers=args.workers):
+            if isinstance(result, Exception):
+                failed += 1
+                print(f"{docket}: failed ({result!r})")
+                continue
             db.save_triage(
                 conn,
                 docket,
                 score=result.score,
                 label=result.label,
                 reasoning=result.reasoning,
-                model=llm.model,
+                model=result.model,
                 prompt_version=triage.PROMPT_VERSION,
             )
             print(f"{docket}: {result.score} {result.label}")
+        if failed:
+            raise SystemExit(f"{failed} rulings failed; run triage again to retry them")
+    elif args.command == "export-triage":
+        count = db.export_triage(conn, args.path, date_from=args.date_from, date_to=args.date_to)
+        print(f"Wrote {count} triage results to {args.path}")
+    elif args.command == "import-triage":
+        print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
     elif args.command == "summarize":
         llm = LLMClient(settings)
         for lang, text in summarize.summarize(conn, args.docket, llm).items():
