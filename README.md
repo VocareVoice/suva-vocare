@@ -63,6 +63,9 @@ make lint      # ruff
 
 `uv run suva summarize 8C_129/2025` summarises a single ruling in German and French.
 
+For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
+rulings with hand-written demo triage and Suva's reference summaries (marked as demo data).
+
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
 2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which

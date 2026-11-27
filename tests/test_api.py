@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from suva import api, summarize
+from suva import api, db, summarize
 
 
 class FakeLLM:
@@ -61,3 +61,54 @@ def test_serves_frontend(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "<html" in response.text
+
+
+def test_list_filters_and_order(client, conn):
+    for docket, score, label, reasoning in [
+        ("8C_129/2025", 90, "relevant", "UVG"),
+        ("4A_106/2025", 5, "not_relevant", "Miete"),
+    ]:
+        db.save_triage(
+            conn,
+            docket,
+            score=score,
+            label=label,
+            reasoning=reasoning,
+            model=None,
+            prompt_version=None,
+        )
+
+    def dockets(**params):
+        items = client.get("/api/rulings", params=params).json()["items"]
+        return [item["docket"] for item in items]
+
+    assert dockets() == ["8C_129/2025", "4A_106/2025", "8C_135/2025"]
+    assert dockets(order="asc") == ["4A_106/2025", "8C_129/2025", "8C_135/2025"]
+    assert dockets(sort="date", order="asc") == ["4A_106/2025", "8C_129/2025", "8C_135/2025"]
+    assert dockets(sort="docket", order="asc") == ["4A_106/2025", "8C_129/2025", "8C_135/2025"]
+    assert dockets(sort="title", order="asc")[0] == "8C_135/2025"
+    assert dockets(max_score=50) == ["4A_106/2025"]
+    assert dockets(language="fr") == ["8C_135/2025"]
+    assert dockets(division="I. zivilrechtliche Abteilung") == ["4A_106/2025"]
+    client.post("/api/rulings/8C_135/2025/summarize")
+    assert dockets(has_summary=True) == ["8C_135/2025"]
+    assert dockets(has_summary=False) == ["8C_129/2025", "4A_106/2025"]
+    body = client.get("/api/rulings", params={"limit": 1}).json()
+    assert body["stats"] == {
+        "total": 3,
+        "relevant": 1,
+        "with_summary": 1,
+        "relevant_without_summary": 1,
+    }
+    item = body["items"][0]
+    assert item["reasoning"] == "UVG"
+    assert item["feedback_verdict"] is None
+
+
+def test_facets(client):
+    body = client.get("/api/facets").json()
+    assert body["total"] == 3
+    assert body["demo"] is False
+    assert body["date_min"] == "2025-09-25"
+    assert {"value": "fr", "count": 1} in body["languages"]
+    assert len(body["divisions"]) == 2

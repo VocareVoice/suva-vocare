@@ -220,6 +220,7 @@ button.chip:hover { border-color: var(--accent-line); color: var(--accent); }
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
   font: 11px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px;
 }
+.field[hidden] { display: none; }
 .field { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .field select, .field input[type="date"] {
   height: 34px; padding: 0 8px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong);
@@ -236,7 +237,8 @@ button.chip:hover { border-color: var(--accent-line); color: var(--accent); }
 .toolbar__spacer { flex: 1; }
 .resultcount { font-size: 13px; color: var(--muted); }
 
-.table-wrap { overflow-x: auto; }
+/* No scroll container on wide screens, otherwise the sticky header sticks inside it. */
+.table-wrap { overflow-x: visible; }
 table.rulings { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
 .rulings th {
   position: sticky; top: 57px; z-index: 5;
@@ -407,6 +409,8 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   .summaries.is-both .summary + .summary { border-left: 0; border-top: 1px solid var(--line); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rulings .c-lang, .rulings .c-sum { display: none; }
+  .table-wrap { overflow-x: auto; }
+  .rulings th { position: static; }
   .original__body { padding: 22px 20px; }
   .dhead { flex-direction: column; }
 }

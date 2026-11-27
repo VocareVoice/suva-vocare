@@ -506,26 +506,23 @@ const SHOW_STEP = 200; // rows rendered per "show more"
 
 function serverParams() {
   const { from, to } = periodRange();
-  const params = { sort: state.sort === "date" ? "date" : "score" };
+  const params = { sort: state.sort === "lang" ? "language" : state.sort, order: state.dir };
   if (state.q.trim()) params.q = state.q.trim();
   if (from) params.from = from;
   if (to) params.to = to;
   if (state.label) params.label = state.label;
   if (state.min) params.min_score = state.min;
+  if (state.div) params.division = state.div;
+  if (state.lang) params.language = state.lang;
+  if (state.sum) params.has_summary = state.sum === "yes";
   return params;
-}
-// Division, language and summary filters and the other column sorts run in the browser,
-// so they need every matching ruling, not only the first page.
-function needsAll() {
-  return Boolean(state.div || state.lang || state.sum) || !(["score", "date"].includes(state.sort) && state.dir === "desc");
 }
 
 async function ensureItems() {
   const params = serverParams();
   const sig = JSON.stringify(params);
   if (sig !== state.sig) { state.sig = sig; state.items = []; state.total = 0; state.loaded = false; }
-  const want = needsAll() ? Infinity : state.shown;
-  while (!state.loaded && state.items.length < want) {
+  while (!state.loaded && state.items.length < state.shown) {
     const res = await API.list({ ...params, limit: PAGE, offset: state.items.length });
     if (state.sig !== sig) return; // a newer request took over
     state.items.push(...(res.items || []));
@@ -543,35 +540,12 @@ async function ensureStats() {
   if (to) base.to = to;
   const sig = JSON.stringify(base);
   if (sig === state.statsSig && state.stats) return;
-  const [all, rel] = await Promise.all([
-    API.list({ ...base, limit: 1 }),
-    API.list({ ...base, label: "relevant", limit: PAGE }),
-  ]);
-  const withSum = (rel.items || []).filter((r) => r.has_summary).length;
-  state.stats = { total: all.total, relevant: rel.total, withSum, open: rel.total - withSum };
+  const { stats } = await API.list({ ...base, limit: 1 });
+  state.stats = {
+    total: stats.total, relevant: stats.relevant,
+    withSum: stats.relevant - stats.relevant_without_summary, open: stats.relevant_without_summary,
+  };
   state.statsSig = sig;
-}
-
-function filteredItems() {
-  let items = state.items.filter((r) =>
-    (!state.div || divisionCode(r.docket) === state.div) &&
-    (!state.lang || r.language === state.lang) &&
-    (!state.sum || (state.sum === "yes" ? r.has_summary : !r.has_summary)));
-  const dir = state.dir === "asc" ? 1 : -1;
-  const key = {
-    score: (r) => r.score ?? -1,
-    date: (r) => r.decision_date || "",
-    docket: (r) => { const m = /^(\d[A-Z])_(\d+)\/(\d+)/.exec(r.docket) || []; return `${m[3] || ""}-${m[1] || ""}-${String(m[2] || "").padStart(5, "0")}`; },
-    lang: (r) => r.language || "",
-    summary: (r) => (r.has_summary ? 1 : 0),
-    title: (r) => (r.title || "").toLowerCase(),
-  }[state.sort] || ((r) => r.score ?? -1);
-  return items.slice().sort((a, b) => {
-    const ka = key(a), kb = key(b);
-    if (ka < kb) return -dir;
-    if (ka > kb) return dir;
-    return (b.score ?? -1) - (a.score ?? -1);
-  });
 }
 
 function listShell() {
@@ -644,7 +618,7 @@ function renderStats() {
 }
 
 function renderTable() {
-  const items = filteredItems();
+  const items = state.items;
   const wrap = $("#tableWrap");
   const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.period !== "all";
   if (!items.length) {
@@ -680,8 +654,8 @@ function renderTable() {
     <tbody>${rows}</tbody>
   </table>
   <div class="summary__foot">
-    <span class="resultcount" id="resultcount">${esc(t("results", Math.min(state.shown, items.length), needsAll() ? items.length : state.total))}</span>
-    ${state.shown < (needsAll() ? items.length : state.total) ? `<button type="button" class="btn btn--sm" id="more">${esc(t("more"))}</button>` : ""}
+    <span class="resultcount" id="resultcount">${esc(t("results", Math.min(state.shown, items.length), state.total))}</span>
+    ${state.shown < state.total ? `<button type="button" class="btn btn--sm" id="more">${esc(t("more"))}</button>` : ""}
   </div>`;
 }
 

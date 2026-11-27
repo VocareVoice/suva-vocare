@@ -13,6 +13,12 @@ def main() -> None:
 
     load = commands.add_parser("load", help="ingest a rulings.jsonl corpus into the database")
     load.add_argument("path", nargs="?", type=Path, default=settings.corpus_path)
+    load.add_argument(
+        "--demo",
+        action="store_true",
+        help="load the bundled demo seed instead of a corpus: 14 real rulings with "
+        "hand-written triage and Suva reference summaries (refuses a database with real data)",
+    )
 
     commands.add_parser("triage", help="score every ruling that has no triage result yet")
 
@@ -26,7 +32,12 @@ def main() -> None:
     args = parser.parse_args()
     conn = db.connect(settings.db_path)
 
-    if args.command == "load":
+    if args.command == "load" and args.demo:
+        try:
+            print(f"Loaded {db.load_demo(conn)} demo rulings into {settings.db_path}")
+        except ValueError as exc:
+            parser.error(str(exc))
+    elif args.command == "load":
         print(f"Loaded {db.load_corpus(conn, args.path)} rulings into {settings.db_path}")
     elif args.command == "triage":
         llm = LLMClient(settings)
