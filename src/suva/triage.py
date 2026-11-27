@@ -25,7 +25,6 @@ from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 from suva.segment import clean, segment
 
 PROMPT_VERSION = "v5"
-MODEL = "apertus-v1-5-70b"
 PREFILTER_MODEL = "prefilter"
 GATE_MODEL = "gate"
 RELEVANCE_THRESHOLD = 50

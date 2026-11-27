@@ -29,7 +29,7 @@ April-June 2026 (`data/results/triage_2026q2.jsonl`).
    substantive consideration. It is labelled not relevant with model `gate` and a German and
    French explanation naming the reason. None of the 82 gated rulings of the labelled period is
    on Suva's list.
-4. **Apertus (`apertus-v1-5-70b`, set in `triage.MODEL`).** The prompt holds the relevance criteria, the base rates
+4. **Apertus (`apertus-v1-5-70b`, from `LLM_NAME`).** The prompt holds the relevance criteria, the base rates
    learned from the labelled period, the topics of Suva's example summaries (few-shot pool only;
    the hold-out and the ruling's own example are never shown), the German = French pairs of the
    glossary statutes and terms that occur in the ruling (`data/eval/glossary.json`), the prior's

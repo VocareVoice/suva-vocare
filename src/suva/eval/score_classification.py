@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> None:
 
     gold = load_gold()
     rulings = load_rulings()
-    llm = LLMClient(model=classify.MODEL)
+    llm = LLMClient()
 
     dockets = [g["docket"] for g in gold]
     facts = {d: classify.facts(rulings[d]) for d in dockets}

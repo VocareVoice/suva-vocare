@@ -32,7 +32,7 @@ def get_conn() -> Iterator[sqlite3.Connection]:
 
 
 def get_llm() -> LLMClient:
-    return LLMClient(model=summarize.MODEL)
+    return LLMClient()
 
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
@@ -192,7 +192,7 @@ def post_chat_message(chat_id: str, message: ChatMessageIn, conn: Conn) -> Strea
         # Own connection: the request's one is closed once the endpoint returns.
         own = db.connect(settings.db_path)
         try:
-            llm = LLMClient(settings, cache=False, model=settings.agent_model)
+            llm = LLMClient(settings, cache=False, model=settings.agent_model or None)
             for event in agent_loop.run_turn(
                 own,
                 llm,

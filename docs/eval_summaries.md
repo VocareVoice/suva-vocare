@@ -93,9 +93,9 @@ authors FRT, LC4 and VIL), never shown to the model.
    Cour" → "la Ire Cour").
 
 A summary takes 10 to 16 model calls and 1 to 5 minutes on the shared gateway, so in the UI it
-runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The model
-is pinned to `apertus-v1-5-70b` (`summarize.MODEL`): a comparison with the thinking variant gave
-no gain.
+runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The results
+use `apertus-v1-5-70b`, the default when `LLM_NAME` is empty: a comparison with the thinking
+variant gave no gain.
 
 **Headlines.** Each run also writes a headline per language (`headline_de` / `headline_fr`): at
 most about 12 words saying what the Court decided, without docket or date, e.g. "Keine analoge
@@ -303,5 +303,5 @@ PY
 uv run python -m suva.eval.score_summaries generated.jsonl
 ```
 
-With `LLMClient(model=summarize.MODEL)` (`apertus-v1-5-70b`) at temperature 0. The gateway is not bit-for-bit deterministic,
+With `apertus-v1-5-70b` at temperature 0. The gateway is not bit-for-bit deterministic,
 so wording and the scores above vary slightly between runs.

@@ -1,7 +1,11 @@
+import logging
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Every evaluation in docs/ ran on this model; it is used when LLM_NAME is empty.
+DEFAULT_MODEL = "apertus-v1-5-70b"
 
 
 class Settings(BaseSettings):
@@ -13,8 +17,7 @@ class Settings(BaseSettings):
     llm_timeout: float = 120.0
     llm_max_retries: int = 5
 
-    # The side-panel agent runs on the instruct model; the pipelines use `llm_name`.
-    agent_model: str = "apertus-v1-5-70b"
+    agent_model: str = ""  # the side-panel agent; empty uses `model`
     agent_max_steps: int = 10  # tool calls per user message before the agent must answer
 
     db_path: Path = Path("data/suva.db")
@@ -22,7 +25,21 @@ class Settings(BaseSettings):
     llm_cache_dir: Path = Path("data/cache/llm")
     examples_path: Path = Path("data/eval/examples.jsonl")
 
+    @property
+    def model(self) -> str:
+        """The model every LLM step uses: LLM_NAME, or DEFAULT_MODEL when it is empty."""
+        return self.llm_name or DEFAULT_MODEL
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    for model in {settings.model, settings.agent_model or settings.model}:
+        if "thinking" in model.lower():
+            logging.getLogger(__name__).warning(
+                "Model %s looks like a thinking variant; the triage, classification and summary "
+                "evaluations all used the regular model (%s).",
+                model,
+                DEFAULT_MODEL,
+            )
+    return settings

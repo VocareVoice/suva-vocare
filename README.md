@@ -51,6 +51,11 @@ LLM_API_KEY — your API key
 ## Running it
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` to `.env` and fill in the three `LLM_*` variables.
+Every LLM step (triage, classification, summaries, the agent, the evaluation judge) uses `LLM_NAME`,
+the model id as your endpoint names it: `apertus-v1-5-70b` on the gateway we used (also the default
+when `LLM_NAME` is empty), `swiss-ai/Apertus-v1.5-70B` on Hugging Face-style gateways. All results
+in `data/results/` and `docs/` come from the regular 70B model; the app warns when `LLM_NAME` names a
+thinking variant.
 
 ```sh
 make install   # uv sync
@@ -67,7 +72,7 @@ make lint      # ruff
 triage score of at least 50 that has no summary of the current prompt version, highest score
 first; `--limit N` takes the N highest-scored rulings and skips those already summarised, so after
 a new triage `uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --limit 30`
-writes only what the new top 30 lacks. Summaries always use `apertus-v1-5-70b`, whatever `LLM_NAME` says. Each summary run also
+writes only what the new top 30 lacks. Each summary run also
 writes a one-line headline per language (`headline_de` / `headline_fr` in the API), and
 `uv run suva headline-relevant` writes only the headlines, at a fraction of the cost.
 `export-summaries` / `import-summaries` work like their triage counterparts;
