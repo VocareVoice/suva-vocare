@@ -191,6 +191,8 @@ button.chip.chip--static:hover { border-color: var(--rule); color: var(--ink-2);
   background: var(--surface); color: var(--ink); font-size: 13.5px;
 }
 .field input[type="range"] { width: 120px; accent-color: var(--blue); }
+/* A select is as wide as its longest option; the category names would stretch the filter row. */
+#branchSel select, #catSel select, #divSel select { max-width: 220px; text-overflow: ellipsis; }
 .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--sunk); border: 1px solid var(--rule); }
 .seg button {
   border: 0; background: transparent; padding: 0 13px; height: 32px; border-radius: var(--r-pill);
@@ -292,6 +294,17 @@ button.chip.chip--static:hover { border-color: var(--rule); color: var(--ink-2);
 .toolbar { display: grid; gap: 12px; margin-bottom: 16px; }
 .toolbar__row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .toolbar__spacer { flex: 1; }
+.toolbar__row[hidden] { display: none; }
+.toolbar__actions { display: inline-flex; gap: 4px; margin-left: auto; white-space: nowrap; }
+/* Second filter row behind "Erweitert", set off from the main filters. */
+.toolbar__row--adv { padding: 10px 14px; border-radius: var(--r-lg); background: var(--sunk); }
+.advtoggle .chev { transition: transform .15s ease; }
+.advtoggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.advtoggle__n {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: var(--r-pill); background: var(--blue); color: #fff; font-size: 11.5px; font-weight: 700;
+}
+.advtoggle__n[hidden] { display: none; }
 .resultcount { font-size: 13px; color: var(--muted); }
 .tablebox { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow); }
 
