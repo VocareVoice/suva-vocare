@@ -52,7 +52,9 @@ degree of incapacity and daily allowances also come up, e.g. 4A_106/2025.
 ## Method
 
 1. **Deterministic facts, every ruling.** Statutes cited (`Art. 6 Abs. 2 UVG`, `art. 6 al. 2 LAA`
-   and `art. 6 cpv. 2 LAINF` all count as UVG 6), the outcome from the first item of the
+   and `art. 6 cpv. 2 LAINF` all count as UVG 6, with paragraph 2 kept as detail; lists such as
+   "Art. 95 und 96 BGG", "art. 97 al. 2 et 105 al. 3 LTF" and "Art. 72 f. UVG" give every
+   article), the leading cases cited (BGE/ATF/DTF), the outcome from the first item of the
    operative part (upheld, partly upheld, remanded, dismissed, not entertained, struck off; a
    remand that only concerns costs does not count), and flags: five-judge panel (counted from the
    "Besetzung" block), public deliberation (Art. 58 BGG), and intended for publication. The
@@ -178,6 +180,28 @@ Invaliditätsgrad & Einkommensvergleich 52, Rentenrevision 20, Hilflosenentschä
 Natürliche Kausalität 11. Outcomes in Q2 2026: 910 not entertained, 891 dismissed, 145
 remanded, 60 upheld, 23 partly upheld, 5 struck off, 62 not recognised (mostly joined cases or
 dispositives without the usual opening line).
+
+### Statutes and precedents (extraction `s2`)
+
+The statutes and precedents in both files were re-extracted without re-running Apertus
+(`prompt_version` `v4+s2`; branch, categories, outcome and flags are unchanged). Checked on 20
+rulings of Q4 2025 - Q1 2026 drawn with seed 7 (9 listed, 8 unlisted 8C/9C, 3 other divisions;
+DE, FR and IT). Statute gold: every distinct (law, article) per ruling, checked by hand, including
+every "Art. N" mention the extractor did not match. BGE gold: the linked references on the
+entscheidsuche.ch copy of each ruling.
+
+| | Gold | Before (`v4`) | After (`v4+s2`) |
+|---|---|---|---|
+| Articles, laws known before (UVG ... EMRK, 30 abbreviations) | 220 | 170 (77 %) | 220 (100 %) |
+| Articles, social-insurance laws (UVG, UVV, ATSG, ATSV, IVG, IVV, MVG) | 33 | 30 (91 %) | 33 (100 %) |
+| Articles, all laws | 236 | 170 (72 %) | 236 (100 %) |
+| False articles | | 0 | 0 |
+| BGE references | 223 | none | 220, plus 9 real ones not linked |
+
+Over the whole corpus the extractor finds 70,806 (law, article) pairs instead of 46,691. Before
+gave 17 pairs that are now gone, all of them cantonal laws ("art. 54 al. 2 Cst./VD", "Art. 23
+Abs. 3 VwVG/OW"). The 3 missed BGE links are links to a decision's first page where the text
+cites a later page ("ATF 139 V 255" for 139 V 250).
 
 ## Per-ruling results (v4)
 

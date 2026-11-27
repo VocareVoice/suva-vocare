@@ -1,10 +1,11 @@
 """Legal classification of a ruling: insurance branch first, then the legal category.
 
 The taxonomy is a closed list (`BRANCHES`, `CATEGORIES`, `MATRIX`), so labels stay consistent and
-filterable. Statutes, outcome and flags are extracted from the text without an LLM. Rulings of
-the social-law divisions are classified by Apertus (JSON schema with enum-constrained labels,
-retried when a category does not fit the branch); every other ruling is outside social insurance
-by its division. Kept separate from the relevance score. Results: docs/eval_classification.md.
+filterable. Statutes, precedents, outcome and flags are extracted from the text without an LLM.
+Rulings of the social-law divisions are classified by Apertus (JSON schema with enum-constrained
+labels, retried when a category does not fit the branch); every other ruling is outside social
+insurance by its division. Kept separate from the relevance score.
+Results: docs/eval_classification.md.
 """
 
 import re
@@ -19,6 +20,10 @@ from suva import db, triage
 from suva.llm import LLMClient, Message, parse_json
 
 PROMPT_VERSION = "v4"
+# Stored with the prompt version, so re-extracted statutes and precedents load over older rows
+# without re-running Apertus.
+EXTRACTION_VERSION = "s2"
+VERSION = f"{PROMPT_VERSION}+{EXTRACTION_VERSION}"
 MODEL = "apertus-v1-5-70b"
 EXCERPT_CHARS = 20_000
 MAX_ATTEMPTS = 3
@@ -122,6 +127,7 @@ class Classification:
     primary: str
     secondary: list[str]
     statutes: list[dict[str, Any]]
+    precedents: list[dict[str, Any]]
     outcome: Outcome | None
     flags: list[str]
     method: Literal["llm", "subject", "rule"]
@@ -135,6 +141,7 @@ class Facts:
 
     subject: str
     statutes: list[dict[str, Any]]
+    precedents: list[dict[str, Any]]
     outcome: Outcome | None
     flags: list[str] = field(default_factory=list)
 
@@ -178,43 +185,184 @@ LAWS = {
     "IVV": "IVV", "RAI": "IVV", "OAI": "IVV",
     "MVG": "MVG", "LAM": "MVG",
     "AHVG": "AHVG", "LAVS": "AHVG",
+    "AHVV": "AHVV", "RAVS": "AHVV", "OAVS": "AHVV",
     "BVG": "BVG", "LPP": "BVG",
+    "BVV 2": "BVV 2", "OPP 2": "BVV 2",
+    "FZG": "FZG", "LFLP": "FZG",
     "KVG": "KVG", "LAMal": "KVG",
+    "KVV": "KVV", "OAMal": "KVV",
+    "KLV": "KLV", "OPAS": "KLV",
     "AVIG": "AVIG", "LACI": "AVIG", "LADI": "AVIG",
+    "AVIV": "AVIV", "OACI": "AVIV", "OADI": "AVIV",
     "ELG": "ELG", "LPC": "ELG",
+    "ELV": "ELV", "OPC-AVS/AI": "ELV",
+    "EOG": "EOG", "LAPG": "EOG", "LIPG": "EOG",
+    "FamZG": "FamZG", "LAFam": "FamZG", "LAFabb": "FamZG",
     "VVG": "VVG", "LCA": "VVG",
     "BGG": "BGG", "LTF": "BGG",
+    "VGG": "VGG", "LTAF": "VGG",
     "BV": "BV", "Cst.": "BV", "Cost.": "BV",
     "OR": "OR", "CO": "OR",
     "ZGB": "ZGB", "CC": "ZGB",
+    "ZPO": "ZPO", "CPC": "ZPO",
+    "StGB": "StGB", "CP": "StGB",
+    "StPO": "StPO", "CPP": "StPO",
+    "SVG": "SVG", "LCR": "SVG",
     "VwVG": "VwVG", "PA": "VwVG",
     "EMRK": "EMRK", "CEDH": "EMRK", "CEDU": "EMRK",
 }  # fmt: skip
 LAW_ORDER = ["UVG", "UVV", "ATSG", "ATSV", "IVG", "IVV", "MVG"]
-_LAW_NAMES = "|".join(re.escape(law) for law in sorted(LAWS, key=len, reverse=True))
-_CITATION = re.compile(
-    r"\b[Aa]rt(?:\.|ikel|icolo)\s*(\d+[a-z]?(?:\s*(?:bis|ter|quater|quinquies)\b)?)"
-    r"(?:\s*(?:Abs\.|al\.|cpv\.|para\.)\s*\d+[a-z]?(?:\s*(?:bis|ter)\b)?)?"
-    r"(?:\s*(?:lit\.|let\.|Bst\.|Ziff\.|ch\.|n\.)\s*[a-z0-9]+\b)?"
-    r"\s+(?:des\s+|de\s+la\s+|du\s+|de\s+l['’]|della\s+|dell['’])?"
-    rf"({_LAW_NAMES})(?![\wÀ-ÿ])"
+_LAW_NAMES = "|".join(
+    re.escape(law).replace(r"\ ", r"\s*") for law in sorted(LAWS, key=len, reverse=True)
 )
+
+# A citation is "Art." and a chain of units joined by "und", "et", "i.V.m." etc., then the
+# statute: "Art. 95 und 96 BGG", "art. 97 al. 2 et 105 al. 3 LTF", "Art. 72 f. UVG", "art. 15 ss
+# LAA", "Art. 6 Abs. 1 des Bundesgesetzes über die Unfallversicherung (UVG)". A unit is an
+# article and its parts (paragraphs, sentence, letters): "Art. 37 Abs. 2 lit. b und Abs. 3 lit. b".
+# "bis" followed by a number is a range ("Art. 5 bis 7"), not the suffix of "Art. 5bis".
+_SUFFIX = r"(?:bis|ter|quater|quinquies|sexies|septies|octies|novies|decies)\b"
+_NUM = rf"\d+(?:[a-z]?\s*{_SUFFIX}(?!\s*\d)|[a-z]\b)?"
+_AND = r"\s*(?:,|-|–)\s*|\s+(?:und|et|e)\s+"
+_WITH = (
+    r"\s+(?:i\.\s*V\.\s*m\.|in\s+Verbindung\s+mit|en\s+(?:relation|lien|corrélation)\s+avec|"
+    r"in\s+(?:relazione|combinazione)\s+con|cum|par\s+renvoi\s+de)\s+"
+)
+_ORDINAL = (
+    r"(?:\d+\s*(?:re|ère|ème|e|a)|première|deuxième|seconde|troisième|dernière|prima|seconda|"
+    r"terza)"
+)
+_SENTENCE = (
+    rf",?\s*(?:Satz\s*\d+|(?:erster|zweiter|dritter|letzter)\s+Satz|{_ORDINAL}\s+(?:phrase|phr\.|frase)"
+    r"|(?:phrase|frase)\s+\d+)"
+)
+_PARA_WORD = r"(?:Abs\.|Absatz|al\.|cpv\.|para\.|par\.)"
+_PARAS = (
+    rf"{_PARA_WORD}\s*{_NUM}(?:(?:{_AND}|\s+(?:sowie|bzw\.)\s+)(?:{_PARA_WORD}\s*)?{_NUM}"
+    rf"(?!\w)(?!\s*{_SUFFIX}|\s*(?:Abs|al|cpv|par)\.|\s*(?:re|ère|ème|e|a)?\s+(?:phrase|phr\.|frase)))*"
+)
+_LET_WORD = r"(?:lit\.|let\.|lett\.|Bst\.|Ziff\.|ch\.|n\.|cifra)"
+_LETTER = rf"[a-z]{{1,3}}\b(?:\s*{_SUFFIX})?"
+_LETTERS = (
+    rf"{_LET_WORD}\s*(?:{_LETTER}(?:(?:{_AND})(?!{_PARA_WORD})(?:{_LET_WORD}\s*)?{_LETTER})*"
+    rf"|\d+[a-z]?\b(?:(?:{_AND})(?:{_LET_WORD}\s*)?\d+[a-z]?\b(?!\s*(?:{_PARA_WORD}|{_LET_WORD})))*)"
+)
+# Letters can be followed by a number ("lit. b Ziff. 5"); only the letter is kept.
+_PART = re.compile(
+    rf"(?P<para>{_PARAS})?(?:{_SENTENCE})?"
+    rf"(?:\s*(?P<let>{_LETTERS})(?:\s*{_LETTERS})?)?(?:{_SENTENCE})?"
+)
+_PART_PLAIN = re.sub(r"\(\?P<\w+>", "(?:", _PART.pattern)
+_FF = (
+    r"(?:\s*(?:ff\.?|f\.|ss\.?|s\.|segg\.|seg\.|sgg\.)(?![\wÀ-ÿ]))?"
+    r"(?:\s+(?:e\s+contrario|in\s+fine|i\.\s*f\.)(?!\w))?"
+)
+_UNIT = re.compile(
+    rf"(?P<art>{_NUM})(?P<parts>\s*{_PART_PLAIN}"
+    rf"(?:(?:{_AND}|{_WITH})(?={_PARA_WORD}){_PART_PLAIN})*){_FF}"
+)
+_UNIT_PLAIN = re.sub(r"\(\?P<\w+>", "(?:", _UNIT.pattern)
+_ARTICLE = r"\b(?:[Aa]rt(?:\.|t\.|ikel|icol[oi])|Artikel)\s*"
+_SEP = (
+    rf"(?:{_AND}|{_WITH}|\s*;\s*|\s*[,;]?\s+(?:und|et|e|sowie|bzw\.|resp\.|oder|ou|o|bis|à)\s+)"
+    rf"(?:(?:l['’]|les\s+|all['’]|gli\s+)?{_ARTICLE})?"
+)
+_OF = r"\s+(?:des|der|de\s+la|de\s+l['’]|du|della|dello|dell['’]|del)"
+# "/" rules out cantonal laws with the same abbreviation, e.g. "Cst./FR".
+_CITATION = re.compile(
+    rf"{_ARTICLE}(?P<chain>{_UNIT_PLAIN}(?:{_SEP}{_UNIT_PLAIN})*?)"
+    rf"(?:(?:{_OF})?,?\s*(?P<law>{_LAW_NAMES})(?![\wÀ-ÿ/])"
+    rf"|{_OF}\s*[^()\n]{{3,140}}?\(\s*(?P<long>{_LAW_NAMES})(?![\wÀ-ÿ/]))"
+)
+_NUMBER = re.compile(_NUM)
+_LET_PREFIX = re.compile(rf"{_LET_WORD}\s*")
+
+
+_CANONICAL = {re.sub(r"\s+", "", name): law for name, law in LAWS.items()}
+
+
+def _canonical(law: str) -> str:
+    return _CANONICAL[re.sub(r"\s+", "", law)]
+
+
+def _number(value: str) -> str:
+    return re.sub(r"\s+", "", value)
 
 
 def statutes(text: str) -> list[dict[str, Any]]:
-    """Articles cited in `text`, e.g. {"law": "UVG", "art": "6", "count": 4}, social insurance
-    laws first, then by article number."""
-    counts = Counter(
-        (LAWS[law], re.sub(r"\s+", "", art)) for art, law in _CITATION.findall(text or "")
-    )
+    """Articles cited in `text`, social insurance laws first, then by article number, e.g.
+    {"law": "UVG", "art": "6", "count": 4, "details": [{"para": "2", "count": 3}]}.
 
-    def key(item: tuple[tuple[str, str], int]) -> tuple[int, str, int, str]:
+    `count` is the number of citations naming the article; `details` the paragraphs ("para") and
+    letters or numbers ("let": lit., let., Bst., Ziff., ch.) cited, when a citation names them.
+    """
+    articles: Counter[tuple[str, str]] = Counter()
+    details: dict[tuple[str, str], Counter[tuple[str | None, str | None]]] = {}
+    for match in _CITATION.finditer(text or ""):
+        law = _canonical(match.group("law") or match.group("long"))
+        cited: dict[str, set[tuple[str | None, str | None]]] = {}
+        for unit in _UNIT.finditer(match.group("chain")):
+            cells = cited.setdefault(_number(unit.group("art")), set())
+            for part in _PART.finditer(unit.group("parts")):
+                if not (part.group("para") or part.group("let")):
+                    continue
+                paras = [_number(p) for p in _NUMBER.findall(part.group("para") or "")] or [None]
+                letters = re.split(_AND, _LET_PREFIX.sub("", part.group("let") or ""))
+                # Letters belong to the last paragraph: "Abs. 1 und 2 lit. a" is Abs. 1 and
+                # Abs. 2 lit. a.
+                cells.update((para, None) for para in paras[:-1])
+                cells.update((paras[-1], _number(let) or None) for let in letters)
+        for art, cells in cited.items():
+            articles[law, art] += 1
+            details.setdefault((law, art), Counter()).update(cells)
+
+    def rank(item: tuple[tuple[str, str], int]) -> tuple[int, str, int, str]:
         (law, art), _ = item
-        rank = LAW_ORDER.index(law) if law in LAW_ORDER else len(LAW_ORDER)
-        return rank, law, int(re.match(r"\d+", art).group()), art
+        order = LAW_ORDER.index(law) if law in LAW_ORDER else len(LAW_ORDER)
+        return order, law, int(re.match(r"\d+", art).group()), art
 
+    def number(value: str | None) -> tuple[int, str]:
+        digits = re.match(r"\d+", value or "")
+        return (int(digits.group()) if digits else -1), value or ""
+
+    result = []
+    for (law, art), n in sorted(articles.items(), key=rank):
+        entry: dict[str, Any] = {"law": law, "art": art, "count": n}
+        cells = sorted(details[law, art].items(), key=lambda c: (number(c[0][0]), number(c[0][1])))
+        if cells:
+            entry["details"] = [
+                {k: v for k, v in (("para", para), ("let", let)) if v} | {"count": count}
+                for (para, let), count in cells
+            ]
+        result.append(entry)
+    return result
+
+
+# "BGE 134 V 109", "ATF 141 V 281", "DTF 143 V 418"; further references in the same list follow
+# without the prefix ("BGE 145 V 361 E. 4.1; 134 V 231"), so a bare one counts within 200
+# characters of the previous reference.
+_BGE = re.compile(
+    r"\b(?P<prefix>(?:BGE|ATF|DTF)\s+)?(?P<volume>1[0-5]\d|[4-9]\d)\s+"
+    r"(?P<part>Ia|Ib|II|III|IV|V|VI|I)\s+(?P<page>\d{1,4})\b"
+)
+_BGE_REACH = 200
+
+
+def precedents(text: str) -> list[dict[str, Any]]:
+    """Leading cases (BGE) cited in `text`, e.g. {"ref": "134 V 109", "count": 2}, oldest first."""
+    counts: Counter[tuple[int, str, int]] = Counter()
+    last = None
+    for match in _BGE.finditer(text or ""):
+        if not match.group("prefix") and (last is None or match.start() - last > _BGE_REACH):
+            continue
+        last = match.end()
+        counts[int(match["volume"]), match["part"], int(match["page"])] += 1
+    parts = ["I", "Ia", "Ib", "II", "III", "IV", "V", "VI"]
     return [
-        {"law": law, "art": art, "count": n} for (law, art), n in sorted(counts.items(), key=key)
+        {"ref": f"{volume} {part} {page}", "count": n}
+        for (volume, part, page), n in sorted(
+            counts.items(), key=lambda item: (item[0][0], parts.index(item[0][1]), item[0][2])
+        )
     ]
 
 
@@ -366,6 +514,7 @@ def facts(ruling: dict[str, Any], published: set[str] = frozenset()) -> Facts:
     return Facts(
         subject=ruling.get("title") or triage.subject(text),
         statutes=statutes(text),
+        precedents=precedents(text),
         outcome=outcome(text),
         flags=flags,
     )
@@ -699,6 +848,7 @@ def classify_subject(ruling: dict[str, Any], facts_: Facts) -> Classification:
         primary=found[0],
         secondary=found[1 : 1 + MAX_SECONDARY],
         statutes=facts_.statutes,
+        precedents=facts_.precedents,
         outcome=facts_.outcome,
         flags=facts_.flags,
         method=method,
@@ -860,6 +1010,7 @@ def classify_llm(ruling: dict[str, Any], facts_: Facts, llm: LLMClient) -> Class
             primary=primary,
             secondary=secondary,
             statutes=facts_.statutes,
+            precedents=facts_.precedents,
             outcome=facts_.outcome,
             flags=facts_.flags,
             method="llm",
@@ -887,6 +1038,7 @@ def classify_ruling(
         primary="andere",
         secondary=[],
         statutes=facts_.statutes,
+        precedents=facts_.precedents,
         outcome=facts_.outcome,
         flags=facts_.flags,
         method="rule",
