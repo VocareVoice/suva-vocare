@@ -153,8 +153,10 @@ body.agent-open { --agent-col: var(--agent-w); }
 .chip--warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .chip--mono { font-family: var(--font-mono); font-size: 12px; }
 .chip--sm { height: 20px; padding: 0 7px; font-size: 11.5px; }
-button.chip { cursor: pointer; }
-button.chip:hover { border-color: var(--blue-line); color: var(--blue); }
+button.chip, a.chip { cursor: pointer; text-decoration: none; }
+button.chip:hover, a.chip:hover { border-color: var(--blue-line); color: var(--blue); }
+button.chip.chip--static { cursor: default; }
+button.chip.chip--static:hover { border-color: var(--rule); color: var(--ink-2); }
 
 .search { position: relative; flex: 1 1 340px; }
 .search svg { position: absolute; left: 15px; top: 50%; width: 17px; height: 17px; transform: translateY(-50%); color: var(--muted); }
@@ -559,7 +561,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 }
 
 @media print {
-  .sidenav, .agent, .agent-tab, .toolbar, .filterbar, .lawtoc, .dactions, .summary__foot, .original__more, .dback { display: none !important; }
+  .sidenav, .agent, .agent-tab, .toolbar, .filterbar, .lawtoc, .dactions, .summary__foot, .summary__tools, .original__more, .dback { display: none !important; }
   body { background: #fff; display: block; }
   .dgrid, .lawgrid { grid-template-columns: 1fr; }
   .original__collapsed { max-height: none; }
@@ -606,10 +608,19 @@ body.agent-open .agent { display: flex; }
 .ref { font-weight: 600; }
 .ref--law::after { content: " ↗"; font-weight: 400; font-size: .85em; }
 /* Tool steps of one turn: a quiet trail above the answer. */
-.steps { list-style: none; margin: -4px 0 0; padding: 0 2px; display: flex; flex-direction: column; gap: 2px; }
+.trace { align-self: stretch; border: 1px dashed var(--blue-line); border-radius: var(--r); background: var(--surface); padding: 5px 9px; font-size: 12.5px; color: var(--muted); }
+.trace > summary { cursor: pointer; font-weight: 600; }
+.trace[open] > summary { margin-bottom: 4px; }
+.steps { list-style: none; margin: 0; padding: 0 2px; display: flex; flex-direction: column; gap: 2px; }
 .step { font-size: 12.5px; color: var(--muted); padding-left: 16px; position: relative; }
 .step::before { content: "✓"; position: absolute; left: 0; color: var(--blue); }
 .step--err::before { content: "!"; color: #b3261e; font-weight: 700; }
+.step summary { cursor: pointer; list-style: none; }
+.step summary::-webkit-details-marker { display: none; }
+.step summary::after { content: " ▸"; font-size: .85em; opacity: .7; }
+.step details[open] > summary::after { content: " ▾"; }
+.step pre { margin: 4px 0 6px; padding: 6px 8px; background: var(--sunk); border-radius: var(--r); font-size: 11.5px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; color: var(--ink-2); }
+.step__args { color: var(--muted) !important; }
 /* Summary proposal: nothing changes until the user applies it. */
 .prop { align-self: stretch; border: 1px solid var(--blue-line); border-radius: var(--r-lg); background: var(--surface); padding: 12px 13px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .prop__head { font-weight: 650; color: var(--ink); }
@@ -629,3 +640,26 @@ body.agent-open .agent { display: flex; }
 @media (min-width: 1700px) {
   :root { --agent-w: 460px; }
 }
+
+/* Agent knowledge: one free text. */
+.know { display: flex; flex-direction: column; }
+.know__text {
+  display: block; width: 100%; min-height: 360px; resize: vertical; border: 0; border-bottom: 1px solid var(--rule);
+  padding: 18px 22px; background: var(--surface); font: 14.5px/1.6 var(--font-read); color: var(--ink); border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.know__text:focus { outline: none; box-shadow: inset 0 0 0 2px var(--blue-soft); }
+.know__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px 10px 22px; font-size: 12.5px; color: var(--muted); }
+.know__actions { display: flex; gap: 8px; }
+.know__actions [hidden] { display: none; }
+.know .alert { margin: 0 14px 14px; }
+.summary__edit {
+  width: 100%; padding: 8px 10px; border-radius: var(--r); border: 1px solid var(--rule-strong); background: var(--surface);
+}
+.summary__edit:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+
+/* Editing a summary in place. */
+.summary__tools { display: flex; gap: 2px; }
+.summary__tools .btn svg { width: 14px; height: 14px; }
+.summary__edit { display: block; min-height: 260px; resize: vertical; font: 16px/1.6 var(--font-read); color: var(--ink); }
+.summary__editbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12.5px; }
+.summary__meta .chip svg { width: 13px; height: 13px; }

@@ -10,12 +10,23 @@ from openai import OpenAI
 
 from suva.config import Settings, get_settings
 
-Message = dict[str, str]
+Message = dict[str, Any]  # role and content; tool calls and tool results carry more keys
 
 
 class TokenLogprob(NamedTuple):
     token: str
     top: dict[str, float]  # alternative token -> logprob, including the chosen token
+
+
+class ToolCall(NamedTuple):
+    id: str
+    name: str
+    arguments: str  # JSON as the model wrote it
+
+
+class Reply(NamedTuple):
+    content: str
+    tool_calls: list[ToolCall]
 
 
 class Completion(NamedTuple):
@@ -78,6 +89,25 @@ class LLMClient:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(json.dumps(completion._asdict(), ensure_ascii=False))
         return completion
+
+    def chat_tools(
+        self, messages: list[Message], tools: list[dict[str, Any]] | None, **params: Any
+    ) -> Reply:
+        """One step of a tool loop, uncached. `tools` go to the endpoint, whose Apertus chat
+        template declares them to the model and whose parser returns its calls as tool_calls.
+        Without tools the template tells the model that it has none."""
+        if tools:
+            params["tools"] = tools
+        response = self.client.chat.completions.create(
+            model=self.model, messages=messages, **params
+        )
+        message = response.choices[0].message
+        calls = [
+            ToolCall(call.id, call.function.name, call.function.arguments or "{}")
+            for call in message.tool_calls or []
+            if call.type == "function"
+        ]
+        return Reply(message.content or "", calls)
 
     def chat_json(self, messages: list[Message], **params: Any) -> Any:
         """Chat and parse the reply as JSON, tolerating code fences and surrounding prose."""

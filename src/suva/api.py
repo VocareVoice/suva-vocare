@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from suva import classify, db, laws, summarize
 from suva.agent import loop as agent_loop
+from suva.agent import memory
 from suva.config import get_settings
 from suva.llm import LLMClient
 
@@ -104,6 +105,26 @@ def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
 def summarize_ruling(docket: str, conn: Conn, llm: LLM) -> dict[str, Any]:
     _require_ruling(conn, docket)
     summarize.save(conn, docket, summarize.summarize(conn, docket, llm), llm.model)
+    return db.get_ruling_detail(conn, docket)
+
+
+class SummaryIn(BaseModel):
+    text: str = Field(min_length=1, max_length=20_000)
+
+
+@app.put("/api/rulings/{docket:path}/summaries/{lang}")
+def edit_summary(
+    docket: str, lang: Literal["de", "fr"], summary: SummaryIn, conn: Conn
+) -> dict[str, Any]:
+    """Replace the summary in `lang` with the user's text. Marked as edited, so the summary
+    pipeline never overwrites it."""
+    _require_ruling(conn, docket)
+    text = summary.text.replace("\r\n", "\n").strip()
+    if not text:
+        raise HTTPException(422, "The summary is empty")
+    db.save_summary(
+        conn, docket, lang=lang, text=text, model="manual", prompt_version=db.EDITED_VERSION
+    )
     return db.get_ruling_detail(conn, docket)
 
 
@@ -214,6 +235,32 @@ def discard_proposal(proposal_id: int, conn: Conn) -> dict[str, Any]:
     _open_proposal(conn, proposal_id)
     db.set_proposal_status(conn, proposal_id, "discarded")
     return {"proposal": db.get_proposal(conn, proposal_id)}
+
+
+# ---------------------------------------------------------------- agent knowledge
+
+
+class KnowledgeIn(BaseModel):
+    content: str = Field(min_length=1, max_length=memory.MAX_CONTENT)
+
+
+@app.get("/api/memory")
+def get_memory(conn: Conn) -> dict[str, Any]:
+    """The agent's knowledge: one text that goes into every system prompt of the agent."""
+    return memory.get(conn)
+
+
+@app.put("/api/memory")
+def put_memory(knowledge: KnowledgeIn, conn: Conn) -> dict[str, Any]:
+    memory.save(conn, knowledge.content, updated_by="user")
+    return memory.get(conn)
+
+
+@app.post("/api/memory/reset")
+def reset_memory(conn: Conn) -> dict[str, Any]:
+    """Back to the default text, which follows the summary pipeline's prompts."""
+    memory.reset(conn)
+    return memory.get(conn)
 
 
 @app.get("/api/laws")

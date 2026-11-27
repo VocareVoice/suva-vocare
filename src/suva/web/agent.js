@@ -2,6 +2,8 @@
 // The chat lives on the server (/api/chats/{id}); its id is kept in localStorage, so the
 // conversation survives reloads until the user starts a new one. A turn streams NDJSON events:
 // "user", one "step" per tool call, then "answer" (with links the server has checked) or "error".
+// When the agent changes its knowledge (update_memory), the "agent-memory" event tells the
+// knowledge page (knowledge.js) to reload it.
 
 import { $, esc, t, uiLang } from "./app.js";
 
@@ -62,6 +64,11 @@ function markdown(text) {
 }
 
 function stepLabel(m) {
+  if (m.tool === "correction") {
+    const key = `agent.step.correction.${m.args?.kind}`;
+    const label = t(key);
+    return label === key ? t("agent.step.correction") : label;
+  }
   const key = `agent.step.${m.tool}`;
   const label = t(key, m.args || {});
   return label === key ? t("agent.step.other", m.tool) : label;
@@ -85,13 +92,24 @@ function proposalCard(p) {
   </div>`;
 }
 
+/** One tool call, collapsed to its label; opening it shows the arguments and the result. */
+function stepItem(s) {
+  const args = s.tool === "correction" ? "" : `<pre class="step__args">${esc(JSON.stringify({ tool: s.tool, args: s.args || {} }, null, 1))}</pre>`;
+  const result = s.result ? `<pre class="step__result">${esc(s.result)}</pre>` : "";
+  return `<li class="${s.error ? "step step--err" : "step"}"><details>
+    <summary>${esc(stepLabel(s))}</summary>${args}${result}</details></li>`;
+}
+
 function paintLog() {
   const el = $("#agentLog");
   const parts = [`<div class="msg msg--agent">${markdown(t("agent.intro"))}</div>`];
   let steps = [];
   const flushSteps = () => {
     if (!steps.length) return;
-    parts.push(`<ul class="steps">${steps.map((s) => `<li class="${s.error ? "step step--err" : "step"}">${esc(stepLabel(s))}</li>`).join("")}</ul>`);
+    // The tool calls of one turn: a separate box, not a chat message, collapsed by default.
+    const errors = steps.filter((s) => s.error).length;
+    parts.push(`<details class="trace"><summary>${esc(t("agent.trace", steps.length, errors))}</summary>
+      <ul class="steps">${steps.map(stepItem).join("")}</ul></details>`);
     steps = [];
   };
   for (const m of messages) {
@@ -105,8 +123,11 @@ function paintLog() {
   }
   flushSteps();
   if (busy) parts.push(`<div class="msg msg--note msg--busy">${esc(t("agent.thinking"))}</div>`);
+  // Keep the steps the user opened open across repaints (a new step repaints the whole log).
+  const open = new Set([...el.querySelectorAll("details[open]")].map((d) => d.dataset.i));
   el.innerHTML = parts.join("");
-  el.scrollTop = el.scrollHeight;
+  el.querySelectorAll(".trace, .step details").forEach((d, i) => { d.dataset.i = i; if (open.has(String(i))) d.open = true; });
+  if (!open.size) el.scrollTop = el.scrollHeight;
 }
 
 function paintContext() {
@@ -175,7 +196,10 @@ async function newChat() {
 
 function handle(event) {
   if (event.type === "user") messages.push(event.message);
-  else if (event.type === "step") messages.push({ role: "tool", tool: event.tool, args: event.args, error: event.error });
+  else if (event.type === "step") {
+    messages.push({ role: "tool", tool: event.tool, args: event.args, error: event.error, result: event.result });
+    if (event.tool === "update_memory" && !event.error) window.dispatchEvent(new Event("agent-memory"));
+  }
   else if (event.type === "answer") messages.push(event.message);
   else if (event.type === "error") messages.push({ role: "note", text: t("agent.error", event.error) });
   paintLog();
@@ -239,6 +263,17 @@ async function decide(id, action) {
 }
 
 // ---------------------------------------------------------------- shell
+
+/** Open the chat with `text` in the input, for the user to complete and send. */
+export function askAgent(text) {
+  setOpen(true);
+  const input = $("#agentInput");
+  input.value = text;
+  input.style.height = "auto";
+  input.style.height = `${input.scrollHeight}px`;
+  input.focus();
+  input.setSelectionRange(text.length, text.length);
+}
 
 function setOpen(open) {
   document.body.classList.toggle("agent-open", open);
