@@ -1,6 +1,7 @@
 """SQLite knowledge base: rulings with FTS5 search, triage results, summaries, headlines and
 feedback."""
 
+import csv
 import gzip
 import io
 import json
@@ -304,7 +305,7 @@ def fts_query(text: str) -> str:
     return " ".join('"' + token.replace('"', '""') + '"' for token in tokens)
 
 
-_DATE = "COALESCE(r.publication_date, r.decision_date)"
+_DATE = "r.decision_date"
 _FROM = (
     f"FROM rulings r LEFT JOIN triage t ON {_LATEST_TRIAGE} "
     f"LEFT JOIN classification c ON {_LATEST_CLASSIFICATION}"
@@ -453,7 +454,7 @@ def facets(conn: sqlite3.Connection) -> dict[str, Any]:
         )
         return [dict(row) for row in rows]
 
-    date = "COALESCE(publication_date, decision_date)"
+    date = "decision_date"
     stats = conn.execute(
         f"SELECT COUNT(*) AS total, MIN({date}) AS date_min, MAX({date}) AS date_max, "
         "SUM(source = ?) > 0 AS demo FROM rulings",
@@ -597,7 +598,7 @@ def untriaged_dockets(
         where[0] += " AND t.prompt_version = ?"
         params.append(prompt_version)
     where[0] += ")"
-    date = "COALESCE(r.publication_date, r.decision_date)"
+    date = "r.decision_date"
     if date_from:
         where.append(f"{date} >= ?")
         params.append(date_from)
@@ -626,7 +627,7 @@ def dockets_to_summarize(
     triage only writes what the new top N lacks."""
     where = ["t.score >= ?"]
     params: list[Any] = [min_score]
-    date = "COALESCE(r.publication_date, r.decision_date)"
+    date = "r.decision_date"
     if date_from:
         where.append(f"{date} >= ?")
         params.append(date_from)
@@ -684,7 +685,7 @@ def export_triage(
 ) -> int:
     """Write the latest triage result per ruling in the date range as JSONL, best first."""
     where, params = [], []
-    date = "COALESCE(r.publication_date, r.decision_date)"
+    date = "r.decision_date"
     if date_from:
         where.append(f"{date} >= ?")
         params.append(date_from)
@@ -701,6 +702,46 @@ def export_triage(
     with open(path, "w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(dict(row), ensure_ascii=False) + "\n")
+    return len(rows)
+
+
+RELEVANT_FIELDS = ("docket", "decision_date", "publication_date", "score", "headline_de")
+
+
+def export_relevant(
+    conn: sqlite3.Connection,
+    path: Path | str,
+    *,
+    min_score: int,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    by: Literal["decision_date", "publication_date"] = "decision_date",
+) -> int:
+    """Write the rulings with a latest triage score of at least `min_score` whose decision (or
+    publication) date is in the range, highest score first and ties in docket order: as one
+    comma-separated line of dockets to `path`.txt and as a table to `path`.csv."""
+    where, params = ["t.score >= ?"], [min_score]
+    if date_from:
+        where.append(f"r.{by} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"r.{by} <= ?")
+        params.append(date_to)
+    rows = conn.execute(
+        f"SELECT r.docket, r.decision_date, r.publication_date, t.score, "
+        f"{_HEADLINE.format(lang='de')} FROM rulings r JOIN triage t ON {_LATEST_TRIAGE} "
+        f"WHERE {' AND '.join(where)} ORDER BY t.score DESC, {_DOCKET_ORDER.format(d='')}",
+        params,
+    ).fetchall()
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.with_suffix(".txt").write_text(
+        ", ".join(row["docket"] for row in rows) + "\n", encoding="utf-8"
+    )
+    with open(path.with_suffix(".csv"), "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(RELEVANT_FIELDS)
+        writer.writerows([row[field] for field in RELEVANT_FIELDS] for row in rows)
     return len(rows)
 
 
@@ -743,7 +784,7 @@ def unclassified_dockets(
         where[0] += " AND c.prompt_version = ?"
         params.append(prompt_version)
     where[0] += ")"
-    date = "COALESCE(r.publication_date, r.decision_date)"
+    date = "r.decision_date"
     if date_from:
         where.append(f"{date} >= ?")
         params.append(date_from)
@@ -781,7 +822,7 @@ def export_classification(
 ) -> int:
     """Write the latest classification per ruling in the date range as JSONL, by docket."""
     where, params = [], []
-    date = "COALESCE(r.publication_date, r.decision_date)"
+    date = "r.decision_date"
     if date_from:
         where.append(f"{date} >= ?")
         params.append(date_from)

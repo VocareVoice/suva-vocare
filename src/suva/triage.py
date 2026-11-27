@@ -28,6 +28,9 @@ PROMPT_VERSION = "v5"
 PREFILTER_MODEL = "prefilter"
 GATE_MODEL = "gate"
 RELEVANCE_THRESHOLD = 50
+# Cut-off of the delivered relevance list, chosen by F2 (recall weighted four times precision)
+# on the labelled period: python -m suva.eval.cutoff, deliverables/README.md.
+LIST_MIN_SCORE = 28
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
 # Share of the final score that comes from the keyword prior rather than the LLM.
