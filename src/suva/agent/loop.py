@@ -29,6 +29,13 @@ CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 TOOL_NAME = re.compile(r"\b(?:" + "|".join(map(re.escape, tools.TOOLS)) + r")\b")
 TOOL_RESULT_LIMIT = 60_000  # characters of one tool result sent to the model
 STORED_RESULT_LIMIT = 4_000  # characters of a tool result kept in the chat history
+# Shown when the model keeps writing tool calls as its answer.
+NO_ANSWER = {
+    "de": "Ich konnte die Recherche nicht zu einer Antwort zusammenführen. Bitte stellen Sie "
+    "die Frage noch einmal, gerne enger gefasst.",
+    "fr": "Je n'ai pas pu conclure la recherche par une réponse. Veuillez reposer la question, "
+    "de préférence de manière plus précise.",
+}
 
 
 @cache
@@ -102,6 +109,48 @@ def _bare_args_call(reply: str) -> tuple[str, dict[str, Any]] | None:
     return None
 
 
+KV_ARG = re.compile(r"""(\w+)\s*[=:]\s*(?:"([^"]*)"|'([^']*)'|([\w./-]+))""")
+
+
+def _kv_call(reply: str) -> tuple[str, dict[str, Any]] | None:
+    """A tool's name followed by key="value" arguments on the same line, as Apertus sometimes
+    writes a call out (`read_article with law="UVV", art="25"`, `read_ruling(docket=...)`)."""
+    for named in TOOL_NAME.finditer(reply):
+        tool = tools.TOOLS[named.group(0)]
+        properties = tool.parameters.get("properties", {})
+        required = set(tool.parameters.get("required", []))
+        line = reply[named.end() :].split("\n", 1)[0]
+        args: dict[str, Any] = {}
+        for match in KV_ARG.finditer(line):
+            key = match.group(1)
+            value = next(g for g in match.groups()[1:] if g is not None)
+            if key not in properties:
+                continue
+            kind = properties[key].get("type")
+            if kind == "integer" and value.isdigit():
+                args[key] = int(value)
+            elif kind == "boolean" and value.lower() in ("true", "false"):
+                args[key] = value.lower() == "true"
+            else:
+                args[key] = value
+        if args and required <= set(args):
+            return tool.name, args
+    return None
+
+
+def looks_like_call(reply: str) -> bool:
+    """The reply is a tool call written as text rather than an answer: it opens with a tool's
+    name, or names one followed by arguments (`read_article with law="UVV"`, `read_ruling(`)."""
+    head = reply.lstrip(" \t\n`*>-[").split("\n", 1)[0]
+    if TOOL_NAME.match(head):
+        return True
+    return any(
+        re.match(r"\s*(?:\(|\{|with\b|mit\b|avec\b|:)", reply[m.end() : m.end() + 12])
+        and KV_ARG.search(reply[m.end() : m.end() + 200])
+        for m in TOOL_NAME.finditer(reply)
+    )
+
+
 def _as_call(obj: Any) -> tuple[str, dict[str, Any]] | None:
     """`obj` as a tool call, in any of the shapes Apertus writes one in, or None:
     {"tool"|"name": "<tool>", "args"|"arguments"|"parameters": {...}}, the same with the
@@ -154,6 +203,8 @@ def parse_calls(reply: str) -> list[tuple[str, dict[str, Any]]]:
             brace = reply.find("{", brace + 1)
     if not calls and (bare := _bare_args_call(reply)):
         calls.append(bare)
+    if not calls and looks_like_call(reply) and (kv := _kv_call(reply)):
+        calls.append(kv)
     return calls
 
 
@@ -249,6 +300,7 @@ def run_turn(
     called: set[str] = set()  # tools called this turn
     known = known_dockets(conn, chat_id) | ({docket} if docket else set())
     calls, forced, checked, described, reply = 0, False, False, False, ""
+    callshaped = 0  # corrections of a tool call written as the answer
     for _ in range(max_steps + 3):  # bound on model calls: tool steps plus a few corrections
         if calls >= max_steps and not forced:
             forced = True
@@ -275,6 +327,27 @@ def run_turn(
                 reply = ""
 
         if not pending:
+            if looks_like_call(reply):
+                # A call written as text that could not be run (tools are off, or its arguments
+                # did not parse) must not become the answer.
+                if callshaped < 2:
+                    callshaped += 1
+                    yield correction(
+                        "callshape",
+                        reply,
+                        "[System] Deine Antwort ist ein als Text geschriebener Tool-Aufruf, keine "
+                        "Antwort; es ist nichts geschehen. "
+                        + (
+                            "Du kannst keine Tools mehr aufrufen. Antworte jetzt in ganzen Sätzen "
+                            "mit dem, was du bisher gefunden hast."
+                            if forced
+                            else "Rufe das Tool als Tool-Aufruf auf, oder antworte in ganzen "
+                            "Sätzen."
+                        ),
+                    )
+                    continue
+                reply = NO_ANSWER.get(lang, NO_ANSWER["de"])
+                break
             named = next((m for m in TOOL_NAME.finditer(reply) if m.group(0) not in called), None)
             if named and not forced and not described:
                 described = True  # it wrote the call out as prose instead of making it, once
@@ -351,6 +424,8 @@ def run_turn(
                 result = result[:TOOL_RESULT_LIMIT] + "\n[… gekürzt]"
             messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
 
+    if looks_like_call(reply):  # the step bound ran out right after a correction
+        reply = NO_ANSWER.get(lang, NO_ANSWER["de"])
     stored = db.add_chat_message(
         conn, chat_id, "assistant", reply or "…", {"proposals": ctx.proposals}
     )

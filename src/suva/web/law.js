@@ -27,7 +27,7 @@ function articleText(text) {
   return String(text || "").split("\n").filter(Boolean).map((line) => {
     let m = /^(\d+[a-z]?(?:bis|ter|quater)?)\s+(\S[\s\S]*)$/.exec(line);
     if (m && !/^\d+\.$/.test(m[1])) return `<p><span class="n">${esc(m[1])}</span>${esc(m[2])}</p>`;
-    m = /^([a-z]{1,3}\.|\d+\.)\s+([\s\S]*)$/.exec(line);
+    m = /^([a-z]{1,3}(?:bis|ter|quater|quinquies|sexies)?\.|\d+\.)\s+([\s\S]*)$/.exec(line);
     if (m) return `<p class="lit"><span class="n">${esc(m[1])}</span>${esc(m[2])}</p>`;
     return `<p>${esc(line)}</p>`;
   }).join("");

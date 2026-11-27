@@ -392,8 +392,10 @@ table.rulings { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .generate p { margin: 0 auto 18px; color: var(--muted); max-width: 54ch; }
 .progress { max-width: 420px; margin: 18px auto 0; text-align: left; }
 .progress__bar { height: 4px; border-radius: 4px; background: var(--rule); overflow: hidden; position: relative; }
-.progress__bar i { position: absolute; inset: 0 auto 0 0; width: 35%; background: var(--blue); border-radius: 4px; animation: indet 1.4s ease-in-out infinite; }
-@keyframes indet { 0% { left: -35%; } 100% { left: 100%; } }
+/* Estimated progress: the width only grows (set from app.js); a sheen keeps it visibly alive. */
+.progress__bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--blue); border-radius: 4px; transition: width .5s linear; overflow: hidden; }
+.progress__bar i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent); animation: sheen 1.6s ease-in-out infinite; }
+@keyframes sheen { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 .progress__steps { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 6px; font-size: 13.5px; }
 .progress__steps li { display: flex; align-items: center; gap: 8px; color: var(--muted); }
 .progress__steps li.is-done { color: var(--ok); }
@@ -523,12 +525,22 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 
 /* ---------- Responsive ---------- */
 /* Columns inside the page react to the page's own width (it shrinks when the agent is open). */
+/* A laptop with the agent open (1440 px) leaves the page about 700 px: the side column narrows
+   rather than dropping below. Stacked, it goes between the summary and the full text (not under
+   the long ruling text), so the relevance, details and statutes stay near the top. */
 @container (max-width: 980px) {
-  .dgrid { grid-template-columns: 1fr; }
-  .daside { position: static; max-height: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 28px; }
-  .daside > .card { border-top: 1px solid var(--rule); }
+  .dgrid { grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; }
   .lawgrid { grid-template-columns: 1fr; }
   .lawtoc { position: static; max-height: 260px; }
+}
+@container (max-width: 660px) {
+  .dgrid { grid-template-columns: 1fr; gap: 28px; }
+  .dmain { display: contents; }
+  #summaryCard { order: 1; }
+  .daside { order: 2; }
+  .dmain > :not(#summaryCard) { order: 3; }
+  .daside { position: static; max-height: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 28px; }
+  .daside > .card { border-top: 1px solid var(--rule); }
 }
 @container (max-width: 720px) {
   .summaries.is-both { grid-template-columns: 1fr; }
@@ -559,6 +571,13 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   .dhead { flex-direction: column; align-items: flex-start; }
   .agent { position: fixed; top: 0; right: 0; bottom: 0; height: auto; width: min(100vw, 400px); box-shadow: -6px 0 24px rgba(0, 0, 0, .12); z-index: 40; }
 }
+/* Phones: logo and language on the first row, the navigation in one scrollable row below. */
+@media (max-width: 600px) {
+  .sidenav { flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  .brand__name { display: none; }
+  .sidenav__nav { order: 3; flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .navlink { white-space: nowrap; flex: none; }
+}
 
 @media print {
   .sidenav, .agent, .agent-tab, .toolbar, .filterbar, .lawtoc, .dactions, .summary__foot, .summary__tools, .original__more, .dback { display: none !important; }
@@ -580,6 +599,9 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 .agent-tab svg { width: 16px; height: 16px; transform: rotate(90deg); }
 .agent-tab:hover { background: var(--blue-hover); }
 body.agent-open .agent-tab { display: none; }
+/* Keep the page clear of the floating tab while the agent is closed. */
+body:not(.agent-open) .page { padding-right: 64px; }
+@media (max-width: 900px) { body:not(.agent-open) .page { padding-right: 52px; } }
 /* Docked column right of the page (see the shell); hidden entirely when closed. */
 .agent {
   position: sticky; top: 0; height: 100vh; z-index: 25; min-width: 0;
