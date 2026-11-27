@@ -1,6 +1,6 @@
 # Summary evaluation
 
-How the summary writer `src/suva/summarize.py` (prompt version `v6`, model `apertus-v1-5-70b`)
+How the summary writer `src/suva/summarize.py` (prompt version `v7`, model `apertus-v1-5-70b`)
 works, and how its German and French summaries compare with Suva's human summaries on the
 hold-out of `data/eval/split.json`: 10 rulings (5 German-, 4 French- and 1 Italian-language;
 authors FRT, LC4 and VIL), never shown to the model.
@@ -92,7 +92,47 @@ authors FRT, LC4 and VIL), never shown to the model.
    superscripts the ruling text lost are restored in the final French text ("1 er août" → "1er août", "la I e
    Cour" → "la Ire Cour").
 
-A summary takes 10 to 16 model calls and 1 to 5 minutes on the shared gateway, so in the UI it
+9. **Factual check (v7).** A blind reading of v6 against the rulings
+   (`docs/eval_baseline_gemini.md`) found 36 factual errors in the 20 hold-out texts, 13 of
+   them consideration references, and an anonymised "Dr. med. D.________" in 8C_78/2025. The
+   claim check of step 6 had let all of them through. Each final text now goes through:
+   - **Passage lookup.** For every sentence but the closing outcome, Apertus copies the passage
+     of the ruling the sentence relies on and names its consideration, one call per sentence
+     (asked for all sentences at once, it answered for one of them or quoted the summary
+     instead of the ruling). A passage that is not word for word in the ruling is dropped.
+   - **Pair check.** Apertus compares each sentence with its passage, looking for the error
+     types of the blind reading: who decided what (a cantonal finding presented as the
+     Court's own, an objection rejected or upheld at the wrong stage), a rule with the wrong
+     meaning (direction, threshold, standard of proof), facts (gender, occupation, the kind of
+     report, repayment versus its waiver) and figures or dates of another stage. A flagged
+     pair is asked about once more, narrowly ("does the passage contradict the sentence, not
+     merely leave it out?"): the pair check alone also flagged correct sentences, among them
+     the closing outcome, and a revision from such a flag adds an error. Asked instead to find
+     errors in the whole summary against the whole ruling, Apertus found none in any of the
+     20 texts.
+   - **Rule checks.** The insured person's gender from the role in the parties block
+     ("Beschwerdeführerin", "intimée"), and an objection procedure in an invalidity insurance
+     ruling, which has none (8C_185/2025 FR: "annulé la décision sur opposition").
+   - The confirmed errors and failed rules go to one revision, then the finishing step of
+     step 8 runs again. A revision with NUL bytes for umlauts (Apertus wrote "willk\x00r" once)
+     is discarded.
+   - **References by rule.** Every consideration reference is checked against the ruling
+     segmented by `src/suva/segment.py`, down to sub-considerations (E. 3.3.2). If the cited
+     consideration contains the sentence's passage it stays; otherwise it becomes the most
+     specific consideration that does; a reference that cannot be verified and does not exist
+     in the ruling is removed; the closing outcome sentence cites none ("Letztlich wies das
+     Bundesgericht die Beschwerde ab (E. 5)" cited the costs). A sentence with several
+     references keeps each one that exists.
+   - **Last rules.** A body sentence that decides the appeal otherwise than the operative part
+     goes (a revision added "... und weist die Beschwerde ab" to a partly upheld appeal,
+     9C_65/2025); the insured person's role words take the gender of the parties block
+     ("Der Versicherte, diplomierte Kinderkrankenschwester" → "Die Versicherte"); an anonymised
+     doctor left after the role goes ("des Suva-Arztes Dr. med. D.________" → "des
+     Suvaarztes"), one on its own becomes "Arzt" / "médecin".
+
+A summary takes 10 to 16 model calls for steps 1 to 8 and about 25 more for step 9 (most of them
+the short per-sentence lookups, each with the ruling as context), 1 to 5 minutes on the shared
+gateway when it is not overloaded, so in the UI it
 runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The results
 use `apertus-v1-5-70b`, the default when `LLM_NAME` is empty: a comparison with the thinking
 variant gave no gain.
@@ -202,13 +242,66 @@ judge it rated a correct summary of 8C_719/2024 as reversing the outcome.
 | Federal Court costs and legal aid in the summary | costs dropped from the source | none |
 
 Remaining weaknesses in the final run: some German sentences are clumsy ("Nach verweigerter
-Erlassgesuch", 8C_613/2025; "Einspracheentscheidung", 8C_351/2025), one German summary starts
-with "Der Versicherte" for a female insured person (9C_65/2025), the French of German rulings
+Erlassgesuch", 8C_613/2025; "Einspracheentscheidung", 8C_351/2025), the French of German rulings
 sometimes keeps a German term ("GgV Ziff. 382", 8C_185/2025), and the facts paragraph of a
 long procedural history can attribute a figure to the wrong stage (8C_313/2024 in an earlier
 run). The claim-by-claim check rarely finds anything: Apertus 70B (also the thinking variant)
 missed both an injected wrong figure and the 8C_185/2025 error, which is why the rule checks,
 the holdings step and the outcome formula carry the accuracy work.
+
+### v7: factual check, blind reading against v6
+
+The same blind reading as `docs/eval_baseline_gemini.md`, with prompt versions v6 and v7 (not
+the run labels of the table above) as the two sides: two
+fresh Claude sub-agents each read five hold-out rulings in full and both versions' German and
+French summaries, labelled A and B at random per ruling (`python -m suva.eval.baseline blind`,
+key opened after both readings). For each summary they judged the outcome, listed every fact,
+figure, date, statute or consideration reference the ruling does not support, every holding
+with the wrong meaning and every anonymised name left, each with a quote from the ruling, and
+scored coverage, closeness to VIL's style and language from 1 to 5. The v6 texts are the ones of
+the Gemini comparison; v7 replays their model calls from the cache and adds step 9, so every
+difference between the sides comes from the factual check.
+
+| per summary (20 each) | v6 | v7 |
+|---|---|---|
+| outcome stated correctly | 20 | 20 |
+| factual errors | 43 | **31** |
+| error-free | 0 | **3** |
+| summaries with more errors than the other version | 0 | 0 |
+| preferred (9 ties, all on identical texts) | 2 | **9** |
+| coverage of holdings (1-5) | 3.65 | 3.50 |
+| closeness to VIL's style (1-5) | 3.55 | 3.55 |
+| German / French quality (1-5) | 3.45 | 3.70 |
+
+These readers are stricter than the first reading of the comparison, which counted 36 errors
+for the same v6 texts. `score_summaries` barely moves (v6 → v7, de: ROUGE-L 0.19 → 0.19, chrF
+43.3 → 43.1, glossary recall 0.64 → 0.63; fr: 0.24 → 0.25, 41.7 → 41.1, 0.71 → 0.69; no style
+issues). Fixed by v7:
+
+- 8C_78/2025 de: "Dr. med. D.________" and "Dr. med. E.________" are gone ("des Suvaarztes",
+  "des beigezogenen Experten"), and the outcome no longer cites the costs (E. 5).
+- 8C_313/2024: the cantonal court's 70 % finding is no longer the Federal Supreme Court's
+  own ("Das kantonale Gericht hatte verbindlich festgestellt ..."); the German text calls the
+  insured woman "Die Versicherte".
+- 8C_351/2025: the non-existent E. 4.2 and E. 5.3 are removed or set to E. 5.2.
+- 8C_185/2025 fr: no "décision sur opposition" in an invalidity insurance case.
+- 9C_65/2025 de: "Die Versicherte, diplomierte Kinderkrankenschwester"; the costs holding no
+  longer cites the formalism consideration.
+
+Still wrong in both versions: the rule of Art. 6 Abs. 2 UVG turned around in 8C_78/2025, the
+"three of seven criteria" in 8C_356/2025, the stages of the procedure in 8C_313/2024 de and
+8C_613/2025 de ("Rückerstattung" for the waiver), "could not be granted" for "could not assume
+it would be granted" in 8C_351/2025, and references to an existing consideration that does not
+state the point (8C_719/2024, 8C_450/2025, 8C_508/2025). The pair check flags the reversed rule
+of 8C_78/2025 only in one language, and the revision did not correct it.
+
+A first v7 run also moved existing references to the consideration of the sentence's passage.
+The same reading found that wrong about as often as right: it fixed 8C_450/2025 (E. 4.4 → 4.3)
+but broke six others, because the passage often stands in the consideration that states the
+general rule rather than its application. v7 therefore changes only references to
+considerations that do not exist or to the costs (that run: 36 errors, preferred 8 to 6). In a
+summary of a partly upheld appeal, the first run's revision also added "... und weist die
+Beschwerde ab" to the body; the final rule removes such sentences.
 
 ## Side by side
 
@@ -305,3 +398,9 @@ uv run python -m suva.eval.score_summaries generated.jsonl
 
 With `apertus-v1-5-70b` at temperature 0. The gateway is not bit-for-bit deterministic,
 so wording and the scores above vary slightly between runs.
+
+The v6 against v7 reading: `LLM_TIMEOUT=900 uv run python -m suva.eval.baseline summaries
+--model apertus-v1-5-70b --out out/v7` (with the response cache of the v6 run of
+`docs/eval_baseline_gemini.md`, only step 9 reaches the gateway), then `python -m
+suva.eval.baseline blind <v6 jsonl> out/v7/summaries_apertus-v1-5-70b.jsonl --out out/blind
+--seed 9043` and the reading as described above.
