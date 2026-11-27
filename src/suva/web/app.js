@@ -1,21 +1,20 @@
 // BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
 // Talks to the FastAPI JSON API in src/suva/api.py. The root view (relevant rulings by category)
-// lives in relevant.js, the branch/category contract in categories.js.
+// lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js.
 
-import { classify, label } from "./categories.js";
+import { initAgent, paintAgent } from "./agent.js";
+import { classify, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
 import { renderRelevant } from "./relevant.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
   de: {
-    "nav.rel": "Relevante Urteile",
+    "nav.rel": "Wissensbasis",
     "nav.all": "Alle Urteile",
-    "rel.title": "Relevante Urteile",
-    "rel.lede": (n, total, sum, q) => `${n.toLocaleString("de-CH")} von ${total.toLocaleString("de-CH")} publizierten Urteilen ${q ? "passen zur Suche und " : ""}sind für die Suva relevant, ${sum.toLocaleString("de-CH")} davon mit Zusammenfassung.`,
+    "rel.title": "Wissensbasis",
     "rel.register": "Register",
-    "rel.all": "Alle relevanten Urteile",
-    "rel.provisional": "Vorläufige Einordnung anhand des Gegenstands. Die Klassifizierung der Rechtsfragen folgt.",
-    "rel.search": "Relevante Urteile durchsuchen, z. B. «Integritätsentschädigung» oder 8C_78/2025",
+    "rel.all": "Alle Rechtsfragen",
+    "rel.search": "Wissensbasis durchsuchen, z. B. «Integritätsentschädigung» oder 8C_78/2025",
     "rel.sort": "Sortierung",
     "rel.view": "Darstellung",
     "rel.view.groups": "Nach Rechtsfrage",
@@ -23,8 +22,14 @@ const I18N = {
     "rel.sum.yes": "Zusammenfassung DE und FR vorhanden",
     "rel.sum.no": "Noch keine Zusammenfassung",
     "rel.sum.open": "Offen",
-    "list.lede": (st) => `${st.total.toLocaleString("de-CH")} Urteile im Zeitraum, ${st.relevant.toLocaleString("de-CH")} davon als relevant bewertet und ${st.withSum.toLocaleString("de-CH")} zusammengefasst.`,
-    "kb.n": (n) => `${n} ${n === 1 ? "Urteil" : "Urteile"}`,
+    "agent.tab": "Agent",
+    "agent.title": "Agent",
+    "agent.close": "Agent schliessen",
+    "agent.intro": "Hier können Sie bald mit einem Agenten über die Rechtsprechung sprechen, z. B. «Welche Urteile 2026 betreffen die adäquate Kausalität bei Schleudertrauma?».",
+    "agent.ph": "Frage an den Agenten …",
+    "agent.send": "Senden",
+    "agent.soon": "Der Agent ist noch nicht angebunden. Ihre Frage wurde nicht übermittelt.",
+    "agent.context": (d) => `Kontext: ${d}`,
     "kb.empty": "Keine Urteile in der Wissensbasis",
     "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
     "kb.sort.score": "Nach Relevanz",
@@ -119,16 +124,24 @@ const I18N = {
     "lang.fr": "Französisch",
     "lang.it": "Italienisch",
     "notfound": "Urteil nicht gefunden",
+    "f.branch": "Versicherungszweig",
+    "f.branch.all": "Alle",
+    "f.category": "Kategorie",
+    "f.category.all": "Alle",
+    "c.title": "Rechtsgebiet",
+    "c.secondary": "Weitere Fragen",
+    "c.outcome": "Ausgang",
+    "c.method.llm": "Apertus",
+    "c.method.subject": "aus dem Gegenstand",
+    "c.method.rule": "Regel",
   },
   fr: {
-    "nav.rel": "Arrêts pertinents",
+    "nav.rel": "Base de connaissances",
     "nav.all": "Tous les arrêts",
-    "rel.title": "Arrêts pertinents",
-    "rel.lede": (n, total, sum, q) => `${n.toLocaleString("fr-CH")} des ${total.toLocaleString("fr-CH")} arrêts publiés ${q ? "correspondent à la recherche et " : ""}sont pertinents pour la Suva, dont ${sum.toLocaleString("fr-CH")} avec résumé.`,
+    "rel.title": "Base de connaissances",
     "rel.register": "Registre",
-    "rel.all": "Tous les arrêts pertinents",
-    "rel.provisional": "Classement provisoire d'après l'objet de l'arrêt. La classification des questions juridiques suit.",
-    "rel.search": "Rechercher dans les arrêts pertinents, p. ex. « intégrité » ou 8C_78/2025",
+    "rel.all": "Toutes les questions",
+    "rel.search": "Rechercher dans la base de connaissances, p. ex. « intégrité » ou 8C_78/2025",
     "rel.sort": "Tri",
     "rel.view": "Affichage",
     "rel.view.groups": "Par question",
@@ -136,8 +149,14 @@ const I18N = {
     "rel.sum.yes": "Résumé DE et FR disponible",
     "rel.sum.no": "Pas encore de résumé",
     "rel.sum.open": "Ouvert",
-    "list.lede": (st) => `${st.total.toLocaleString("fr-CH")} arrêts dans la période, dont ${st.relevant.toLocaleString("fr-CH")} jugés pertinents et ${st.withSum.toLocaleString("fr-CH")} résumés.`,
-    "kb.n": (n) => `${n} ${n === 1 ? "arrêt" : "arrêts"}`,
+    "agent.tab": "Agent",
+    "agent.title": "Agent",
+    "agent.close": "Fermer l'agent",
+    "agent.intro": "Vous pourrez bientôt discuter ici de la jurisprudence avec un agent, p. ex. « Quels arrêts de 2026 portent sur la causalité adéquate en cas de coup du lapin ? ».",
+    "agent.ph": "Question à l'agent …",
+    "agent.send": "Envoyer",
+    "agent.soon": "L'agent n'est pas encore connecté. Votre question n'a pas été transmise.",
+    "agent.context": (d) => `Contexte : ${d}`,
     "kb.empty": "Aucun arrêt dans la base de connaissances",
     "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
     "kb.sort.score": "Par pertinence",
@@ -232,6 +251,16 @@ const I18N = {
     "lang.fr": "Français",
     "lang.it": "Italien",
     "notfound": "Arrêt introuvable",
+    "f.branch": "Branche d'assurance",
+    "f.branch.all": "Toutes",
+    "f.category": "Catégorie",
+    "f.category.all": "Toutes",
+    "c.title": "Domaine juridique",
+    "c.secondary": "Autres questions",
+    "c.outcome": "Issue",
+    "c.method.llm": "Apertus",
+    "c.method.subject": "d'après l'objet",
+    "c.method.rule": "règle",
   },
 };
 
@@ -381,6 +410,14 @@ export const API = {
   summarize: (docket) => api(`/api/rulings/${docketPath(docket)}/summarize`, { method: "POST" }),
 };
 
+// ---------------------------------------------------------------- classification
+// Closed label lists (branch, category, outcome, flag) with DE/FR labels, from /api/facets.
+function classChips(c, size = "chip--sm") {
+  if (!c) return "";
+  return `<span class="chip ${size}" title="${esc(taxLabel("branches", c.branch))}">${esc(taxLabel("branches", c.branch, true))}</span>` +
+    `<span class="chip ${size} chip--accent" title="${esc(taxLabel("categories", c.primary))}">${esc(taxLabel("categories", c.primary, true))}</span>`;
+}
+
 // ---------------------------------------------------------------- statutes
 // Recognise citations such as "Art. 73 lit. b UVV", "art. 6 al. 1 LAA", "Art. 16 ATSG".
 const LAWS = ["UVG", "LAA", "UVV", "OLAA", "ATSG", "LPGA", "ATSV", "OPGA", "IVG", "LAI", "IVV", "RAI", "AHVG", "LAVS",
@@ -453,9 +490,10 @@ function paragraphs(text, terms) {
 export const state = {
   // list filters (mirrored in the URL hash)
   q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
+  branch: "", cat: "",
   sort: "score", dir: "desc",
   // cache of last list response
-  items: [], total: 0, sig: "", loaded: false, shown: 0, stats: null, statsSig: "",
+  items: [], total: 0, sig: "", loaded: false, shown: 0,
   lastListHash: "#/",
 };
 
@@ -475,7 +513,7 @@ function readHash() {
 }
 function listHash() {
   const p = new URLSearchParams();
-  for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum"]) if (state[k] && !(k === "period" && state[k] === "all")) p.set(k, state[k]);
+  for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) if (state[k] && !(k === "period" && state[k] === "all")) p.set(k, state[k]);
   if (state.min) p.set("min", state.min);
   if (state.sort !== "score" || state.dir !== "desc") { p.set("sort", state.sort); p.set("dir", state.dir); }
   const s = p.toString();
@@ -497,7 +535,7 @@ async function route() {
     if (path !== "/" && path !== "") { location.replace("#/"); return; } // old #/c/<topic> links
     await renderRelevant(params, resetListeners());
   } else {
-    for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
+    for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
     state.min = +params.get("min") || 0;
     state.sort = params.get("sort") || "score";
     state.dir = params.get("dir") || "desc";
@@ -526,6 +564,8 @@ function serverParams() {
   if (state.div) params.division = state.div;
   if (state.lang) params.language = state.lang;
   if (state.sum) params.has_summary = state.sum === "yes";
+  if (state.branch) params.branch = state.branch;
+  if (state.cat) params.category = state.cat;
   return params;
 }
 
@@ -543,22 +583,6 @@ async function ensureItems() {
 }
 
 // Stats describe the period and search, independent of the triage/score filters.
-async function ensureStats() {
-  const { from, to } = periodRange();
-  const base = {};
-  if (state.q.trim()) base.q = state.q.trim();
-  if (from) base.from = from;
-  if (to) base.to = to;
-  const sig = JSON.stringify(base);
-  if (sig === state.statsSig && state.stats) return;
-  const { stats } = await API.list({ ...base, limit: 1 });
-  state.stats = {
-    total: stats.total, relevant: stats.relevant,
-    withSum: stats.relevant - stats.relevant_without_summary, open: stats.relevant_without_summary,
-  };
-  state.statsSig = sig;
-}
-
 function listShell() {
   const sel = (name, opts, val) =>
     `<select data-f="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -600,6 +624,8 @@ function listShell() {
       <span class="field">${esc(t("f.summary"))}
         ${sel("sum", [["", t("f.summary.all")], ["yes", t("f.summary.yes")], ["no", t("f.summary.no")]], state.sum)}
       </span>
+      <span class="field">${esc(t("f.branch"))} <span id="branchSel"></span></span>
+      <span class="field">${esc(t("f.category"))} <span id="catSel"></span></span>
       <span class="toolbar__spacer"></span>
       <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
     </div>
@@ -610,20 +636,31 @@ function listShell() {
 }
 
 function renderStats() {
-  const st = state.stats;
-  if (st) {
-    $("#stats").textContent = t("list.lede", st);
-  }
   const divs = [...new Set([...COMMON_DIVISIONS, ...state.items.map((r) => divisionCode(r.docket)).filter(Boolean)])].sort();
   if (state.div && !divs.includes(state.div)) divs.push(state.div);
   $("#divSel").innerHTML = `<select data-f="div"><option value="">${esc(t("f.division.all"))}</option>${divs
     .map((d) => `<option value="${d}"${d === state.div ? " selected" : ""}>${d}${divisionName(d) ? " – " + esc(divisionName(d)) : ""}</option>`).join("")}</select>`;
+  renderClassFilters();
+}
+
+// Branch first; the category list then shows the categories that branch allows, with counts.
+function renderClassFilters() {
+  const taxonomy = getTaxonomy();
+  if (!taxonomy) return;
+  const opt = (v, l, n, on) => `<option value="${esc(v)}"${on ? " selected" : ""}>${esc(l)}${n != null ? ` (${n.toLocaleString("de-CH")})` : ""}</option>`;
+  $("#branchSel").innerHTML = `<select data-f="branch">${opt("", t("f.branch.all"), null, !state.branch)}${taxonomy.branches
+    .filter((b) => b.count || b.value === state.branch)
+    .map((b) => opt(b.value, taxLabel("branches", b.value, true), b.count, b.value === state.branch)).join("")}</select>`;
+  const count = (c) => (state.branch ? c.counts[state.branch] || 0 : Object.values(c.counts).reduce((a, n) => a + n, 0));
+  $("#catSel").innerHTML = `<select data-f="cat">${opt("", t("f.category.all"), null, !state.cat)}${taxonomy.categories
+    .filter((c) => (!state.branch || c.branches.includes(state.branch)) && (count(c) || c.value === state.cat))
+    .map((c) => opt(c.value, taxLabel("categories", c.value, true), count(c), c.value === state.cat)).join("")}</select>`;
 }
 
 function renderTable() {
   const items = state.items;
   const wrap = $("#tableWrap");
-  const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.period !== "all";
+  const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.branch || state.cat || state.period !== "all";
   if (!items.length) {
     wrap.innerHTML = `<div class="empty"><h2>${esc(t("empty.title"))}</h2>${
       !filtered ? `<p>${esc(t("empty.db"))} <code>make load</code></p>` : `<p>${esc(t("empty.filtered"))}</p>`}</div>`;
@@ -643,7 +680,7 @@ function renderTable() {
       <td class="c-docket"><a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
         <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " " + esc(t("untriaged")) : ""}</span></td>
       <td class="c-date num">${fmtDate(r.decision_date)}</td>
-      <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>
+      <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>${r.classification ? `<div class="ruling-tags">${classChips(r.classification)}</div>` : ""}
         ${reason ? `<div class="ruling-reason">${esc(reason)}</div>` : ""}</td>
       <td class="c-lang">${r.language ? `<span class="lang">${esc(r.language)}</span>` : ""}</td>
       <td class="c-sum">${r.has_summary ? `<span class="sumflag is-yes">${ICONS.check}${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
@@ -684,7 +721,7 @@ async function renderList() {
     clearTimeout(loadingTimer);
     loadingTimer = setTimeout(() => { const c = $("#resultcount"); if (c) c.textContent = t("loading"); }, 300);
     try {
-      await Promise.all([ensureItems(), ensureStats().then(renderStats)]);
+      await Promise.all([ensureItems().then(renderStats), ensureTaxonomy().then(renderClassFilters)]);
     } catch (e) {
       clearTimeout(loadingTimer);
       $("#tableWrap").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
@@ -711,6 +748,7 @@ async function renderList() {
     if (!f || f === "min") return;
     state[f] = e.target.value;
     if (f === "period") $("#customRange").hidden = state.period !== "custom";
+    if (f === "branch" && state.branch && !getTaxonomy()?.categories.find((c) => c.value === state.cat)?.branches.includes(state.branch)) state.cat = "";
     reload();
   }, opts);
   app.addEventListener("click", (e) => {
@@ -735,7 +773,7 @@ async function renderList() {
       return;
     }
     if (e.target.id === "reset") {
-      Object.assign(state, { q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "", sort: "score", dir: "desc" });
+      Object.assign(state, { q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "", branch: "", cat: "", sort: "score", dir: "desc" });
       renderList();
       return;
     }
@@ -838,6 +876,25 @@ function relevanceCard(r) {
   </section>`;
 }
 
+function classificationCard(c) {
+  if (!c) return "";
+  const rows = [
+    [t("f.branch"), taxLabel("branches", c.branch)],
+    [t("f.category"), taxLabel("categories", c.primary)],
+    ...(c.secondary.length ? [[t("c.secondary"), c.secondary.map((s) => taxLabel("categories", s)).join(" · ")]] : []),
+    ...(c.outcome ? [[t("c.outcome"), taxLabel("outcomes", c.outcome)]] : []),
+  ];
+  return `<section class="card">
+    <div class="card__head"><h2 class="card__title">${esc(t("c.title"))}</h2></div>
+    <div class="card__body" style="display:grid;gap:12px">
+      <dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+      ${c.flags.length ? `<div class="statutes">${c.flags.map((f) => `<span class="chip chip--accent">${esc(taxLabel("flags", f))}</span>`).join("")}</div>` : ""}
+      ${c.rationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
+      <div class="metaline"><span>${esc(t(`c.method.${c.method}`))}${c.model ? ` · ${esc(c.model)}` : ""}</span>${c.prompt_version ? `<span>Prompt ${esc(c.prompt_version)}</span>` : ""}</div>
+    </div>
+  </section>`;
+}
+
 function statutesCard(statutes) {
   return `<section class="card">
     <div class="card__head"><h2 class="card__title">${esc(t("st.title"))}</h2></div>
@@ -889,7 +946,7 @@ async function renderDetail(docket, params) {
     <div class="card card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(6)}</div>`;
   let r;
   try {
-    r = await API.detail(docket);
+    [r] = await Promise.all([API.detail(docket), ensureTaxonomy()]);
   } catch (e) {
     app.innerHTML = `<div class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></div>
       <div class="card empty"><h2>${esc(e.status === 404 ? t("notfound") : t("err.load"))}</h2><p>${esc(docket)} · ${esc(e.message)}</p></div>`;
@@ -899,13 +956,14 @@ async function renderDetail(docket, params) {
   paintDetail(r, terms);
 }
 
-// "Unfallversicherung / Kausalzusammenhang", each part linking to the register filter.
+// "Unfallversicherung / Natürliche Kausalität", each part linking to the knowledge-base filter.
 function classPath(r) {
-  const c = classify({ ...(r.triage || {}), ...r, reasoning: reasoningOf(r.triage) });
-  const b = encodeURIComponent(c.branch.id);
-  return `<a class="classpath" data-branch="${esc(c.branch.id)}" href="#/?branch=${b}"><span class="register__swatch" aria-hidden="true"></span>${esc(label(c.branch, uiLang))}</a>
+  if (!r.classification) return "";
+  const { branch, category } = classify(r);
+  const b = encodeURIComponent(branch);
+  return `<a class="classpath" data-branch="${esc(branch)}" href="#/?branch=${b}" title="${esc(taxLabel("branches", branch))}"><span class="register__swatch" aria-hidden="true"></span>${esc(taxLabel("branches", branch, true))}</a>
     <span class="classpath__sep" aria-hidden="true">/</span>
-    <a class="classpath" href="#/?branch=${b}&cat=${encodeURIComponent(c.category.id)}">${esc(label(c.category, uiLang))}</a>`;
+    <a class="classpath" href="#/?branch=${b}&cat=${encodeURIComponent(category)}" title="${esc(taxLabel("categories", category))}">${esc(taxLabel("categories", category, true))}</a>`;
 }
 
 function paintDetail(r, terms) {
@@ -918,7 +976,7 @@ function paintDetail(r, terms) {
     <header class="dhead">
       <div>
         <div class="dhead__kicker">
-          ${tr?.label === "relevant" ? classPath(r) : ""}
+          ${classPath(r)}
         </div>
         <h1>${esc(suvaTitle(r))}</h1>
         ${r.title ? `<p class="dhead__title">${esc(r.title)}</p>` : ""}
@@ -936,6 +994,7 @@ function paintDetail(r, terms) {
       </div>
       <aside class="daside">
         ${relevanceCard(r)}
+        ${classificationCard(r.classification)}
         ${statutesCard(statutes)}
         ${metaCard(r)}
       </aside>
@@ -1029,6 +1088,7 @@ function applyLang() {
   document.documentElement.lang = uiLang;
   $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   $$(".langswitch button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === uiLang));
+  if ($("#agentTab")) paintAgent();
 }
 $$(".langswitch button").forEach((b) => b.addEventListener("click", () => {
   if (uiLang === b.dataset.lang) return;
@@ -1052,5 +1112,6 @@ new ResizeObserver(syncTopbar).observe($(".topbar"));
 syncTopbar();
 
 window.addEventListener("hashchange", route);
+initAgent();
 applyLang();
 route();

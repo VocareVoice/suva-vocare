@@ -1,10 +1,10 @@
-// Root view: the rulings triage marked relevant for Suva, grouped by insurance branch and legal
-// category. A register on the left lists every category with its count and acts as the filter.
+// Root view, the knowledge base: the rulings triage marked relevant for Suva, grouped by insurance
+// branch and legal category. A register on the left lists every category and acts as the filter.
 
-import { $, $$, API, ICONS, PERIODS, band, esc, fmtDate, highlight, reasoningOf, state, t, uiLang } from "./app.js";
-import { BRANCHES, buildRegister, classify, label } from "./categories.js";
+import { $, $$, API, ICONS, PERIODS, esc, fmtDate, highlight, reasoningOf, state, t } from "./app.js";
+import { branchLaw, buildRegister, classify, ensureTaxonomy, taxLabel } from "./categories.js";
 
-const cache = { sig: "", items: [], corpus: 0 };
+const cache = { sig: "", items: [] };
 
 async function load(period, q) {
   const p = PERIODS.find((x) => x.id === period) || PERIODS[0];
@@ -20,8 +20,7 @@ async function load(period, q) {
     items.push(...(res.items || []));
     if (!res.items?.length || items.length >= res.total) break;
   }
-  const all = await API.list({ ...range, limit: 1 });
-  Object.assign(cache, { sig, items, corpus: all.total ?? 0 });
+  Object.assign(cache, { sig, items });
 }
 
 function readParams(params) {
@@ -53,18 +52,13 @@ const sorter = (sort) => (sort === "date"
 function entry(r, terms, showCat) {
   const c = classify(r);
   const reason = reasoningOf(r);
-  const b = band(r.score);
   return `<li class="entry" data-docket="${esc(r.docket)}">
-    <div class="entry__rz rz--${b}" title="${esc(t("r.hint"))}">
-      <span class="rz__n">${r.score ?? "–"}</span>
-      <span class="rz__bar"><i style="width:${r.score ?? 0}%"></i></span>
-    </div>
+    <a class="entry__id docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
     <div class="entry__body">
       <div class="entry__head">
-        <a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
         <span class="entry__date">${esc(fmtDate(r.decision_date, "long"))}</span>
         ${r.language ? `<span class="entry__lang">${esc(t(`lang.${r.language}`))}</span>` : ""}
-        ${showCat ? `<span class="entry__cat" data-branch="${esc(c.branch.id)}">${esc(label(c.category, uiLang))}</span>` : ""}
+        ${showCat ? `<span class="entry__cat" data-branch="${esc(c.branch)}" title="${esc(taxLabel("categories", c.category))}">${esc(taxLabel("categories", c.category, true))}</span>` : ""}
       </div>
       <p class="entry__title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</p>
       ${reason ? `<p class="entry__reason">${terms.length ? highlight(reason, terms) : esc(reason)}</p>` : ""}
@@ -75,22 +69,21 @@ function entry(r, terms, showCat) {
   </li>`;
 }
 
-function registerHtml(reg, f, total, provisional) {
+function registerHtml(reg, f, total) {
   const link = (patch) => toHash({ ...f, ...patch });
   const cur = (on) => (on ? ' aria-current="true"' : "");
   return `<nav class="register" aria-label="${esc(t("rel.register"))}">
     <h2 class="register__title">${esc(t("rel.register"))}</h2>
     <a class="register__all" href="${link({ branch: "", cat: "" })}"${cur(!f.branch && !f.cat)}>
       <span>${esc(t("rel.all"))}</span><span class="register__n">${total}</span></a>
-    ${reg.map((b) => `<section class="register__branch" data-branch="${esc(b.branch.id)}">
-      <a class="register__b" href="${link({ branch: b.branch.id, cat: "" })}"${cur(f.branch === b.branch.id && !f.cat)}>
+    ${reg.map((b) => `<section class="register__branch" data-branch="${esc(b.branch)}">
+      <a class="register__b" href="${link({ branch: b.branch, cat: "" })}"${cur(f.branch === b.branch && !f.cat)} title="${esc(taxLabel("branches", b.branch))}">
         <span class="register__swatch" aria-hidden="true"></span>
-        <span class="register__bname">${esc(label(b.branch, uiLang))}${BRANCHES[b.branch.id]?.law ? ` <span class="register__law">${esc(BRANCHES[b.branch.id].law[uiLang])}</span>` : ""}</span>
+        <span class="register__bname">${esc(taxLabel("branches", b.branch, true))}${branchLaw(b.branch) ? ` <span class="register__law">${esc(branchLaw(b.branch))}</span>` : ""}</span>
         <span class="register__n">${b.count}</span></a>
-      <ul>${b.cats.map((c) => `<li><a href="${link({ branch: b.branch.id, cat: c.category.id })}"${cur(f.branch === b.branch.id && f.cat === c.category.id)}>
-        <span>${esc(label(c.category, uiLang))}</span><span class="register__n">${c.count}</span></a></li>`).join("")}</ul>
+      <ul>${b.cats.map((c) => `<li><a href="${link({ branch: b.branch, cat: c.category })}"${cur(f.branch === b.branch && f.cat === c.category)} title="${esc(taxLabel("categories", c.category))}">
+        <span>${esc(taxLabel("categories", c.category, true))}</span><span class="register__n">${c.count}</span></a></li>`).join("")}</ul>
     </section>`).join("")}
-    ${provisional ? `<p class="register__note">${esc(t("rel.provisional"))}</p>` : ""}
   </nav>`;
 }
 
@@ -103,7 +96,6 @@ export async function renderRelevant(params, opts) {
   app.innerHTML = `
     <header class="pagehead">
       <h1>${esc(t("rel.title"))}</h1>
-      <p class="pagehead__lede" id="lede">${esc(t("loading"))}</p>
     </header>
     <div class="relgrid">
       <aside class="relgrid__side" id="register"><div class="skel"></div><div class="skel"></div><div class="skel" style="width:60%"></div></aside>
@@ -143,15 +135,12 @@ export async function renderRelevant(params, opts) {
     const terms = f.q.trim() ? f.q.trim().split(/\s+/) : [];
     const pool = cache.items.filter((r) => !f.sum || r.has_summary === (f.sum === "yes"));
     const reg = buildRegister(pool);
-    const provisional = pool.some((r) => classify(r).provisional);
-    $("#register").innerHTML = registerHtml(reg, f, pool.length, provisional);
+    $("#register").innerHTML = registerHtml(reg, f, pool.length);
 
     const selected = pool.filter((r) => {
       const c = classify(r);
-      return (!f.branch || c.branch.id === f.branch) && (!f.cat || c.category.id === f.cat);
+      return (!f.branch || c.branch === f.branch) && (!f.cat || c.category === f.cat);
     });
-    const withSum = cache.items.filter((r) => r.has_summary).length;
-    $("#lede").textContent = t("rel.lede", cache.items.length, cache.corpus, withSum, !!f.q);
 
     const body = $("#relBody");
     if (!selected.length) {
@@ -166,14 +155,13 @@ export async function renderRelevant(params, opts) {
       return;
     }
     const groups = reg
-      .filter((b) => !f.branch || b.branch.id === f.branch)
-      .flatMap((b) => b.cats.filter((c) => !f.cat || c.category.id === f.cat).map((c) => ({ b, c })));
+      .filter((b) => !f.branch || b.branch === f.branch)
+      .flatMap((b) => b.cats.filter((c) => !f.cat || c.category === f.cat).map((c) => ({ b, c })));
     body.innerHTML = groups.map(({ b, c }) => `
-      <section class="group" data-branch="${esc(b.branch.id)}">
+      <section class="group" data-branch="${esc(b.branch)}">
         <header class="group__head">
-          <h2><a href="${toHash({ ...f, branch: b.branch.id, cat: c.category.id })}">${esc(label(c.category, uiLang))}</a></h2>
-          <span class="group__branch">${esc(label(b.branch, uiLang))}</span>
-          <span class="group__n">${esc(t("kb.n", c.count))}</span>
+          <h2><a href="${toHash({ ...f, branch: b.branch, cat: c.category })}" title="${esc(taxLabel("categories", c.category))}">${esc(taxLabel("categories", c.category, true))}</a></h2>
+          <span class="group__branch">${esc(taxLabel("branches", b.branch, true))}</span>
         </header>
         <ol class="entries">${[...c.items].sort(sort).map((r) => entry(r, terms, false)).join("")}</ol>
       </section>`).join("");
@@ -181,7 +169,7 @@ export async function renderRelevant(params, opts) {
 
   const reload = async () => {
     try {
-      await load(f.period, f.q.trim());
+      await Promise.all([load(f.period, f.q.trim()), ensureTaxonomy()]);
     } catch (e) {
       $("#relBody").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
       $("#register").innerHTML = "";

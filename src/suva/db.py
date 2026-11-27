@@ -77,6 +77,26 @@ CREATE TABLE IF NOT EXISTS feedback (
 CREATE INDEX IF NOT EXISTS feedback_docket ON feedback(docket);
 """
 
+# Created on connect like the rest of the schema, so databases from before it existed still load.
+CLASSIFICATION_SCHEMA = """
+CREATE TABLE IF NOT EXISTS classification (
+    id INTEGER PRIMARY KEY,
+    docket TEXT NOT NULL REFERENCES rulings(docket) ON DELETE CASCADE,
+    branch TEXT NOT NULL,
+    primary_category TEXT NOT NULL,
+    secondary TEXT NOT NULL DEFAULT '[]',
+    statutes TEXT NOT NULL DEFAULT '[]',
+    outcome TEXT,
+    flags TEXT NOT NULL DEFAULT '[]',
+    method TEXT NOT NULL CHECK (method IN ('llm', 'subject', 'rule')),
+    rationale TEXT,
+    model TEXT,
+    prompt_version TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS classification_docket ON classification(docket);
+"""
+
 RULING_FIELDS = (
     "docket",
     "decision_date",
@@ -92,6 +112,7 @@ RULING_FIELDS = (
 # Latest triage row per ruling; triage and summaries keep history, newest id wins.
 _LATEST_TRIAGE = "t.id = (SELECT MAX(id) FROM triage WHERE docket = r.docket)"
 _HAS_SUMMARY = "(SELECT 1 FROM summaries s WHERE s.docket = r.docket)"
+_LATEST_CLASSIFICATION = "c.id = (SELECT MAX(id) FROM classification WHERE docket = r.docket)"
 
 
 def connect(path: Path | str) -> sqlite3.Connection:
@@ -102,6 +123,7 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.executescript(SCHEMA)
+    conn.executescript(CLASSIFICATION_SCHEMA)
     return conn
 
 
@@ -175,7 +197,10 @@ def fts_query(text: str) -> str:
 
 
 _DATE = "COALESCE(r.publication_date, r.decision_date)"
-_FROM = f"FROM rulings r LEFT JOIN triage t ON {_LATEST_TRIAGE}"
+_FROM = (
+    f"FROM rulings r LEFT JOIN triage t ON {_LATEST_TRIAGE} "
+    f"LEFT JOIN classification c ON {_LATEST_CLASSIFICATION}"
+)
 
 
 def _filters(
@@ -189,6 +214,8 @@ def _filters(
     division: str | None = None,
     language: str | None = None,
     has_summary: bool | None = None,
+    branch: str | None = None,
+    category: str | None = None,
 ) -> tuple[str, list[Any]]:
     """WHERE clause (or "") and parameters for the list filters, over `_FROM`."""
     where, params = [], []
@@ -203,12 +230,19 @@ def _filters(
         ("t.label = ?", label),
         ("r.division = ?", division),
         ("r.language = ?", language),
+        ("c.branch = ?", branch),
     ]:
         if value is not None and value != "":
             where.append(clause)
             params.append(value)
     if has_summary is not None:
         where.append(f"{'' if has_summary else 'NOT '}EXISTS {_HAS_SUMMARY}")
+    if category:
+        where.append(
+            "(c.primary_category = ? OR EXISTS (SELECT 1 FROM json_each(c.secondary) "
+            "WHERE value = ?))"
+        )
+        params += [category, category]
     return ("WHERE " + " AND ".join(where) if where else ""), params
 
 
@@ -247,14 +281,33 @@ def list_rulings(
                r.title, r.url, t.score, t.label, t.reasoning,
                EXISTS {_HAS_SUMMARY} AS has_summary,
                (SELECT verdict FROM feedback f WHERE f.docket = r.docket
-                ORDER BY f.id DESC LIMIT 1) AS feedback_verdict
+                ORDER BY f.id DESC LIMIT 1) AS feedback_verdict,
+               c.branch, c.primary_category, c.secondary, c.outcome, c.flags
         {_FROM} {where}
         ORDER BY {order_by}
         LIMIT ? OFFSET ?
         """,
         [*params, limit, offset],
     ).fetchall()
-    return total, [{**dict(row), "has_summary": bool(row["has_summary"])} for row in rows]
+    return total, [_list_item(dict(row)) for row in rows]
+
+
+def _list_item(row: dict[str, Any]) -> dict[str, Any]:
+    keys = ("branch", "primary_category", "secondary", "outcome", "flags")
+    branch, primary, secondary, outcome, flags = (row.pop(key) for key in keys)
+    row["has_summary"] = bool(row["has_summary"])
+    row["classification"] = (
+        {
+            "branch": branch,
+            "primary": primary,
+            "secondary": json.loads(secondary),
+            "outcome": outcome,
+            "flags": json.loads(flags),
+        }
+        if branch
+        else None
+    )
+    return row
 
 
 def list_stats(conn: sqlite3.Connection, **filters: Any) -> dict[str, int]:
@@ -297,7 +350,31 @@ def facets(conn: sqlite3.Connection) -> dict[str, Any]:
         "demo": bool(stats["demo"]),
         "divisions": counts("division"),
         "languages": counts("language"),
+        "classification": classification_counts(conn),
     }
+
+
+def classification_counts(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Rulings per branch and per (branch, category), counting secondary categories too,
+    over the latest classification of every ruling."""
+    latest = f"FROM rulings r JOIN classification c ON {_LATEST_CLASSIFICATION}"
+    branches = {
+        row["branch"]: row["n"]
+        for row in conn.execute(f"SELECT c.branch, COUNT(*) AS n {latest} GROUP BY c.branch")
+    }
+    categories: dict[str, dict[str, int]] = {}
+    rows = conn.execute(
+        f"""
+        SELECT branch, category, COUNT(*) AS n FROM (
+            SELECT c.branch, c.primary_category AS category {latest}
+            UNION ALL
+            SELECT c.branch, j.value AS category {latest}, json_each(c.secondary) j
+        ) GROUP BY branch, category
+        """
+    )
+    for row in rows:
+        categories.setdefault(row["category"], {})[row["branch"]] = row["n"]
+    return {"branches": branches, "categories": categories}
 
 
 def get_ruling(conn: sqlite3.Connection, docket: str) -> dict[str, Any] | None:
@@ -334,7 +411,46 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
         "triage": dict(triage) if triage else None,
         "summaries": {lang: summaries.get(lang) for lang in ("de", "fr")},
         "feedback": [dict(row) for row in feedback],
+        "classification": get_classification(conn, docket),
     }
+
+
+_JSON_COLUMNS = ("secondary", "statutes", "flags")
+CLASSIFICATION_FIELDS = (
+    "docket",
+    "branch",
+    "primary",
+    "secondary",
+    "statutes",
+    "outcome",
+    "flags",
+    "method",
+    "rationale",
+    "model",
+    "prompt_version",
+    "created_at",
+)
+
+
+def _classification_columns(table: str) -> str:
+    # "primary" is an SQL keyword, hence the column name primary_category.
+    return ", ".join(
+        f'{table}.primary_category AS "primary"' if f == "primary" else f"{table}.{f}"
+        for f in CLASSIFICATION_FIELDS
+    )
+
+
+def _classification(row: sqlite3.Row) -> dict[str, Any]:
+    return {k: json.loads(v) if k in _JSON_COLUMNS else v for k, v in dict(row).items()}
+
+
+def get_classification(conn: sqlite3.Connection, docket: str) -> dict[str, Any] | None:
+    row = conn.execute(
+        f"SELECT {_classification_columns('classification')} FROM classification "
+        "WHERE docket = ? ORDER BY id DESC LIMIT 1",
+        (docket,),
+    ).fetchone()
+    return _classification(row) if row else None
 
 
 def untriaged_dockets(
@@ -438,6 +554,103 @@ def import_triage(conn: sqlite3.Connection, path: Path | str) -> int:
                 "COALESCE(:created_at, datetime('now')) "
                 "WHERE EXISTS (SELECT 1 FROM rulings WHERE docket = :docket) "
                 "AND NOT EXISTS (SELECT 1 FROM triage WHERE docket = :docket "
+                "AND prompt_version IS :prompt_version)",
+                row,
+            )
+            count += cursor.rowcount
+    return count
+
+
+def unclassified_dockets(
+    conn: sqlite3.Connection,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    prompt_version: str | None = None,
+) -> list[str]:
+    """Dockets in the date range without a classification (of `prompt_version`, if given)."""
+    where, params = ["NOT EXISTS (SELECT 1 FROM classification c WHERE c.docket = r.docket"], []
+    if prompt_version is not None:
+        where[0] += " AND c.prompt_version = ?"
+        params.append(prompt_version)
+    where[0] += ")"
+    date = "COALESCE(r.publication_date, r.decision_date)"
+    if date_from:
+        where.append(f"{date} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{date} <= ?")
+        params.append(date_to)
+    rows = conn.execute(
+        f"SELECT docket FROM rulings r WHERE {' AND '.join(where)} ORDER BY docket", params
+    )
+    return [row["docket"] for row in rows]
+
+
+def save_classification(conn: sqlite3.Connection, docket: str, **values: Any) -> None:
+    """Store a classification; `values` are the `CLASSIFICATION_FIELDS` except docket."""
+    row = {f: values.get(f) for f in CLASSIFICATION_FIELDS if f != "created_at"}
+    row["docket"] = docket
+    for key in _JSON_COLUMNS:
+        row[key] = json.dumps(row[key] or [], ensure_ascii=False)
+    with conn:
+        conn.execute(
+            "INSERT INTO classification (docket, branch, primary_category, secondary, statutes, "
+            "outcome, flags, method, rationale, model, prompt_version) VALUES (:docket, :branch, "
+            ":primary, :secondary, :statutes, :outcome, :flags, :method, :rationale, :model, "
+            ":prompt_version)",
+            row,
+        )
+
+
+def export_classification(
+    conn: sqlite3.Connection,
+    path: Path | str,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> int:
+    """Write the latest classification per ruling in the date range as JSONL, by docket."""
+    where, params = [], []
+    date = "COALESCE(r.publication_date, r.decision_date)"
+    if date_from:
+        where.append(f"{date} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{date} <= ?")
+        params.append(date_to)
+    rows = conn.execute(
+        f"SELECT {_classification_columns('c')} "
+        f"FROM rulings r JOIN classification c ON {_LATEST_CLASSIFICATION} "
+        f"{'WHERE ' + ' AND '.join(where) if where else ''} ORDER BY {_DOCKET_ORDER.format(d='')}",
+        params,
+    ).fetchall()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(_classification(row), ensure_ascii=False) + "\n")
+    return len(rows)
+
+
+def import_classification(conn: sqlite3.Connection, path: Path | str) -> int:
+    """Load results written by `export_classification`. Rows for unknown rulings, or rulings
+    that already have a classification of the same prompt version, are skipped."""
+    count = 0
+    with conn, open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            row = {field: json.loads(line).get(field) for field in CLASSIFICATION_FIELDS}
+            for key in _JSON_COLUMNS:
+                row[key] = json.dumps(row[key] or [], ensure_ascii=False)
+            cursor = conn.execute(
+                "INSERT INTO classification (docket, branch, primary_category, secondary, "
+                "statutes, outcome, flags, method, rationale, model, prompt_version, created_at) "
+                "SELECT :docket, :branch, :primary, :secondary, :statutes, :outcome, :flags, "
+                ":method, :rationale, :model, :prompt_version, "
+                "COALESCE(:created_at, datetime('now')) "
+                "WHERE EXISTS (SELECT 1 FROM rulings WHERE docket = :docket) "
+                "AND NOT EXISTS (SELECT 1 FROM classification WHERE docket = :docket "
                 "AND prompt_version IS :prompt_version)",
                 row,
             )
