@@ -24,7 +24,8 @@ from suva.eval.metrics import contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 from suva.segment import clean, segment
 
-PROMPT_VERSION = "v4"
+PROMPT_VERSION = "v5"
+MODEL = "apertus-v1-5-70b"
 PREFILTER_MODEL = "prefilter"
 GATE_MODEL = "gate"
 RELEVANCE_THRESHOLD = 50
@@ -286,7 +287,10 @@ Nicht relevant sind:
 IV-Fälle ohne Bedeutung für die UV usw.).
 - Nichteintretensentscheide, Abschreibungen und Urteile im vereinfachten Verfahren \
 (Art. 108/109 BGG), unentgeltliche Rechtspflege, reine Kosten- und Fristfragen ohne \
-Grundsatzcharakter.
+Grundsatzcharakter. Gemeint sind Nichteintretensentscheide des Bundesgerichts selbst. Prüft \
+das Bundesgericht, ob der Versicherer auf eine Einsprache oder das kantonale Gericht auf eine \
+Beschwerde eintreten musste (Begründung der Einsprache, Fristen, rechtliches Gehör), ist das \
+eine Verfahrensfrage nach ATSG und wie ein materielles Urteil zu bewerten.
 - Urteile, die nur den konkreten Sachverhalt würdigen, ohne für die Praxis der Suva etwas \
 Neues oder Bestätigenswertes zu sagen.
 
