@@ -107,6 +107,7 @@ const I18N = {
     "st.none": "Keine Normen erkannt.",
     "m.title": "Angaben",
     "m.docket": "Urteil",
+    "m.subject": "Gegenstand",
     "m.decision": "Entscheid",
     "m.published": "Publiziert",
     "m.division": "Abteilung",
@@ -224,6 +225,7 @@ const I18N = {
     "st.none": "Aucune norme détectée.",
     "m.title": "Informations",
     "m.docket": "Arrêt",
+    "m.subject": "Objet",
     "m.decision": "Décision",
     "m.published": "Publication",
     "m.division": "Cour",
@@ -856,13 +858,14 @@ function relevanceCard(r) {
   </section>`;
 }
 
-// One-line headline of what the court decided, shown under the ruling number. Reads
-// `headline_de` / `headline_fr` (or `headline`) once the backend provides them; until then the
-// classification's one-sentence explanation stands in (German only).
-function headlineOf(r) {
-  return r[`headline_${uiLang}`] || r.headline || r.classification?.rationale || "";
+// One-line headline of what the court decided (`headline_de` / `headline_fr`, written by Apertus;
+// null until generated, see lucas-firstmate on agent-comms). It is the ruling's heading next to
+// the docket. Without one, the court's subject line is the heading and the classification's
+// one-sentence explanation (German only) stands in below it.
+export function headlineOf(r) {
+  return r[`headline_${uiLang}`] || r[`headline_${uiLang === "fr" ? "de" : "fr"}`] || "";
 }
-const headlineIsRationale = (r) => !r[`headline_${uiLang}`] && !r.headline && !!r.classification?.rationale;
+const headlineIsRationale = (r) => !headlineOf(r) && !!r.classification?.rationale;
 
 function classificationCard(c, hideRationale = false) {
   if (!c) return "";
@@ -895,6 +898,7 @@ function metaCard(r) {
   const div = divisionCode(r.docket);
   const rows = [
     [t("m.docket"), r.docket],
+    ...(r.title ? [[t("m.subject"), r.title]] : []),
     [t("m.decision"), fmtDate(r.decision_date, "long")],
     ...(r.publication_date ? [[t("m.published"), fmtDate(r.publication_date, "long")]] : []),
     [t("m.division"), `${div} ${rulingDivision(r)}`],
@@ -946,6 +950,10 @@ async function renderDetail(docket, params) {
   paintDetail(r, terms);
 }
 
+// The relevance score and its reasoning matter when screening every ruling ("Alle Urteile");
+// in the knowledge base every ruling is relevant already, so the box is left out there.
+const fromAllRulings = () => state.lastListHash.startsWith("#/all");
+
 function paintDetail(r, terms) {
   document.title = `${r.docket} – BGer-Monitor`;
   const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningOf(r.triage), r.text);
@@ -954,13 +962,9 @@ function paintDetail(r, terms) {
       <div class="dhead__id">
         ${backBtn()}
         <div class="dhead__text">
-          <h1><span class="dhead__docket">${esc(r.docket)}</span>${r.title ? `<span class="dhead__name">${esc(r.title)}</span>` : ""}</h1>
-          ${headlineOf(r) ? `<p class="dhead__headline">${esc(headlineOf(r))}</p>` : ""}
+          <h1><span class="dhead__docket">${esc(r.docket)}</span>${headlineOf(r) || r.title ? `<span class="dhead__name">${esc(headlineOf(r) || r.title)}</span>` : ""}</h1>
+          ${headlineIsRationale(r) ? `<p class="dhead__headline">${esc(r.classification.rationale)}</p>` : ""}
         </div>
-      </div>
-      <div class="dhead__actions">
-        ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
-        <button type="button" class="btn btn--ghost" id="printBtn">${ICONS.print}${esc(t("d.print"))}</button>
       </div>
     </header>
     <div class="dgrid">
@@ -969,7 +973,11 @@ function paintDetail(r, terms) {
         ${originalCard(r, terms)}
       </div>
       <aside class="daside">
-        ${relevanceCard(r)}
+        <div class="dactions">
+          ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
+          <button type="button" class="btn" id="printBtn">${ICONS.print}${esc(t("d.print"))}</button>
+        </div>
+        ${fromAllRulings() ? relevanceCard(r) : ""}
         ${metaCard(r)}
         ${classificationCard(r.classification, headlineIsRationale(r))}
         ${statutesCard(statutes)}

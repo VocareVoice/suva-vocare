@@ -215,6 +215,7 @@ button.chip:hover { border-color: var(--blue-line); color: var(--blue); }
 .entry__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13.5px; color: var(--muted); }
 .entry__cat { color: var(--branch); font-weight: 600; }
 .entry__title { margin: 4px 0 0; font-size: 15px; font-weight: 550; color: var(--ink); }
+.entry__subject { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 .entry__reason {
   margin: 4px 0 0; max-width: 84ch; font: 15px/1.55 var(--font-read); color: var(--ink-2);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -296,13 +297,14 @@ table.rulings { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .dhead h1 { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 26px; line-height: 1.25; font-weight: 500; }
 .dhead__docket { color: var(--orange); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dhead__name { color: var(--ink); }
-.dhead__actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; flex: none; }
 
 .dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; align-items: start; }
 .dmain { display: grid; gap: 28px; min-width: 0; }
 .daside { display: grid; gap: 0; position: sticky; top: calc(var(--topbar-h, 73px) + 16px); max-height: calc(100vh - var(--topbar-h, 73px) - 32px); overflow: auto; }
 .daside > .card { background: transparent; border: 0; border-radius: 0; border-top: 1px solid var(--rule); box-shadow: none; }
 .daside > .card:first-child { border-top: 0; }
+.dactions { display: grid; gap: 8px; padding: 2px 0 16px; }
+.dactions .btn { width: 100%; }
 .daside .card__head { padding: 16px 0 6px; border: 0; }
 .daside .card__body { padding: 4px 0 18px; }
 
@@ -455,7 +457,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 }
 
 @media print {
-  .topbar, .agent, .agent-tab, .toolbar, .filterbar, .relgrid__side, .dhead__actions, .summary__foot, .original__more, .dback { display: none !important; }
+  .topbar, .agent, .agent-tab, .toolbar, .filterbar, .relgrid__side, .dactions, .summary__foot, .original__more, .dback { display: none !important; }
   body { background: #fff; }
   .dgrid, .relgrid { grid-template-columns: 1fr; }
   .original__collapsed { max-height: none; }

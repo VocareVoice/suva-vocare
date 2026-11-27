@@ -2,7 +2,7 @@
 // branch and legal category. A register on the left lists every category and acts as the filter.
 // No search box: searching (and editing) the knowledge base is meant to go through the agent panel.
 
-import { $, API, ICONS, esc, fmtDate, reasoningOf, state, t } from "./app.js";
+import { $, API, ICONS, esc, fmtDate, headlineOf, reasoningOf, state, t } from "./app.js";
 import { branchLaw, buildRegister, classify, ensureTaxonomy, taxLabel } from "./categories.js";
 
 const cache = { sig: "", items: [] };
@@ -43,7 +43,8 @@ function entry(r) {
         <span class="entry__date">${esc(fmtDate(r.decision_date, "long"))}</span>
         ${r.language ? `<span class="entry__lang">${esc(t(`lang.${r.language}`))}</span>` : ""}
       </div>
-      <p class="entry__title">${esc(r.title || "—")}</p>
+      <p class="entry__title">${esc(headlineOf(r) || r.title || "—")}</p>
+      ${headlineOf(r) && r.title ? `<p class="entry__subject">${esc(r.title)}</p>` : ""}
       ${reason ? `<p class="entry__reason">${esc(reason)}</p>` : ""}
     </div>
     <div class="entry__sum">${r.has_summary
