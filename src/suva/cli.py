@@ -1,7 +1,8 @@
 import argparse
+import json
 from pathlib import Path
 
-from suva import classify, db, summarize, triage
+from suva import classify, db, feedback, summarize, triage
 from suva.config import get_settings
 from suva.llm import LLMClient
 
@@ -92,6 +93,20 @@ def main() -> None:
         "import-summaries", help="load summaries and headlines from export-summaries"
     )
     imp_summ.add_argument("path", type=Path)
+
+    fb = commands.add_parser(
+        "feedback-export",
+        help="write the experts' score corrections, feedback and edited summaries (next to the "
+        "generated text they replaced) as JSON, for the feedback-review skill (no LLM)",
+    )
+    fb.add_argument("--out", type=Path, required=True)
+    fb.add_argument(
+        "--generated",
+        type=Path,
+        nargs="*",
+        help="export-summaries files holding the generated summaries that edits replaced "
+        f"(default: {feedback.RESULTS_DIR}/{feedback.GENERATED_GLOB})",
+    )
 
     serve = commands.add_parser("serve", help="run the API and web UI")
     serve.add_argument("--host", default="127.0.0.1")
@@ -199,6 +214,18 @@ def main() -> None:
     elif args.command == "import-summaries":
         count = db.import_summaries(conn, args.path)
         print(f"Loaded {count} summaries and headlines from {args.path}")
+    elif args.command == "feedback-export":
+        generated = args.generated
+        if generated is None:
+            generated = sorted(feedback.RESULTS_DIR.glob(feedback.GENERATED_GLOB))
+        data = feedback.export(conn, generated)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        counts = data["counts"]
+        print(
+            f"Wrote {counts['score_corrections']} score corrections, {counts['feedback_rows']} "
+            f"feedback rows and {counts['edited_summaries']} edited summaries to {args.out}"
+        )
     elif args.command == "serve":
         import uvicorn
 

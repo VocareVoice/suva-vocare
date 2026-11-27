@@ -39,8 +39,8 @@ April-June 2026 (`data/results/triage_2026q2.jsonl`).
    relevance level from 0 to 9. Since v5 the prompt adds that a ruling on whether the insurer or
    the cantonal court had to hear an objection or appeal is a procedural question under the
    ATSG and is rated like a ruling on the merits, not like the Federal Court's own non-entry
-   decisions. Lawyer feedback is not part of the prompt: that feature is
-   deferred, the `feedback` table and its endpoint stay for later.
+   decisions. Lawyer feedback is not part of the prompt: corrections reach it only as a
+   reviewed and evaluated prompt change (`docs/feedback_loop.md`).
 5. **Checks on the explanations.** Each explanation must be written in its language (counted
    function words). A wrong one gets one rewrite request; if it is still wrong, the ruling fails
    and the next `suva triage` run retries it. Statute abbreviations of the other language, or
