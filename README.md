@@ -86,8 +86,9 @@ closed two-level taxonomy, shown in the UI as badges and filters in German and F
 insurance branch (UVG, IVG, MVG, ATSG, or outside social insurance) and a legal category (one
 primary, up to two secondary, e.g. adequate causality or degree of invalidity). Statutes cited,
 the outcome and flags (five-judge panel, public deliberation, cited as intended for publication)
-are read from the text without an LLM. Rulings that pass the triage pre-filter are classified by
-Apertus with enum-constrained JSON; the rest get their labels from the subject line.
+are read from the text without an LLM. Every ruling of the social-law divisions (dockets 8x and
+9x) is classified by Apertus 70B with enum-constrained JSON; every other ruling is outside social
+insurance by its division.
 `uv run suva classify --from ... --to ...` classifies a period (resumable, parallel),
 `export-classification` / `import-classification` work like their triage counterparts, and
 `data/results/classification_*.jsonl` hold the results for October 2025 to June 2026.

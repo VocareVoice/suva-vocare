@@ -1,10 +1,10 @@
 """Legal classification of a ruling: insurance branch first, then the legal category.
 
 The taxonomy is a closed list (`BRANCHES`, `CATEGORIES`, `MATRIX`), so labels stay consistent and
-filterable. Statutes, outcome and flags are extracted from the text without an LLM. Rulings that
-pass the triage pre-filter are classified by Apertus (JSON schema with enum-constrained labels,
-retried when a category does not fit the branch); every other ruling gets its labels from the
-subject line. Kept separate from the relevance score. Results: docs/eval_classification.md.
+filterable. Statutes, outcome and flags are extracted from the text without an LLM. Rulings of
+the social-law divisions are classified by Apertus (JSON schema with enum-constrained labels,
+retried when a category does not fit the branch); every other ruling is outside social insurance
+by its division. Kept separate from the relevance score. Results: docs/eval_classification.md.
 """
 
 import re
@@ -18,7 +18,8 @@ from typing import Any, Literal, NamedTuple
 from suva import db, triage
 from suva.llm import LLMClient, Message, parse_json
 
-PROMPT_VERSION = "v3"
+PROMPT_VERSION = "v4"
+MODEL = "apertus-v1-5-70b"
 EXCERPT_CHARS = 20_000
 MAX_ATTEMPTS = 3
 MAX_SECONDARY = 2
@@ -736,10 +737,12 @@ Rechtsprechungsdatenbank einer festen Kategorienliste zu.
 
 1. Versicherungszweig (branch), nach dem Gesetz, das der Streit betrifft:
 {_describe(BRANCHES)}
-Für AHV, BVG, KVG, ALV, EL und die übrigen Sozialversicherungen gilt "atsg". Private \
-Versicherungen (VVG), Haftpflicht-, Zivil-, Straf- und übriges Verwaltungsrecht sind "other". \
-Betrifft ein Urteil Unfall- und Invalidenversicherung, entscheidet der Versicherer, gegen dessen \
-Entscheid sich die Beschwerde richtet.
+Für AHV, BVG, KVG, ALV, EL, Familienzulagen und die übrigen Sozialversicherungen gilt "atsg", \
+auch wenn das ATSG nicht anwendbar ist. Private Versicherungen (VVG), Sozialhilfe, Steuern, \
+Haftpflicht-, Zivil-, Straf- und übriges Verwaltungsrecht sind "other". Nennt der Gegenstand \
+einen Zweig (unten als Hinweis angegeben), ist er der Versicherungszweig, auch wenn das Urteil \
+nur eine Verfahrensfrage entscheidet. Betrifft ein Urteil Unfall- und Invalidenversicherung, \
+entscheidet der Versicherer, gegen dessen Entscheid sich die Beschwerde richtet.
 
 2. Rechtliche Kategorie: eine Hauptkategorie (primary) für die zentrale Rechtsfrage, die das \
 Bundesgericht entscheidet, und höchstens zwei Nebenkategorien (secondary) für weitere \
@@ -799,6 +802,8 @@ RESPONSE_FORMAT = {
 def build_messages(ruling: dict[str, Any], facts_: Facts) -> list[Message]:
     cited = ", ".join(f"Art. {s['art']} {s['law']}" for s in facts_.statutes[:12]) or "keine"
     hints = [f"Gegenstand laut Rubrum: {facts_.subject or 'nicht angegeben'}"]
+    if branch := subject_branch(facts_.subject):
+        hints.append(f"Vom Gegenstand genannter Zweig: {branch}")
     if named := subject_categories(facts_.subject)[0]:
         hints.append(f"Vom Gegenstand genannte Kategorie: {', '.join(named)}")
     hints.append(f"Meistzitierte Normen: {cited}")
@@ -864,18 +869,31 @@ def classify_llm(ruling: dict[str, Any], facts_: Facts, llm: LLMClient) -> Class
     return classify_subject(ruling, facts_)
 
 
+# The docket starts with the division: 8 and 9 are the two social-law divisions (IV. and III.
+# öffentlich-rechtliche Abteilung). Registers in the corpus: 8C, 8F, 8G, 9C, 9D, 9F, 9G. Division 9
+# also decides tax law; Apertus puts those rulings in "other".
+SOCIAL_LAW_DIVISIONS = ("8", "9")
+
+
 def classify_ruling(
-    ruling: dict[str, Any], llm: LLMClient | None, published: set[str] = frozenset()
+    ruling: dict[str, Any], llm: LLMClient, published: set[str] = frozenset()
 ) -> Classification:
-    """Apertus for rulings that pass the triage pre-filter (when `llm` is given), else the
-    subject line."""
+    """Apertus for rulings of the social-law divisions; every other ruling is "other"."""
     facts_ = facts(ruling, published)
-    if llm is not None and triage.prior(ruling).score >= triage.PRIOR_CUTOFF:
+    if ruling["docket"].startswith(SOCIAL_LAW_DIVISIONS):
         return classify_llm(ruling, facts_, llm)
-    return classify_subject(ruling, facts_)
+    return Classification(
+        branch="other",
+        primary="andere",
+        secondary=[],
+        statutes=facts_.statutes,
+        outcome=facts_.outcome,
+        flags=facts_.flags,
+        method="rule",
+    )
 
 
-def classify(conn: sqlite3.Connection, docket: str, llm: LLMClient | None) -> Classification:
+def classify(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> Classification:
     """Classify ruling `docket`. Does not persist."""
     ruling = db.get_ruling(conn, docket)
     if ruling is None:
@@ -884,7 +902,7 @@ def classify(conn: sqlite3.Connection, docket: str, llm: LLMClient | None) -> Cl
 
 
 def classify_batch(
-    conn: sqlite3.Connection, dockets: list[str], llm: LLMClient | None, workers: int = 8
+    conn: sqlite3.Connection, dockets: list[str], llm: LLMClient, workers: int = 8
 ) -> Iterator[tuple[str, Classification | Exception]]:
     """Classify many rulings with parallel LLM calls, yielding results as they complete.
 

@@ -2,8 +2,8 @@
 
 The labels in `split.json` map onto the taxonomy of `suva.classify`; the full rulings are in
 `example_rulings.jsonl.gz` (fetched from entscheidsuche.ch, as the corpus). Every ruling is
-classified twice: as `suva classify` does (Apertus for rulings that pass the triage pre-filter)
-and from the subject line alone, the fallback for all other rulings.
+classified twice: as `suva classify` does (Apertus for rulings of the social-law divisions,
+branch "other" for the rest) and from the subject line alone, the fallback when Apertus fails.
 
     python -m suva.eval.score_classification [--out docs/eval_classification.md] [--workers 8]
 """
@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> None:
 
     gold = load_gold()
     rulings = load_rulings()
-    llm = LLMClient()
+    llm = LLMClient(model=classify.MODEL)
 
     dockets = [g["docket"] for g in gold]
     facts = {d: classify.facts(rulings[d]) for d in dockets}

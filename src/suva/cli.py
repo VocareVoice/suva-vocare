@@ -39,7 +39,7 @@ def main() -> None:
     cls = commands.add_parser(
         "classify",
         help="classify every ruling without a result of the current prompt version: Apertus "
-        "for rulings that pass the triage pre-filter, the subject line for the rest",
+        "for rulings of the social-law divisions (8x, 9x), branch 'other' for the rest",
     )
     cls.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
     cls.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
@@ -119,7 +119,7 @@ def main() -> None:
     elif args.command == "import-triage":
         print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
     elif args.command == "classify":
-        llm = LLMClient(settings)
+        llm = LLMClient(settings, model=classify.MODEL)
         dockets = db.unclassified_dockets(
             conn,
             date_from=args.date_from,
