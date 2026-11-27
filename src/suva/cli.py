@@ -1,5 +1,4 @@
 import argparse
-from dataclasses import asdict
 from pathlib import Path
 
 from suva import classify, db, summarize, triage
@@ -123,16 +122,7 @@ def main() -> None:
                 failed += 1
                 print(f"{docket}: failed ({result!r})")
                 continue
-            db.save_triage(
-                conn,
-                docket,
-                score=result.score,
-                label=result.label,
-                reasoning_de=result.reasoning_de,
-                reasoning_fr=result.reasoning_fr,
-                model=result.model,
-                prompt_version=triage.PROMPT_VERSION,
-            )
+            triage.save(conn, docket, result)
             print(f"{docket}: {result.score} {result.label}")
         if failed:
             raise SystemExit(f"{failed} rulings failed; run triage again to retry them")
@@ -156,12 +146,7 @@ def main() -> None:
                 failed += 1
                 print(f"{docket}: failed ({result!r})")
                 continue
-            db.save_classification(
-                conn,
-                docket,
-                **asdict(result),
-                prompt_version=classify.VERSION,
-            )
+            classify.save(conn, docket, result)
             labels = " ".join([result.branch, result.primary, *result.secondary])
             print(f"{docket}: {labels} ({result.method})")
         if failed:

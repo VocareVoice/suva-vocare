@@ -623,6 +623,19 @@ def triage(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> TriageResul
     return triage_ruling(ruling, llm, load_examples(path), load_glossary(path))
 
 
+def save(conn: sqlite3.Connection, docket: str, result: TriageResult) -> None:
+    db.save_triage(
+        conn,
+        docket,
+        score=result.score,
+        label=result.label,
+        reasoning_de=result.reasoning_de,
+        reasoning_fr=result.reasoning_fr,
+        model=result.model,
+        prompt_version=PROMPT_VERSION,
+    )
+
+
 def triage_batch(
     conn: sqlite3.Connection, dockets: list[str], llm: LLMClient, workers: int = 8
 ) -> Iterator[tuple[str, TriageResult | Exception]]:

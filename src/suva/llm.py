@@ -66,8 +66,13 @@ class LLMClient:
         """Like `chat`, but also returns token logprobs when `logprobs=True` is passed."""
         params.setdefault("temperature", 0.0)
         cache_file = self._cache_file(messages, params)
+        cached = None
         if cache_file and cache_file.exists():
-            cached = json.loads(cache_file.read_text())
+            try:
+                cached = json.loads(cache_file.read_text())
+            except ValueError:  # cut short by an interrupted write: ask the model again
+                cached = None
+        if cached is not None:
             logprobs = cached.get("logprobs")
             return Completion(
                 cached["content"], [TokenLogprob(*t) for t in logprobs] if logprobs else None
@@ -87,7 +92,9 @@ class LLMClient:
 
         if cache_file:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
-            cache_file.write_text(json.dumps(completion._asdict(), ensure_ascii=False))
+            # ASCII-escaped, so the file reads the same under any locale encoding (Windows'
+            # cp1252 cannot write e.g. U+202F, which Apertus sometimes puts before units).
+            cache_file.write_text(json.dumps(completion._asdict()))
         return completion
 
     def chat_tools(

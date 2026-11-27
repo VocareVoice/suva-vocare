@@ -10,6 +10,11 @@ const cache = { sig: "", items: [] };
 
 // All relevant rulings, every period; shared with the side navigation (branch counts).
 let pending = null;
+/** Reload on next use, e.g. after an expert moved a ruling in or out of the knowledge base. */
+export function invalidateKnowledgeBase() {
+  pending = null;
+  Object.assign(cache, { sig: "", items: [] });
+}
 export function loadKnowledgeBase() {
   pending ||= load().then(() => cache.items, (e) => { pending = null; throw e; });
   return pending;
