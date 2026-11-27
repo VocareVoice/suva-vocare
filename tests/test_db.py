@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from suva import db
@@ -47,7 +49,7 @@ def test_search_reflects_updated_text(conn):
 
 
 def test_sort_and_filter_by_latest_triage(conn):
-    triage = dict(reasoning="r", model="m", prompt_version="v")
+    triage = dict(reasoning_de="r", reasoning_fr="r", model="m", prompt_version="v")
     db.save_triage(conn, "8C_129/2025", score=40, label="not_relevant", **triage)
     db.save_triage(conn, "8C_129/2025", score=90, label="relevant", **triage)
     db.save_triage(conn, "8C_135/2025", score=70, label="relevant", **triage)
@@ -72,5 +74,41 @@ def test_load_demo(tmp_path, conn):
     assert all(item["score"] is not None for item in items)
     assert any(item["has_summary"] for item in items)
     assert db.facets(demo)["demo"] is True
+    assert all(item["reasoning_de"] and item["reasoning_fr"] for item in items)
     with pytest.raises(ValueError):
         db.load_demo(conn)
+
+
+def test_database_from_before_the_french_explanation_still_loads(tmp_path):
+    path = tmp_path / "old.db"
+    old = sqlite3.connect(path)
+    old.executescript(
+        "CREATE TABLE rulings (id INTEGER PRIMARY KEY, docket TEXT NOT NULL UNIQUE, "
+        "decision_date TEXT, publication_date TEXT, division TEXT, language TEXT, title TEXT, "
+        "url TEXT, text TEXT NOT NULL DEFAULT '', source TEXT, "
+        "ingested_at TEXT NOT NULL DEFAULT (datetime('now')));"
+        "CREATE TABLE triage (id INTEGER PRIMARY KEY, docket TEXT NOT NULL, score INTEGER NOT "
+        "NULL, label TEXT NOT NULL, reasoning TEXT NOT NULL, model TEXT, prompt_version TEXT, "
+        "created_at TEXT NOT NULL DEFAULT (datetime('now')));"
+        "INSERT INTO rulings (docket, text) VALUES ('8C_1/2026', 'Unfall');"
+        "INSERT INTO triage (docket, score, label, reasoning) "
+        "VALUES ('8C_1/2026', 80, 'relevant', 'Alt.');"
+    )
+    old.close()
+
+    conn = db.connect(path)
+    _, items = db.list_rulings(conn)
+    assert (items[0]["reasoning_de"], items[0]["reasoning_fr"]) == ("Alt.", None)
+    db.save_triage(
+        conn,
+        "8C_1/2026",
+        score=90,
+        label="relevant",
+        reasoning_de="Neu.",
+        reasoning_fr="Nouveau.",
+        model="m",
+        prompt_version="v4",
+    )
+    assert db.get_ruling_detail(conn, "8C_1/2026")["triage"]["reasoning_fr"] == "Nouveau."
+    conn.close()
+    assert db.connect(path).execute("SELECT COUNT(*) FROM triage").fetchone()[0] == 2

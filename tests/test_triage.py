@@ -32,11 +32,15 @@ Demnach erkennt das Bundesgericht:
 """
 
 
+DE = "Unfallversicherung, die Suva ist Partei. Das Urteil ist für die Suva relevant."
+FR = "Assurance-accidents, la Suva est partie. L'arrêt est pertinent pour la Suva."
+
+
 class FakeLLM:
     model = "fake-apertus"
 
-    def __init__(self, reply, tmp_path):
-        self.reply = reply
+    def __init__(self, *replies, tmp_path):
+        self.replies = list(replies)
         self.logprobs = None
         self.calls = []
         examples = tmp_path / "examples.jsonl"
@@ -52,13 +56,26 @@ class FakeLLM:
         )
         split = {"fewshot_pool": ["8C_129/2025", "8C_9/2025"], "holdout": ["8C_78/2025"]}
         (tmp_path / "split.json").write_text(json.dumps(split))
+        glossary = {
+            "statutes": [
+                {"de": "UVG", "fr": "LAA"},
+                {"de": "IVG", "fr": "LAI"},
+                {"de": "IVV", "fr": "RAI"},
+            ],
+            "terms": [
+                {"de": "Kausalzusammenhang", "fr": "lien de causalité", "support": 3},
+                {"de": "Taggeld", "fr": "indemnité journalière", "support": 5},
+            ],
+        }
+        (tmp_path / "glossary.json").write_text(json.dumps(glossary))
         self.settings = SimpleNamespace(examples_path=examples)
 
     def complete(self, messages, **params):
         self.calls.append(messages)
-        if isinstance(self.reply, Exception):
-            raise self.reply
-        return Completion(json.dumps(self.reply), self.logprobs)
+        reply = self.replies[min(len(self.calls), len(self.replies)) - 1]
+        if isinstance(reply, Exception):
+            raise reply
+        return Completion(json.dumps(reply), self.logprobs)
 
 
 def ruling(docket="8C_1/2026", title="Unfallversicherung (Kausalzusammenhang)", filler=""):
@@ -128,11 +145,11 @@ def test_split_sections_and_excerpt_keep_rubrum_and_operative_part():
 @pytest.mark.parametrize(
     ("reply", "prior", "level", "label"),
     [
-        ({"relevanz": 9, "reasoning": "Klar."}, 100, 9, "relevant"),
-        ({"relevanz": "7", "reasoning": "Eher relevant."}, 40, 7, "relevant"),
-        ({"relevanz": 3, "reasoning": ["Satz eins.", "Satz zwei."]}, 40, 3, "not_relevant"),
-        ({"relevanz": 12, "reasoning": "Zu hoch."}, 100, 9, "relevant"),
-        ({"relevanz": -1, "reasoning": "Nein."}, 0, 0, "not_relevant"),
+        ({"relevanz": 9, "reasoning_de": "Klar.", "reasoning_fr": "Clair."}, 100, 9, "relevant"),
+        ({"relevanz": "7", "reasoning_de": "Eher relevant."}, 40, 7, "relevant"),
+        ({"relevanz": 3, "reasoning_de": ["Satz eins.", "Satz  zwei."]}, 40, 3, "not_relevant"),
+        ({"relevanz": 12, "reasoning_de": "Zu hoch."}, 100, 9, "relevant"),
+        ({"relevanz": -1, "reasoning_de": "Nein."}, 0, 0, "not_relevant"),
     ],
 )
 def test_parse_result_blends_level_and_prior(reply, prior, level, label):
@@ -140,30 +157,66 @@ def test_parse_result_blends_level_and_prior(reply, prior, level, label):
     w = triage.PRIOR_WEIGHT
     assert result.score == round(100 * ((1 - w) * level / 9 + w * prior / 100))
     assert (result.label, result.model) == (label, "m")
-    assert "  " not in result.reasoning
+    assert "  " not in result.reasoning_de
+    assert result.reasoning_fr == reply.get("reasoning_fr", "")
 
 
-@pytest.mark.parametrize("reply", [[1, 2], {"reasoning": "kein Score"}, {"relevanz": "hoch"}])
+@pytest.mark.parametrize("reply", [[1, 2], {"reasoning_de": "kein Score"}, {"relevanz": "hoch"}])
 def test_parse_result_rejects_malformed_replies(reply):
     with pytest.raises((ValueError, KeyError)):
         triage.parse_result(reply, "m")
 
 
+@pytest.mark.parametrize(
+    ("text", "lang"),
+    [
+        (DE, "de"),
+        (FR, "fr"),
+        (
+            "IV-Urteil, keine Änderung seit 2019, Gutachten massgeblich, Beschwerde abgewiesen.",
+            "de",
+        ),
+        ("Assicurazione contro gli infortuni: la sentenza non è rilevante per la Suva.", "it"),
+        ("Unfallversicherung (UVG).", None),
+        ("", None),
+    ],
+)
+def test_language_of_an_explanation(text, lang):
+    assert triage.language(text) == lang
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Die Suva ist Partei. Stufe 7.", "Die Suva ist Partei."),
+        ("Daher Grenzfall (Stufe 5-6).", "Daher Grenzfall."),
+        ("La Suva est partie. Niveau de pertinence: 7.", "La Suva est partie."),
+        ("Klärt die Adäquanz. Relevanz: 8 (materielles Urteil).", "Klärt die Adäquanz."),
+        ("Pour une personne qualifiée, le niveau 2 est approprié.", None),
+        ("Art. 6 Abs. 2 UVG ist anwendbar.", None),
+    ],
+)
+def test_the_level_is_dropped_from_the_explanation(text, expected):
+    assert triage.without_level(text) == (expected or text)
+
+
 def test_expected_level_weights_the_digit_by_its_probability():
-    tokens = ['{"', "reasoning", '":', ' "Ein Satz 7."', ', "', "relevanz", '":', " 7", "}"]
+    tokens = ['{"', "reasoning_de", '":', ' "Ein Satz 7."', ', "', "relevanz", '":', " 7", "}"]
     logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens]
     logprobs[7] = TokenLogprob(" 7", {" 7": math.log(0.5), "8": math.log(0.5), "x": -1.0})
     assert triage.expected_level(logprobs) == pytest.approx(7.5)
+    # A full-width digit among the alternatives must not replace the probability of its ASCII twin.
+    logprobs[7] = TokenLogprob("9", {"9": -1e-6, "0": -15.6, "８": -16.0, "９": -21.4})
+    assert triage.expected_level(logprobs) == pytest.approx(9.0, abs=1e-3)
     # The digit inside the reasoning is not the level.
     assert triage.expected_level(logprobs[:7]) is None
     assert triage.expected_level(None) is None
 
 
-def test_triage_calls_the_llm_with_examples_and_feedback(conn, tmp_path):
-    db.save_feedback(conn, "8C_135/2025", verdict="relevant", corrected_score=90, comment="BGE")
-    llm = FakeLLM({"reasoning": "Suva-Fall.", "relevanz": 9}, tmp_path)
-    tokens = ['{"reasoning": "Suva-Fall.", "relevanz": ', "9", "}"]
-    llm.logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens]
+def test_triage_calls_the_llm_with_examples_and_glossary(conn, tmp_path):
+    llm = FakeLLM({"reasoning_de": DE, "reasoning_fr": FR, "relevanz": 9}, tmp_path=tmp_path)
+    tokens = [json.dumps({"reasoning_de": DE, "reasoning_fr": FR})[:-1] + ', "relevanz": ', "9"]
+    llm.logprobs = [TokenLogprob(t, {t: 0.0}) for t in tokens + ["}"]]
     llm.logprobs[1] = TokenLogprob("9", {"9": math.log(0.5), "6": math.log(0.5)})
 
     result = triage.triage(conn, "8C_129/2025", llm)
@@ -172,26 +225,73 @@ def test_triage_calls_the_llm_with_examples_and_feedback(conn, tmp_path):
     w = triage.PRIOR_WEIGHT
     expected = round(100 * ((1 - w) * 7.5 / 9 + w * prior / 100))
     assert (result.score, result.label, result.model) == (expected, "relevant", "fake-apertus")
+    assert (result.reasoning_de, result.reasoning_fr) == (DE, FR)
+    assert len(llm.calls) == 1
     prompt = llm.calls[0][1]["content"]
     assert "8C_9/2025: Der Unfallbegriff" in prompt
     # The ruling's own example summary must not leak into its prompt.
     assert "8C_129/2025: Die Reinigung" not in prompt
     assert "Hold-out" not in prompt
-    assert "8C_135/2025 (Assurance-accidents (rente d'invalidité)): relevant, Score 90" in prompt
-    assert "Kommentar: BGE" in prompt
+    # Only the glossary entries that occur in the ruling.
+    assert "- Kausalzusammenhang = lien de causalité" in prompt
+    assert "Taggeld" not in prompt
+    assert "IVG = LAI" not in prompt
+
+
+def test_reasoning_in_the_wrong_language_is_rewritten(conn, tmp_path):
+    llm = FakeLLM(
+        {"reasoning_de": FR, "reasoning_fr": FR, "relevanz": 8},
+        {"reasoning_de": DE},
+        tmp_path=tmp_path,
+    )
+    result = triage.triage(conn, "8C_135/2025", llm)
+    assert (result.reasoning_de, result.reasoning_fr) == (DE, FR)
+    assert "reasoning_de" in llm.calls[1][-1]["content"]
+    assert "reasoning_fr" not in llm.calls[1][-1]["content"]
+
+
+def test_the_other_languages_statute_abbreviations_are_replaced(conn, tmp_path):
+    llm = FakeLLM(
+        {
+            "reasoning_de": DE + " Art. 6 LAA, IVG/LAI, OAI.",
+            "reasoning_fr": FR + " LAA/UVG",
+            "relevanz": 8,
+        },
+        tmp_path=tmp_path,
+    )
+    result = triage.triage(conn, "8C_135/2025", llm)
+    assert result.reasoning_de.endswith("Art. 6 UVG, IVG, IVV.")
+    assert result.reasoning_fr.endswith(" LAA")
+    assert len(llm.calls) == 1
+
+
+def test_reasoning_that_stays_in_the_wrong_language_fails(conn, tmp_path):
+    llm = FakeLLM({"reasoning_de": DE, "reasoning_fr": DE, "relevanz": 8}, tmp_path=tmp_path)
+    with pytest.raises(ValueError, match="fr"):
+        triage.triage(conn, "8C_135/2025", llm)
+    assert len(llm.calls) == 2
 
 
 def test_prefiltered_rulings_never_reach_the_llm(conn, tmp_path):
-    llm = FakeLLM({"relevanz": 9}, tmp_path)
+    llm = FakeLLM({"relevanz": 9}, tmp_path=tmp_path)
     result = triage.triage(conn, "4A_106/2025", llm)
     assert result.label == "not_relevant"
     assert result.model == triage.PREFILTER_MODEL
-    assert "Vorprüfung" in result.reasoning
+    assert "Vorprüfung" in result.reasoning_de
+    assert "examen préliminaire" in result.reasoning_fr
+    assert triage.wrong_language(result) == []
     assert llm.calls == []
 
 
+def test_prefilter_lists_its_hints_in_both_languages():
+    p = triage.prior({"docket": "9C_3/2026", "title": "Direkte Bundessteuer", "text": "ATSG"})
+    result = triage.prefiltered(p)
+    assert "Abteilung 9C, ATSG zitiert" in result.reasoning_de
+    assert "cour 9C, LPGA citée" in result.reasoning_fr
+
+
 def test_batch_reports_failures_without_stopping(conn, tmp_path):
-    llm = FakeLLM(ValueError("kein JSON"), tmp_path)
+    llm = FakeLLM(ValueError("kein JSON"), tmp_path=tmp_path)
     results = dict(triage.triage_batch(conn, db.untriaged_dockets(conn), llm, workers=2))
     assert isinstance(results["8C_129/2025"], ValueError)
     assert results["4A_106/2025"].model == triage.PREFILTER_MODEL
@@ -203,7 +303,8 @@ def test_untriaged_dockets_by_date_and_prompt_version(conn):
         "8C_129/2025",
         score=80,
         label="relevant",
-        reasoning="r",
+        reasoning_de="r",
+        reasoning_fr="r",
         model="m",
         prompt_version="old",
     )
@@ -225,7 +326,8 @@ def test_export_and_import_round_trip(conn, tmp_path):
         "8C_129/2025",
         score=80,
         label="relevant",
-        reasoning="r",
+        reasoning_de="Deutsch",
+        reasoning_fr="Français",
         model="m",
         prompt_version="v1",
     )
@@ -239,3 +341,16 @@ def test_export_and_import_round_trip(conn, tmp_path):
     detail = db.get_ruling_detail(fresh, "8C_129/2025")
     assert detail["triage"]["score"] == 80
     assert detail["triage"]["prompt_version"] == "v1"
+    assert (detail["triage"]["reasoning_de"], detail["triage"]["reasoning_fr"]) == (
+        "Deutsch",
+        "Français",
+    )
+
+
+def test_import_of_results_with_only_a_german_explanation(conn, tmp_path):
+    path = tmp_path / "v3.jsonl"
+    row = {"docket": "8C_129/2025", "score": 70, "label": "relevant", "reasoning": "Alt."}
+    path.write_text(json.dumps({**row, "model": "m", "prompt_version": "v3"}) + "\n")
+    assert db.import_triage(conn, path) == 1
+    triage_ = db.get_ruling_detail(conn, "8C_129/2025")["triage"]
+    assert (triage_["reasoning_de"], triage_["reasoning_fr"]) == ("Alt.", None)

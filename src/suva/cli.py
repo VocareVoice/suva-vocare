@@ -94,7 +94,8 @@ def main() -> None:
                 docket,
                 score=result.score,
                 label=result.label,
-                reasoning=result.reasoning,
+                reasoning_de=result.reasoning_de,
+                reasoning_fr=result.reasoning_fr,
                 model=result.model,
                 prompt_version=triage.PROMPT_VERSION,
             )

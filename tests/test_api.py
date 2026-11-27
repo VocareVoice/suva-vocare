@@ -73,7 +73,8 @@ def test_list_filters_and_order(client, conn):
             docket,
             score=score,
             label=label,
-            reasoning=reasoning,
+            reasoning_de=reasoning,
+            reasoning_fr=f"FR {reasoning}",
             model=None,
             prompt_version=None,
         )
@@ -101,7 +102,9 @@ def test_list_filters_and_order(client, conn):
         "relevant_without_summary": 1,
     }
     item = body["items"][0]
-    assert item["reasoning"] == "UVG"
+    assert (item["reasoning_de"], item["reasoning_fr"]) == ("UVG", "FR UVG")
+    detail = client.get("/api/rulings/8C_129/2025").json()
+    assert (detail["triage"]["reasoning_de"], detail["triage"]["reasoning_fr"]) == ("UVG", "FR UVG")
     assert item["feedback_verdict"] is None
 
 
