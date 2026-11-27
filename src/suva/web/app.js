@@ -1,60 +1,38 @@
 // BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
-// Talks to the FastAPI JSON API in src/suva/api.py. Knowledge-base views live in kb.js.
+// Talks to the FastAPI JSON API in src/suva/api.py. The root view (relevant rulings by category)
+// lives in relevant.js, the branch/category contract in categories.js.
 
-import { categoriesOf, renderCategory, renderHome } from "./kb.js";
+import { classify, label } from "./categories.js";
+import { renderRelevant } from "./relevant.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
   de: {
-    "nav.kb": "Wissensbasis",
+    "nav.rel": "Relevante Urteile",
     "nav.all": "Alle Urteile",
-    "kb.title": "Wissensbasis Unfallversicherung",
-    "kb.sub": "Für die Suva relevante Bundesgerichtsurteile, geordnet nach Rechtsfrage",
-    "kb.f.corpus": "Publizierte Urteile",
-    "kb.f.corpus.sub": "bger.ch, gewählter Zeitraum",
-    "kb.f.relevant": "Relevant für die Suva",
-    "kb.f.cats": "Rechtsfragen",
-    "kb.f.cats.sub": (n) => `${n} relevante Urteile eingeordnet`,
-    "kb.f.sum": "Zusammengefasst DE · FR",
-    "kb.search": "In der Wissensbasis filtern – Rechtsfrage, Urteil oder Stichwort",
-    "kb.view.map": "Themenkarte",
-    "kb.view.tiles": "Übersicht",
-    "kb.map.aria": "Themenkarte: Rechtsfragen mit den zugeordneten Urteilen",
+    "rel.title": "Relevante Urteile",
+    "rel.lede": (n, total, sum, q) => `${n.toLocaleString("de-CH")} von ${total.toLocaleString("de-CH")} publizierten Urteilen ${q ? "passen zur Suche und " : ""}sind für die Suva relevant, ${sum.toLocaleString("de-CH")} davon mit Zusammenfassung.`,
+    "rel.register": "Register",
+    "rel.all": "Alle relevanten Urteile",
+    "rel.provisional": "Vorläufige Einordnung anhand des Gegenstands. Die Klassifizierung der Rechtsfragen folgt.",
+    "rel.search": "Relevante Urteile durchsuchen, z. B. «Integritätsentschädigung» oder 8C_78/2025",
+    "rel.sort": "Sortierung",
+    "rel.view": "Darstellung",
+    "rel.view.groups": "Nach Rechtsfrage",
+    "rel.view.flat": "Als Liste",
+    "rel.sum.yes": "Zusammenfassung DE und FR vorhanden",
+    "rel.sum.no": "Noch keine Zusammenfassung",
+    "rel.sum.open": "Offen",
+    "list.lede": (st) => `${st.total.toLocaleString("de-CH")} Urteile im Zeitraum, ${st.relevant.toLocaleString("de-CH")} davon als relevant bewertet und ${st.withSum.toLocaleString("de-CH")} zusammengefasst.`,
     "kb.n": (n) => `${n} ${n === 1 ? "Urteil" : "Urteile"}`,
-    "kb.avg": (n) => `Durchschnittliche Relevanz ${n}`,
-    "kb.more": (n) => `+ ${n} weitere`,
-    "kb.lg.high": "Hohe Relevanz",
-    "kb.lg.mid": "Mittlere Relevanz",
-    "kb.lg.open": "Noch ohne Zusammenfassung",
-    "kb.lg.hint": "Punkt = Urteil · Kreis = Rechtsfrage · Klick öffnet",
-    "kb.tip.sum": "Zusammenfassung DE · FR vorhanden",
-    "kb.tip.nosum": "Noch keine Zusammenfassung",
-    "kb.uncat": "Ohne Zuordnung",
     "kb.empty": "Keine Urteile in der Wissensbasis",
     "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
-    "kb.cat.sub": (n) => `${n} für die Suva relevante ${n === 1 ? "Urteil" : "Urteile"} zu dieser Rechtsfrage`,
     "kb.sort.score": "Nach Relevanz",
     "kb.sort.date": "Neueste zuerst",
-    "kb.related": "Verwandte Rechtsfragen",
-    "kb.nosum": "Noch keine Zusammenfassung – im Urteil erstellen.",
-    "kb.open": "Öffnen",
-    "d.cats": "Rechtsfragen",
-    "area.uv": "Unfallversicherung",
-    "area.iv": "Invalidenversicherung",
-    "area.ahv": "Alters- und Hinterlassenenversicherung",
-    "area.el": "Ergänzungsleistungen",
-    "area.bvg": "Berufliche Vorsorge",
-    "area.kv": "Krankenversicherung",
-    "area.alv": "Arbeitslosenversicherung",
-    "area.sv": "Sozialversicherung (allgemein)",
     "brand.sub": "Rechtsprechung Unfallversicherung",
     "nav.rulings": "Urteile",
     "list.title": "Bundesgerichtsurteile",
     "list.sub": "Alle publizierten Urteile mit Relevanzbewertung für die Suva",
-    "stat.total": "Urteile im Zeitraum",
-    "stat.relevant": "Als relevant bewertet",
-    "stat.summaries": "Relevant, mit Zusammenfassung",
-    "stat.open": "Relevant, ohne Zusammenfassung",
     "search.ph": "Volltextsuche in Urteilen – z. B. «Kausalzusammenhang», «Art. 6 UVG», 8C_129/2025",
     "f.period": "Zeitraum",
     "f.period.all": "Alle",
@@ -79,17 +57,17 @@ const I18N = {
     "col.score": "Score",
     "col.docket": "Urteil",
     "col.date": "Datum",
-    "col.subject": "Gegenstand · Begründung",
+    "col.subject": "Gegenstand und Begründung",
     "col.lang": "Spr.",
     "col.summary": "Zusammenf.",
-    "sum.yes": "DE · FR",
+    "sum.yes": "DE FR",
     "sum.no": "—",
     "untriaged": "nicht bewertet",
     "empty.title": "Keine Urteile gefunden",
     "empty.filtered": "Passen Sie Suche oder Filter an.",
     "empty.db": "Die Datenbank ist leer. Laden Sie Urteile mit",
     "err.load": "Daten konnten nicht geladen werden",
-    "back": "Zurück",
+    "back": "Zurück zur Übersicht",
     "d.original": "Original auf bger.ch",
     "d.copy": "Kopieren",
     "d.copyAll": "DE + FR kopieren",
@@ -112,7 +90,7 @@ const I18N = {
     "gen.s2": "Kernaussagen und Normen extrahieren",
     "gen.s3": "Deutsche Fassung verfassen",
     "gen.s4": "Französische Fassung verfassen",
-    "gen.elapsed": (s) => `Laufzeit ${s} s · dauert in der Regel 30–90 s`,
+    "gen.elapsed": (s) => `Laufzeit ${s} s, dauert in der Regel 30–90 s`,
     "gen.err": "Die Zusammenfassung konnte nicht erstellt werden",
     "gen.notimpl": "Der Zusammenfassungs-Dienst ist noch nicht verfügbar.",
     "gen.done": "Zusammenfassung erstellt",
@@ -143,55 +121,31 @@ const I18N = {
     "notfound": "Urteil nicht gefunden",
   },
   fr: {
-    "nav.kb": "Base de connaissances",
+    "nav.rel": "Arrêts pertinents",
     "nav.all": "Tous les arrêts",
-    "kb.title": "Base de connaissances assurance-accidents",
-    "kb.sub": "Arrêts du Tribunal fédéral pertinents pour la Suva, classés par question juridique",
-    "kb.f.corpus": "Arrêts publiés",
-    "kb.f.corpus.sub": "bger.ch, période choisie",
-    "kb.f.relevant": "Pertinents pour la Suva",
-    "kb.f.cats": "Questions juridiques",
-    "kb.f.cats.sub": (n) => `${n} arrêts pertinents classés`,
-    "kb.f.sum": "Résumés DE · FR",
-    "kb.search": "Filtrer la base – question juridique, arrêt ou mot-clé",
-    "kb.view.map": "Carte thématique",
-    "kb.view.tiles": "Vue d'ensemble",
-    "kb.map.aria": "Carte thématique : questions juridiques et arrêts associés",
+    "rel.title": "Arrêts pertinents",
+    "rel.lede": (n, total, sum, q) => `${n.toLocaleString("fr-CH")} des ${total.toLocaleString("fr-CH")} arrêts publiés ${q ? "correspondent à la recherche et " : ""}sont pertinents pour la Suva, dont ${sum.toLocaleString("fr-CH")} avec résumé.`,
+    "rel.register": "Registre",
+    "rel.all": "Tous les arrêts pertinents",
+    "rel.provisional": "Classement provisoire d'après l'objet de l'arrêt. La classification des questions juridiques suit.",
+    "rel.search": "Rechercher dans les arrêts pertinents, p. ex. « intégrité » ou 8C_78/2025",
+    "rel.sort": "Tri",
+    "rel.view": "Affichage",
+    "rel.view.groups": "Par question",
+    "rel.view.flat": "En liste",
+    "rel.sum.yes": "Résumé DE et FR disponible",
+    "rel.sum.no": "Pas encore de résumé",
+    "rel.sum.open": "Ouvert",
+    "list.lede": (st) => `${st.total.toLocaleString("fr-CH")} arrêts dans la période, dont ${st.relevant.toLocaleString("fr-CH")} jugés pertinents et ${st.withSum.toLocaleString("fr-CH")} résumés.`,
     "kb.n": (n) => `${n} ${n === 1 ? "arrêt" : "arrêts"}`,
-    "kb.avg": (n) => `Pertinence moyenne ${n}`,
-    "kb.more": (n) => `+ ${n} autres`,
-    "kb.lg.high": "Pertinence élevée",
-    "kb.lg.mid": "Pertinence moyenne",
-    "kb.lg.open": "Pas encore de résumé",
-    "kb.lg.hint": "Point = arrêt · cercle = question juridique · clic pour ouvrir",
-    "kb.tip.sum": "Résumé DE · FR disponible",
-    "kb.tip.nosum": "Pas encore de résumé",
-    "kb.uncat": "Non classé",
     "kb.empty": "Aucun arrêt dans la base de connaissances",
     "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
-    "kb.cat.sub": (n) => `${n} ${n === 1 ? "arrêt pertinent" : "arrêts pertinents"} pour la Suva sur cette question`,
     "kb.sort.score": "Par pertinence",
     "kb.sort.date": "Plus récents",
-    "kb.related": "Questions apparentées",
-    "kb.nosum": "Pas encore de résumé – à générer dans l'arrêt.",
-    "kb.open": "Ouvrir",
-    "d.cats": "Questions juridiques",
-    "area.uv": "Assurance-accidents",
-    "area.iv": "Assurance-invalidité",
-    "area.ahv": "Assurance-vieillesse et survivants",
-    "area.el": "Prestations complémentaires",
-    "area.bvg": "Prévoyance professionnelle",
-    "area.kv": "Assurance-maladie",
-    "area.alv": "Assurance-chômage",
-    "area.sv": "Assurances sociales (général)",
     "brand.sub": "Jurisprudence assurance-accidents",
     "nav.rulings": "Arrêts",
     "list.title": "Arrêts du Tribunal fédéral",
     "list.sub": "Tous les arrêts publiés avec leur évaluation de pertinence pour la Suva",
-    "stat.total": "Arrêts de la période",
-    "stat.relevant": "Jugés pertinents",
-    "stat.summaries": "Pertinents, avec résumé",
-    "stat.open": "Pertinents, sans résumé",
     "search.ph": "Recherche plein texte – p. ex. « causalité adéquate », « art. 6 LAA », 8C_129/2025",
     "f.period": "Période",
     "f.period.all": "Toutes",
@@ -216,17 +170,17 @@ const I18N = {
     "col.score": "Score",
     "col.docket": "Arrêt",
     "col.date": "Date",
-    "col.subject": "Objet · Motivation",
+    "col.subject": "Objet et motivation",
     "col.lang": "Lang.",
     "col.summary": "Résumé",
-    "sum.yes": "DE · FR",
+    "sum.yes": "DE FR",
     "sum.no": "—",
     "untriaged": "non évalué",
     "empty.title": "Aucun arrêt trouvé",
     "empty.filtered": "Modifiez la recherche ou les filtres.",
     "empty.db": "La base de données est vide. Chargez des arrêts avec",
     "err.load": "Impossible de charger les données",
-    "back": "Retour",
+    "back": "Retour à la vue d'ensemble",
     "d.original": "Original sur bger.ch",
     "d.copy": "Copier",
     "d.copyAll": "Copier DE + FR",
@@ -249,7 +203,7 @@ const I18N = {
     "gen.s2": "Extraire les considérants et les normes",
     "gen.s3": "Rédiger la version allemande",
     "gen.s4": "Rédiger la version française",
-    "gen.elapsed": (s) => `Durée ${s} s · prend en général 30–90 s`,
+    "gen.elapsed": (s) => `Durée ${s} s, prend en général 30–90 s`,
     "gen.err": "Le résumé n'a pas pu être généré",
     "gen.notimpl": "Le service de résumé n'est pas encore disponible.",
     "gen.done": "Résumé généré",
@@ -340,6 +294,9 @@ function rulingDivision(r) {
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
+// Triage reasoning in the interface language (reasoning_de / reasoning_fr), else the single field.
+export const reasoningOf = (o) => (o && (o[`reasoning_${uiLang}`] || o.reasoning || o.reason)) || "";
+
 export function band(score) {
   if (score == null) return "none";
   return score >= 70 ? "high" : score >= 40 ? "mid" : "low";
@@ -368,6 +325,7 @@ export const ICONS = {
   up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.3 6A2 2 0 0 1 17.7 20H7"/></svg>',
   downv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V4h3v10zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.3-6A2 2 0 0 1 6.3 4H17"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
 };
 
@@ -527,17 +485,17 @@ function listHash() {
 async function route() {
   const { path, params } = readHash();
   const m = /^\/r\/(.+)$/.exec(path);
-  const cat = /^\/c\/(.+)$/.exec(path);
   window.scrollTo(0, 0);
   const section = path.startsWith("/all") ? "#/all" : m ? "" : "#/";
-  $$(".topbar__nav > a").forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === section));
+  $$(".topbar__nav > a").forEach((a) => {
+    if (a.getAttribute("href") === section) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  });
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
-  } else if (cat) {
-    resetListeners();
-    await renderCategory(decodeURIComponent(cat[1]), params);
-  } else if (path === "/" || path === "") {
-    await renderHome(params, resetListeners());
+  } else if (!path.startsWith("/all")) {
+    if (path !== "/" && path !== "") { location.replace("#/"); return; } // old #/c/<topic> links
+    await renderRelevant(params, resetListeners());
   } else {
     for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
     state.min = +params.get("min") || 0;
@@ -605,14 +563,11 @@ function listShell() {
   const sel = (name, opts, val) =>
     `<select data-f="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   return `
-  <div class="pagehead">
-    <div>
-      <h1>${esc(t("list.title"))}</h1>
-      <p>${esc(t("list.sub"))}</p>
-    </div>
-  </div>
-  <section class="stats" id="stats"></section>
-  <section class="card toolbar">
+  <header class="pagehead">
+    <h1>${esc(t("list.title"))}</h1>
+    <p class="pagehead__lede" id="stats">${esc(t("list.sub"))}</p>
+  </header>
+  <section class="toolbar">
     <div class="toolbar__row">
       <label class="search">
         <span class="sr-only">${esc(t("search.ph"))}</span>
@@ -649,7 +604,7 @@ function listShell() {
       <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
     </div>
   </section>
-  <section class="card">
+  <section class="tablebox">
     <div class="table-wrap" id="tableWrap"></div>
   </section>`;
 }
@@ -657,12 +612,7 @@ function listShell() {
 function renderStats() {
   const st = state.stats;
   if (st) {
-    $("#stats").innerHTML = [
-      [t("stat.total"), st.total],
-      [t("stat.relevant"), st.relevant, st.total ? `${Math.round((st.relevant / st.total) * 100)} %` : ""],
-      [t("stat.summaries"), st.withSum],
-      [t("stat.open"), st.open],
-    ].map(([l, v, x]) => `<div class="card stat"><div class="stat__label">${esc(l)}</div><div class="stat__value">${v.toLocaleString("de-CH")}${x ? `<small>${esc(x)}</small>` : ""}</div></div>`).join("");
+    $("#stats").textContent = t("list.lede", st);
   }
   const divs = [...new Set([...COMMON_DIVISIONS, ...state.items.map((r) => divisionCode(r.docket)).filter(Boolean)])].sort();
   if (state.div && !divs.includes(state.div)) divs.push(state.div);
@@ -686,17 +636,17 @@ function renderTable() {
   };
   const terms = state.q.trim() ? state.q.trim().split(/\s+/) : [];
   const rows = items.slice(0, state.shown).map((r) => {
-    const reason = r.reasoning || r.reason || "";
+    const reason = reasoningOf(r);
     const div = divisionCode(r.docket);
     return `<tr data-docket="${esc(r.docket)}" class="${band(r.score) === "low" ? "is-low" : ""}">
       <td class="c-score">${scoreBadge(r.score)}</td>
       <td class="c-docket"><a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
-        <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " · " + esc(t("untriaged")) : ""}</span></td>
+        <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " " + esc(t("untriaged")) : ""}</span></td>
       <td class="c-date num">${fmtDate(r.decision_date)}</td>
       <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>
         ${reason ? `<div class="ruling-reason">${esc(reason)}</div>` : ""}</td>
       <td class="c-lang">${r.language ? `<span class="lang">${esc(r.language)}</span>` : ""}</td>
-      <td class="c-sum">${r.has_summary ? `<span class="chip chip--ok"><span class="dot"></span>${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
+      <td class="c-sum">${r.has_summary ? `<span class="sumflag is-yes">${ICONS.check}${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
     </tr>`;
   }).join("");
   wrap.innerHTML = `<table class="rulings">
@@ -721,10 +671,10 @@ function resetListeners() {
 }
 
 async function renderList() {
-  document.title = `${t("list.title")} · BGer-Monitor`;
+  document.title = `${t("list.title")} – BGer-Monitor`;
   const opts = resetListeners();
   app.innerHTML = listShell();
-  $("#tableWrap").innerHTML = `<div class="card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(8)}</div>`;
+  $("#tableWrap").innerHTML = `<div class="skelblock">${'<div class="skel"></div>'.repeat(8)}</div>`;
 
   let loadingTimer;
   const reload = async (resetShown = true) => {
@@ -882,7 +832,7 @@ function relevanceCard(r) {
       </div>
       <div>
         <h3 class="card__title" style="margin-bottom:6px">${esc(t("r.reason"))}</h3>
-        <p class="reasoning">${highlight(tr.reasoning || "")}</p>
+        <p class="reasoning">${highlight(reasoningOf(tr))}</p>
       </div>
     </div>
   </section>`;
@@ -892,7 +842,7 @@ function statutesCard(statutes) {
   return `<section class="card">
     <div class="card__head"><h2 class="card__title">${esc(t("st.title"))}</h2></div>
     <div class="card__body">${statutes.length
-      ? `<div class="statutes">${statutes.map((s) => `<button type="button" class="chip chip--mono" data-goto="${esc(s.law + " " + s.art.replace(/\s+/g, ""))}" title="${esc([...s.forms].join(" · "))}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`).join("")}</div>`
+      ? `<div class="statutes">${statutes.map((s) => `<button type="button" class="chip" data-goto="${esc(s.law + " " + s.art.replace(/\s+/g, ""))}" title="${esc([...s.forms].join(", "))}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`).join("")}</div>`
       : `<p class="muted" style="margin:0">${esc(t("st.none"))}</p>`}</div>
   </section>`;
 }
@@ -903,7 +853,7 @@ function metaCard(r) {
     [t("m.docket"), r.docket],
     [t("m.decision"), fmtDate(r.decision_date, "long")],
     ...(r.publication_date ? [[t("m.published"), fmtDate(r.publication_date, "long")]] : []),
-    [t("m.division"), `${div} · ${rulingDivision(r)}`],
+    [t("m.division"), `${div} ${rulingDivision(r)}`],
     [t("m.language"), r.language ? t(`lang.${r.language}`) : "—"],
     [t("m.source"), r.source || "bger.ch"],
   ];
@@ -949,9 +899,18 @@ async function renderDetail(docket, params) {
   paintDetail(r, terms);
 }
 
+// "Unfallversicherung / Kausalzusammenhang", each part linking to the register filter.
+function classPath(r) {
+  const c = classify({ ...(r.triage || {}), ...r, reasoning: reasoningOf(r.triage) });
+  const b = encodeURIComponent(c.branch.id);
+  return `<a class="classpath" data-branch="${esc(c.branch.id)}" href="#/?branch=${b}"><span class="register__swatch" aria-hidden="true"></span>${esc(label(c.branch, uiLang))}</a>
+    <span class="classpath__sep" aria-hidden="true">/</span>
+    <a class="classpath" href="#/?branch=${b}&cat=${encodeURIComponent(c.category.id)}">${esc(label(c.category, uiLang))}</a>`;
+}
+
 function paintDetail(r, terms) {
-  document.title = `${r.docket} · BGer-Monitor`;
-  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, r.triage?.reasoning, r.text);
+  document.title = `${r.docket} – BGer-Monitor`;
+  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningOf(r.triage), r.text);
   const div = divisionCode(r.docket);
   const tr = r.triage;
   app.innerHTML = `
@@ -959,14 +918,11 @@ function paintDetail(r, terms) {
     <header class="dhead">
       <div>
         <div class="dhead__kicker">
-          ${tr ? `<span class="chip ${tr.label === "relevant" ? "chip--accent" : ""}"><span class="dot"></span>${esc(tr.label === "relevant" ? t("r.rel") : t("r.not"))} · ${tr.score}</span>` : ""}
-          <span class="chip">${esc(div)} · ${esc(rulingDivision(r))}</span>
-          <span class="chip">${esc(fmtDate(r.decision_date, "long"))}</span>
+          ${tr?.label === "relevant" ? classPath(r) : ""}
         </div>
         <h1>${esc(suvaTitle(r))}</h1>
         ${r.title ? `<p class="dhead__title">${esc(r.title)}</p>` : ""}
-        ${tr?.label === "relevant" ? `<div class="related"><span class="muted">${esc(t("d.cats"))}</span>${categoriesOf(r)
-          .map((c) => `<a class="chip chip--accent" href="#/c/${encodeURIComponent(c)}">${esc(c)}</a>`).join("")}</div>` : ""}
+        <p class="dhead__meta"><span>${esc(div)} ${esc(rulingDivision(r))}</span><span>${esc(fmtDate(r.decision_date, "long"))}</span>${r.language ? `<span>${esc(t(`lang.${r.language}`))}</span>` : ""}</p>
       </div>
       <div class="dhead__actions">
         ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}

@@ -1,0 +1,217 @@
+// Root view: the rulings triage marked relevant for Suva, grouped by insurance branch and legal
+// category. A register on the left lists every category with its count and acts as the filter.
+
+import { $, $$, API, ICONS, PERIODS, band, esc, fmtDate, highlight, reasoningOf, state, t, uiLang } from "./app.js";
+import { BRANCHES, buildRegister, classify, label } from "./categories.js";
+
+const cache = { sig: "", items: [], corpus: 0 };
+
+async function load(period, q) {
+  const p = PERIODS.find((x) => x.id === period) || PERIODS[0];
+  const range = {};
+  if (p.from) range.from = p.from;
+  if (p.to) range.to = p.to;
+  const sig = JSON.stringify({ ...range, q });
+  if (sig === cache.sig) return;
+  const base = { ...range, ...(q ? { q } : {}) };
+  const items = [];
+  for (;;) {
+    const res = await API.list({ ...base, label: "relevant", sort: "score", order: "desc", limit: 500, offset: items.length });
+    items.push(...(res.items || []));
+    if (!res.items?.length || items.length >= res.total) break;
+  }
+  const all = await API.list({ ...range, limit: 1 });
+  Object.assign(cache, { sig, items, corpus: all.total ?? 0 });
+}
+
+function readParams(params) {
+  return {
+    period: params.get("period") || "all",
+    q: params.get("q") || "",
+    branch: params.get("branch") || "",
+    cat: params.get("cat") || "",
+    sum: params.get("sum") || "",
+    sort: params.get("sort") === "date" ? "date" : "score",
+    view: params.get("view") === "flat" ? "flat" : "groups",
+  };
+}
+function toHash(f) {
+  const p = new URLSearchParams();
+  if (f.period !== "all") p.set("period", f.period);
+  for (const k of ["q", "branch", "cat", "sum"]) if (f[k]) p.set(k, f[k]);
+  if (f.sort !== "score") p.set("sort", f.sort);
+  if (f.view !== "groups") p.set("view", f.view);
+  const s = p.toString();
+  return "#/" + (s ? "?" + s : "");
+}
+
+const sorter = (sort) => (sort === "date"
+  ? (a, b) => (b.decision_date || "").localeCompare(a.decision_date || "") || (b.score ?? 0) - (a.score ?? 0)
+  : (a, b) => (b.score ?? 0) - (a.score ?? 0) || (b.decision_date || "").localeCompare(a.decision_date || ""));
+
+// ---------------------------------------------------------------- pieces
+function entry(r, terms, showCat) {
+  const c = classify(r);
+  const reason = reasoningOf(r);
+  const b = band(r.score);
+  return `<li class="entry" data-docket="${esc(r.docket)}">
+    <div class="entry__rz rz--${b}" title="${esc(t("r.hint"))}">
+      <span class="rz__n">${r.score ?? "–"}</span>
+      <span class="rz__bar"><i style="width:${r.score ?? 0}%"></i></span>
+    </div>
+    <div class="entry__body">
+      <div class="entry__head">
+        <a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
+        <span class="entry__date">${esc(fmtDate(r.decision_date, "long"))}</span>
+        ${r.language ? `<span class="entry__lang">${esc(t(`lang.${r.language}`))}</span>` : ""}
+        ${showCat ? `<span class="entry__cat" data-branch="${esc(c.branch.id)}">${esc(label(c.category, uiLang))}</span>` : ""}
+      </div>
+      <p class="entry__title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</p>
+      ${reason ? `<p class="entry__reason">${terms.length ? highlight(reason, terms) : esc(reason)}</p>` : ""}
+    </div>
+    <div class="entry__sum">${r.has_summary
+      ? `<span class="sumflag is-yes" title="${esc(t("rel.sum.yes"))}">${ICONS.check}DE FR</span>`
+      : `<span class="sumflag" title="${esc(t("rel.sum.no"))}">${esc(t("rel.sum.open"))}</span>`}</div>
+  </li>`;
+}
+
+function registerHtml(reg, f, total, provisional) {
+  const link = (patch) => toHash({ ...f, ...patch });
+  const cur = (on) => (on ? ' aria-current="true"' : "");
+  return `<nav class="register" aria-label="${esc(t("rel.register"))}">
+    <h2 class="register__title">${esc(t("rel.register"))}</h2>
+    <a class="register__all" href="${link({ branch: "", cat: "" })}"${cur(!f.branch && !f.cat)}>
+      <span>${esc(t("rel.all"))}</span><span class="register__n">${total}</span></a>
+    ${reg.map((b) => `<section class="register__branch" data-branch="${esc(b.branch.id)}">
+      <a class="register__b" href="${link({ branch: b.branch.id, cat: "" })}"${cur(f.branch === b.branch.id && !f.cat)}>
+        <span class="register__swatch" aria-hidden="true"></span>
+        <span class="register__bname">${esc(label(b.branch, uiLang))}${BRANCHES[b.branch.id]?.law ? ` <span class="register__law">${esc(BRANCHES[b.branch.id].law[uiLang])}</span>` : ""}</span>
+        <span class="register__n">${b.count}</span></a>
+      <ul>${b.cats.map((c) => `<li><a href="${link({ branch: b.branch.id, cat: c.category.id })}"${cur(f.branch === b.branch.id && f.cat === c.category.id)}>
+        <span>${esc(label(c.category, uiLang))}</span><span class="register__n">${c.count}</span></a></li>`).join("")}</ul>
+    </section>`).join("")}
+    ${provisional ? `<p class="register__note">${esc(t("rel.provisional"))}</p>` : ""}
+  </nav>`;
+}
+
+// ---------------------------------------------------------------- view
+export async function renderRelevant(params, opts) {
+  const f = readParams(params);
+  document.title = `${t("rel.title")} – BGer-Monitor`;
+  state.lastListHash = toHash(f);
+  const app = $("#app");
+  app.innerHTML = `
+    <header class="pagehead">
+      <h1>${esc(t("rel.title"))}</h1>
+      <p class="pagehead__lede" id="lede">${esc(t("loading"))}</p>
+    </header>
+    <div class="relgrid">
+      <aside class="relgrid__side" id="register"><div class="skel"></div><div class="skel"></div><div class="skel" style="width:60%"></div></aside>
+      <div class="relgrid__main">
+        <div class="filterbar">
+          <label class="search">
+            <span class="sr-only">${esc(t("rel.search"))}</span>${ICONS.search}
+            <input type="search" id="q" value="${esc(f.q)}" placeholder="${esc(t("rel.search"))}" autocomplete="off"><kbd>/</kbd>
+          </label>
+          <label class="field"><span>${esc(t("f.period"))}</span>
+            <select id="period">${PERIODS.filter((p) => p.id !== "custom").map((p) => `<option value="${p.id}"${p.id === f.period ? " selected" : ""}>${esc(p.label())}</option>`).join("")}</select>
+          </label>
+          <label class="field"><span>${esc(t("f.summary"))}</span>
+            <select id="sum">${[["", t("f.summary.all")], ["yes", t("f.summary.yes")], ["no", t("f.summary.no")]].map(([v, l]) => `<option value="${v}"${v === f.sum ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>
+          </label>
+          <span class="seg" role="group" aria-label="${esc(t("rel.sort"))}">
+            <button type="button" data-sort="score" aria-pressed="${f.sort === "score"}">${esc(t("kb.sort.score"))}</button>
+            <button type="button" data-sort="date" aria-pressed="${f.sort === "date"}">${esc(t("kb.sort.date"))}</button>
+          </span>
+          <span class="seg" role="group" aria-label="${esc(t("rel.view"))}">
+            <button type="button" data-view="groups" aria-pressed="${f.view === "groups"}">${esc(t("rel.view.groups"))}</button>
+            <button type="button" data-view="flat" aria-pressed="${f.view === "flat"}">${esc(t("rel.view.flat"))}</button>
+          </span>
+        </div>
+        <div id="relBody"><div class="skelblock">${'<div class="skel"></div>'.repeat(8)}</div></div>
+      </div>
+    </div>`;
+
+  const go = (patch, replace = true) => {
+    Object.assign(f, patch);
+    const h = toHash(f);
+    state.lastListHash = h;
+    if (replace) history.replaceState(null, "", h);
+  };
+
+  const paint = () => {
+    const terms = f.q.trim() ? f.q.trim().split(/\s+/) : [];
+    const pool = cache.items.filter((r) => !f.sum || r.has_summary === (f.sum === "yes"));
+    const reg = buildRegister(pool);
+    const provisional = pool.some((r) => classify(r).provisional);
+    $("#register").innerHTML = registerHtml(reg, f, pool.length, provisional);
+
+    const selected = pool.filter((r) => {
+      const c = classify(r);
+      return (!f.branch || c.branch.id === f.branch) && (!f.cat || c.category.id === f.cat);
+    });
+    const withSum = cache.items.filter((r) => r.has_summary).length;
+    $("#lede").textContent = t("rel.lede", cache.items.length, cache.corpus, withSum, !!f.q);
+
+    const body = $("#relBody");
+    if (!selected.length) {
+      body.innerHTML = `<div class="empty"><h2>${esc(t(cache.items.length ? "empty.title" : "kb.empty"))}</h2>
+        <p>${esc(cache.items.length ? t("empty.filtered") : t("kb.empty.sub"))}</p>
+        ${f.q || f.sum || f.branch || f.cat ? `<p><a class="btn btn--sm" href="${toHash({ ...f, q: "", sum: "", branch: "", cat: "" })}">${esc(t("f.reset"))}</a></p>` : ""}</div>`;
+      return;
+    }
+    const sort = sorter(f.sort);
+    if (f.view === "flat") {
+      body.innerHTML = `<ol class="entries">${[...selected].sort(sort).map((r) => entry(r, terms, true)).join("")}</ol>`;
+      return;
+    }
+    const groups = reg
+      .filter((b) => !f.branch || b.branch.id === f.branch)
+      .flatMap((b) => b.cats.filter((c) => !f.cat || c.category.id === f.cat).map((c) => ({ b, c })));
+    body.innerHTML = groups.map(({ b, c }) => `
+      <section class="group" data-branch="${esc(b.branch.id)}">
+        <header class="group__head">
+          <h2><a href="${toHash({ ...f, branch: b.branch.id, cat: c.category.id })}">${esc(label(c.category, uiLang))}</a></h2>
+          <span class="group__branch">${esc(label(b.branch, uiLang))}</span>
+          <span class="group__n">${esc(t("kb.n", c.count))}</span>
+        </header>
+        <ol class="entries">${[...c.items].sort(sort).map((r) => entry(r, terms, false)).join("")}</ol>
+      </section>`).join("");
+  };
+
+  const reload = async () => {
+    try {
+      await load(f.period, f.q.trim());
+    } catch (e) {
+      $("#relBody").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
+      $("#register").innerHTML = "";
+      return;
+    }
+    paint();
+  };
+
+  let timer;
+  app.addEventListener("input", (e) => {
+    if (e.target.id !== "q") return;
+    clearTimeout(timer);
+    timer = setTimeout(() => { go({ q: e.target.value }); reload(); }, 250);
+  }, opts);
+  app.addEventListener("change", (e) => {
+    if (e.target.id === "period") { go({ period: e.target.value }); reload(); }
+    if (e.target.id === "sum") { go({ sum: e.target.value }); paint(); }
+  }, opts);
+  app.addEventListener("click", (e) => {
+    const s = e.target.closest("[data-sort]");
+    const v = e.target.closest("[data-view]");
+    if (s || v) {
+      go(s ? { sort: s.dataset.sort } : { view: v.dataset.view });
+      $$(s ? "[data-sort]" : "[data-view]").forEach((x) => x.setAttribute("aria-pressed", x === (s || v)));
+      paint();
+      return;
+    }
+    const li = e.target.closest(".entry[data-docket]");
+    if (li && !e.target.closest("a") && !window.getSelection()?.toString()) location.hash = `#/r/${encodeURIComponent(li.dataset.docket)}`;
+  }, opts);
+
+  await reload();
+}
