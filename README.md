@@ -76,6 +76,16 @@ Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge
 `triage.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend), `fetch/`
 (ruling crawler).
 
+Evaluation: `docs/style_guide.md` is the house style for the DE/FR summaries and the relevance
+signals, derived from Suva's examples in `judgements/`. `data/eval/` holds the parsed examples,
+the labelled Q4 2025 / Q1 2026 relevance list, the hold-out split and the DE/FR glossary.
+
+```sh
+uv run python -m suva.eval.examples          # re-parse judgements/ into data/eval/
+uv run python -m suva.eval.score_summaries generated.jsonl [--judge]   # vs. hold-out summaries
+uv run python -m suva.eval.score_triage triage.jsonl [--threshold 0.5] # vs. relevance list
+```
+
 ## 📦 Submission Requirements & Deliverables
 
 The submission must:
