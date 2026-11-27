@@ -7,7 +7,8 @@ import { askAgent, initAgent, paintAgent } from "./agent.js";
 import { branchLaw, buildRegister, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
 import { renderKnowledge } from "./knowledge.js";
 import { renderLaw } from "./law.js";
-import { loadKnowledgeBase, renderRelevant } from "./relevant.js";
+import { invalidateKnowledgeBase, loadKnowledgeBase, renderRelevant } from "./relevant.js";
+import { loadAdjustments, renderAdjustments } from "./adjustments.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
@@ -16,6 +17,30 @@ const I18N = {
     "nav.all": "Alle Urteile",
     "nav.law": "Gesetze",
     "nav.agent": "Agent-Wissen",
+    "nav.adjust": "Anpassungen",
+    "adj.intro": "Hier sind alle Relevanz-Scores erfasst, die Fachpersonen angepasst haben, jeweils neben dem Score der KI-Triage. Die KI-Auswertung fasst zusammen, wo die Triage danebenliegt. Sie ändert die Triage nicht: Diese Erkenntnisse in den Triage-Prompt zurückzuführen, ist der nächste Schritt.",
+    "adj.stat.total": "Anpassungen",
+    "adj.stat.raised": "höher bewertet",
+    "adj.stat.lowered": "tiefer bewertet",
+    "adj.stat.added": "neu in der Wissensbasis",
+    "adj.stat.removed": "aus der Wissensbasis entfernt",
+    "adj.sum.title": "KI-Auswertung",
+    "adj.sum.run": "Auswerten",
+    "adj.sum.rerun": "Neu auswerten",
+    "adj.sum.running": "Wird ausgewertet …",
+    "adj.sum.wait": "Apertus liest die Anpassungen. Das kann eine Minute dauern.",
+    "adj.sum.none": "Noch keine Auswertung. Apertus fasst zusammen, was die Anpassungen gemeinsam haben und was das für den Triage-Prompt heisst.",
+    "adj.sum.empty": "Sobald Fachpersonen Scores anpassen, lässt sich hier auswerten, was die Korrekturen gemeinsam haben.",
+    "adj.sum.stale": "Seit dieser Auswertung haben sich die Anpassungen geändert.",
+    "adj.sum.meta": (d, n, m) => `Erstellt am ${d} aus ${n} ${n === 1 ? "Anpassung" : "Anpassungen"} · ${m}`,
+    "adj.sum.next": "Nächster Schritt (noch nicht umgesetzt): Die Vorschläge fliessen geprüft in den Triage-Prompt ein, und die Triage wird mit den angepassten Urteilen als Referenz neu evaluiert.",
+    "adj.sum.err": (m) => `Die Auswertung ist fehlgeschlagen: ${m}`,
+    "adj.col.change": "KI → Fachperson",
+    "adj.col.reason": "Gegenstand und Begründung der Fachperson",
+    "adj.col.date": "Angepasst",
+    "adj.noreason": "Keine Begründung angegeben",
+    "adj.empty.title": "Noch keine Anpassungen",
+    "adj.empty.text": "Öffnen Sie ein Urteil unter «Alle Urteile» und passen Sie im Feld «Relevanz» den Score an.",
     "mem.intro": "Dieser Text gilt für jede Antwort des Agenten, vor allem für Zusammenfassungen. Er geht bei jeder Frage mit, halten Sie ihn deshalb kurz. Standardmässig enthält er die wichtigsten Stilregeln der Suva-Zusammenfassungen; Sie können ihn frei ändern und jederzeit auf den Standard zurücksetzen. Bitten Sie den Agenten im Chat, sich etwas zu merken, ergänzt er den Text selbst.",
     "mem.save": "Speichern",
     "mem.undo": "Änderungen verwerfen",
@@ -74,10 +99,29 @@ const I18N = {
     "nav.rulings": "Urteile",
     "list.title": "Bundesgerichtsurteile",
     "list.sub": "Alle publizierten Urteile mit Relevanzbewertung für die Suva",
+    "add.btn": "Urteil hinzufügen",
+    "add.label": "Urteilsnummer des Bundesgerichts",
+    "add.ph": "z. B. 8C_129/2025",
+    "add.hint": "Das Urteil wird von entscheidsuche.ch geladen, klassifiziert und auf seine Relevanz für die Suva bewertet.",
+    "add.submit": "Hinzufügen",
+    "add.cancel": "Abbrechen",
+    "add.running": (d) => `${d} wird hinzugefügt …`,
+    "add.s1": "Urteil auf entscheidsuche.ch suchen und laden",
+    "add.s2": "Versicherungszweig und Kategorie bestimmen",
+    "add.s3": "Relevanz für die Suva bewerten",
+    "add.elapsed": (s) => `Laufzeit ${fmtElapsed(s)} · dauert meist unter einer Minute`,
+    "add.invalid": "Bitte eine Urteilsnummer wie 8C_129/2025 eingeben.",
+    "add.err": "Das Urteil konnte nicht hinzugefügt werden",
+    "add.notfound": (d) => `${d} ist auf entscheidsuche.ch nicht zu finden. Ist die Nummer richtig?`,
+    "add.done": (d) => `${d} hinzugefügt`,
+    "add.exists": (d) => `${d} ist bereits in der Datenbank`,
+    "add.partial": (d) => `${d} hinzugefügt, aber nicht vollständig bewertet`,
     "search.ph": "Volltextsuche in Urteilen – z. B. «Kausalzusammenhang», «Art. 6 UVG», 8C_129/2025",
     "f.period": "Zeitraum",
     "f.period.all": "Alle",
     "f.custom": "Benutzerdefiniert",
+    "f.period.eval": "Evaluation",
+    "gen.eval": "Dieses Urteil liegt im Evaluationszeitraum (Q4 2025 – Q1 2026). Er diente zum Vergleich mit den Zusammenfassungen der Suva, deshalb wurden hier keine Zusammenfassungen im Voraus erstellt.",
     "f.label": "Triage",
     "f.label.all": "Alle",
     "f.label.rel": "Relevant",
@@ -158,6 +202,17 @@ const I18N = {
     "r.hint": "Score 0–100 für die Bedeutung für die Unfallversicherung",
     "r.none": "Dieses Urteil wurde noch nicht bewertet.",
     "r.reason": "Begründung",
+    "r.adjust": "Anpassen",
+    "r.expert": "Von Fachperson angepasst",
+    "r.model": (s) => `KI-Score ${s}`,
+    "r.reset": "Auf KI-Score zurücksetzen",
+    "r.edit.kb": "Erscheint in der Wissensbasis",
+    "r.edit.nokb": "Erscheint nicht in der Wissensbasis",
+    "r.edit.comment": "Begründung (optional)",
+    "r.edit.placeholder": "Warum ist das Urteil für die Suva mehr oder weniger relevant?",
+    "r.edit.saved": "Score gespeichert",
+    "r.edit.reset": "Wieder der KI-Score",
+    "r.edit.err": "Der Score konnte nicht gespeichert werden",
     "st.title": "Zitierte Normen",
     "st.none": "Keine Normen erkannt.",
     "st.para": "Abs.",
@@ -191,6 +246,30 @@ const I18N = {
     "nav.all": "Tous les arrêts",
     "nav.law": "Lois",
     "nav.agent": "Savoir de l'agent",
+    "nav.adjust": "Ajustements",
+    "adj.intro": "Tous les scores de pertinence ajustés par des spécialistes, à côté du score du triage IA. L'analyse IA résume où le triage se trompe. Elle ne modifie pas le triage : réintégrer ces enseignements dans le prompt de triage est la prochaine étape.",
+    "adj.stat.total": "ajustements",
+    "adj.stat.raised": "relevés",
+    "adj.stat.lowered": "abaissés",
+    "adj.stat.added": "ajoutés à la base",
+    "adj.stat.removed": "retirés de la base",
+    "adj.sum.title": "Analyse IA",
+    "adj.sum.run": "Analyser",
+    "adj.sum.rerun": "Analyser à nouveau",
+    "adj.sum.running": "Analyse en cours …",
+    "adj.sum.wait": "Apertus lit les ajustements. Cela peut prendre une minute.",
+    "adj.sum.none": "Pas encore d'analyse. Apertus résume ce que les ajustements ont en commun et ce que cela implique pour le prompt de triage.",
+    "adj.sum.empty": "Dès que des spécialistes ajustent des scores, vous pourrez analyser ici ce que les corrections ont en commun.",
+    "adj.sum.stale": "Les ajustements ont changé depuis cette analyse.",
+    "adj.sum.meta": (d, n, m) => `Créée le ${d} à partir de ${n} ajustement${n === 1 ? "" : "s"} · ${m}`,
+    "adj.sum.next": "Prochaine étape (pas encore réalisée) : les propositions, une fois vérifiées, sont intégrées au prompt de triage, et le triage est réévalué avec les arrêts ajustés comme référence.",
+    "adj.sum.err": (m) => `L'analyse a échoué : ${m}`,
+    "adj.col.change": "IA → spécialiste",
+    "adj.col.reason": "Objet et motivation du ou de la spécialiste",
+    "adj.col.date": "Ajusté",
+    "adj.noreason": "Aucune motivation indiquée",
+    "adj.empty.title": "Pas encore d'ajustements",
+    "adj.empty.text": "Ouvrez un arrêt sous « Tous les arrêts » et ajustez le score dans le champ « Pertinence ».",
     "mem.intro": "Ce texte vaut pour chaque réponse de l'agent, en particulier pour les résumés. Il accompagne chaque question, gardez-le donc court. Par défaut, il contient l'essentiel des règles de style des résumés de la Suva ; vous pouvez le modifier librement et le rétablir en tout temps. Si vous demandez à l'agent dans le chat de retenir quelque chose, il complète lui-même le texte.",
     "mem.save": "Enregistrer",
     "mem.undo": "Annuler les modifications",
@@ -249,10 +328,29 @@ const I18N = {
     "nav.rulings": "Arrêts",
     "list.title": "Arrêts du Tribunal fédéral",
     "list.sub": "Tous les arrêts publiés avec leur évaluation de pertinence pour la Suva",
+    "add.btn": "Ajouter un arrêt",
+    "add.label": "Numéro de l'arrêt du Tribunal fédéral",
+    "add.ph": "p. ex. 8C_129/2025",
+    "add.hint": "L'arrêt est chargé depuis entscheidsuche.ch, classé et évalué quant à sa pertinence pour la Suva.",
+    "add.submit": "Ajouter",
+    "add.cancel": "Annuler",
+    "add.running": (d) => `Ajout de ${d} …`,
+    "add.s1": "Rechercher et charger l'arrêt sur entscheidsuche.ch",
+    "add.s2": "Déterminer la branche d'assurance et la catégorie",
+    "add.s3": "Évaluer la pertinence pour la Suva",
+    "add.elapsed": (s) => `Durée ${fmtElapsed(s)} · en général moins d'une minute`,
+    "add.invalid": "Veuillez saisir un numéro d'arrêt comme 8C_129/2025.",
+    "add.err": "L'arrêt n'a pas pu être ajouté",
+    "add.notfound": (d) => `${d} est introuvable sur entscheidsuche.ch. Le numéro est-il correct ?`,
+    "add.done": (d) => `${d} ajouté`,
+    "add.exists": (d) => `${d} figure déjà dans la base de données`,
+    "add.partial": (d) => `${d} ajouté, mais pas entièrement évalué`,
     "search.ph": "Recherche plein texte – p. ex. « causalité adéquate », « art. 6 LAA », 8C_129/2025",
     "f.period": "Période",
     "f.period.all": "Toutes",
     "f.custom": "Personnalisée",
+    "f.period.eval": "évaluation",
+    "gen.eval": "Cet arrêt se situe dans la période d'évaluation (T4 2025 – T1 2026). Elle a servi à la comparaison avec les résumés de la Suva ; aucun résumé n'y a donc été rédigé à l'avance.",
     "f.label": "Triage",
     "f.label.all": "Tous",
     "f.label.rel": "Pertinents",
@@ -333,6 +431,17 @@ const I18N = {
     "r.hint": "Score 0–100 pour l'importance en assurance-accidents",
     "r.none": "Cet arrêt n'a pas encore été évalué.",
     "r.reason": "Motivation",
+    "r.adjust": "Ajuster",
+    "r.expert": "Ajusté par un·e spécialiste",
+    "r.model": (s) => `Score IA ${s}`,
+    "r.reset": "Revenir au score IA",
+    "r.edit.kb": "Figure dans la base de connaissances",
+    "r.edit.nokb": "Ne figure pas dans la base de connaissances",
+    "r.edit.comment": "Motivation (facultatif)",
+    "r.edit.placeholder": "Pourquoi l'arrêt est-il plus ou moins pertinent pour la Suva ?",
+    "r.edit.saved": "Score enregistré",
+    "r.edit.reset": "Score IA rétabli",
+    "r.edit.err": "Le score n'a pas pu être enregistré",
     "st.title": "Normes citées",
     "st.none": "Aucune norme détectée.",
     "st.para": "al.",
@@ -467,6 +576,7 @@ export const ICONS = {
   downv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V4h3v10zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.3-6A2 2 0 0 1 6.3 4H17"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
 };
 
@@ -519,17 +629,12 @@ const docketPath = (docket) => docket.split("/").map(encodeURIComponent).join("/
 export const API = {
   list: (params) => api(`/api/rulings?${new URLSearchParams(params)}`),
   detail: (docket) => api(`/api/rulings/${docketPath(docket)}`),
+  add: (docket) => api("/api/rulings", { method: "POST", body: JSON.stringify({ docket }) }),
   summarize: (docket) => api(`/api/rulings/${docketPath(docket)}/summarize`, { method: "POST" }),
+  setScore: (docket, score, comment) => api(`/api/rulings/${docketPath(docket)}/score`, { method: "PUT", body: JSON.stringify({ score, comment }) }),
+  resetScore: (docket) => api(`/api/rulings/${docketPath(docket)}/score`, { method: "DELETE" }),
   saveSummary: (docket, lang, text) => api(`/api/rulings/${docketPath(docket)}/summaries/${lang}`, { method: "PUT", body: JSON.stringify({ text }) }),
 };
-
-// ---------------------------------------------------------------- classification
-// Closed label lists (branch, category, outcome, flag) with DE/FR labels, from /api/facets.
-function classChips(c, size = "chip--sm") {
-  if (!c) return "";
-  return `<span class="chip ${size}" title="${esc(taxLabel("branches", c.branch))}">${esc(taxLabel("branches", c.branch, true))}</span>` +
-    `<span class="chip ${size} chip--accent" title="${esc(taxLabel("categories", c.primary))}">${esc(taxLabel("categories", c.primary, true))}</span>`;
-}
 
 // ---------------------------------------------------------------- statutes
 // The cited statutes and precedents come with the classification (`classification.statutes`,
@@ -585,9 +690,14 @@ function paragraphs(text, terms) {
 }
 
 // ---------------------------------------------------------------- router
+// Summaries were written ahead of time only for Q2 2026; Q4 2025 – Q1 2026 is the evaluation
+// period (compared against Suva's own summaries), so the list opens on Q2 2026.
+const DEFAULT_PERIOD = "2026q2";
+const EVAL_END = "2026-03-31";
+
 export const state = {
   // list filters (mirrored in the URL hash)
-  q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
+  q: "", period: DEFAULT_PERIOD, from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
   branch: "", cat: "",
   sort: "score", dir: "desc",
   // cache of last list response
@@ -598,9 +708,9 @@ export const state = {
 export const PERIODS = [
   { id: "all", label: () => t("f.period.all"), from: "", to: "" },
   { id: "2026q2", label: () => "Q2 2026", from: "2026-04-01", to: "2026-06-30" },
-  { id: "2026q1", label: () => "Q1 2026", from: "2026-01-01", to: "2026-03-31" },
-  { id: "2025q4", label: () => "Q4 2025", from: "2025-10-01", to: "2025-12-31" },
-  { id: "2025q4-2026q1", label: () => "Q4 2025 – Q1 2026", from: "2025-10-01", to: "2026-03-31" },
+  { id: "2026q1", label: () => `Q1 2026 (${t("f.period.eval")})`, from: "2026-01-01", to: "2026-03-31" },
+  { id: "2025q4", label: () => `Q4 2025 (${t("f.period.eval")})`, from: "2025-10-01", to: "2025-12-31" },
+  { id: "2025q4-2026q1", label: () => `Q4 2025 – Q1 2026 (${t("f.period.eval")})`, from: "2025-10-01", to: "2026-03-31" },
   { id: "custom", label: () => t("f.custom") },
 ];
 
@@ -611,7 +721,7 @@ function readHash() {
 }
 function listHash() {
   const p = new URLSearchParams();
-  for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) if (state[k] && !(k === "period" && state[k] === "all")) p.set(k, state[k]);
+  for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) if (state[k] && !(k === "period" && state[k] === DEFAULT_PERIOD)) p.set(k, state[k]);
   if (state.min) p.set("min", state.min);
   if (state.sort !== "score" || state.dir !== "desc") { p.set("sort", state.sort); p.set("dir", state.dir); }
   const s = p.toString();
@@ -632,6 +742,7 @@ async function paintNav() {
     return;
   }
   $("#kbCount").textContent = items.length || "";
+  loadAdjustments().then((d) => { $("#adjCount").textContent = d.items.length || ""; }, () => {});
   ul.innerHTML = buildRegister(items).map((b) => `<li data-branch="${esc(b.branch)}">
     <a href="#/?branch=${encodeURIComponent(b.branch)}" data-navbranch="${esc(b.branch)}" title="${esc(taxLabel("branches", b.branch))}">
       <span class="navsub__swatch" aria-hidden="true"></span>
@@ -644,7 +755,7 @@ function markNav() {
   const { path, params } = readHash();
   const onDetail = path.startsWith("/r/");
   const [refPath, refQuery = ""] = (onDetail ? state.lastListHash.slice(1) : `${path}?${params}`).split("?");
-  const section = refPath.startsWith("/all") ? "all" : refPath.startsWith("/law") ? "law" : refPath === "/agent" ? "agent" : "kb";
+  const section = refPath.startsWith("/all") ? "all" : refPath === "/adjust" ? "adjust" : refPath.startsWith("/law") ? "law" : refPath === "/agent" ? "agent" : "kb";
   const branch = section === "kb" ? new URLSearchParams(refQuery).get("branch") || "" : "";
   $$("[data-nav]").forEach((a) => {
     const on = a.dataset.nav === section && !(section === "kb" && branch) && !onDetail;
@@ -662,6 +773,9 @@ async function route() {
   markNav();
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
+  } else if (path === "/adjust") {
+    state.lastListHash = location.hash;
+    await renderAdjustments(resetListeners());
   } else if (path === "/agent") {
     state.lastListHash = location.hash;
     await renderKnowledge(resetListeners());
@@ -672,7 +786,7 @@ async function route() {
     if (path !== "/" && path !== "") { location.replace("#/"); return; } // old #/c/<topic> links
     await renderRelevant(params, resetListeners());
   } else {
-    for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
+    for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) state[k] = params.get(k) || (k === "period" ? DEFAULT_PERIOD : "");
     state.min = +params.get("min") || 0;
     state.sort = params.get("sort") || "score";
     state.dir = params.get("dir") || "desc";
@@ -724,10 +838,23 @@ function listShell() {
   const sel = (name, opts, val) =>
     `<select data-f="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   return `
-  <header class="pagehead">
-    <h1>${esc(t("list.title"))}</h1>
-    <p class="pagehead__lede" id="stats">${esc(t("list.sub"))}</p>
+  <header class="pagehead pagehead--action">
+    <div>
+      <h1>${esc(t("list.title"))}</h1>
+      <p class="pagehead__lede" id="stats">${esc(t("list.sub"))}</p>
+    </div>
+    <button type="button" class="btn btn--sm" id="addBtn" aria-expanded="false" aria-controls="addForm">${ICONS.plus}${esc(t("add.btn"))}</button>
   </header>
+  <form class="addform" id="addForm" hidden novalidate>
+    <label for="addDocket">${esc(t("add.label"))}</label>
+    <div class="addform__row">
+      <input id="addDocket" name="docket" autocomplete="off" spellcheck="false" placeholder="${esc(t("add.ph"))}">
+      <button type="submit" class="btn btn--primary btn--sm">${esc(t("add.submit"))}</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="addCancel">${esc(t("add.cancel"))}</button>
+    </div>
+    <p class="addform__hint">${esc(t("add.hint"))}</p>
+    <div id="addStatus" aria-live="polite"></div>
+  </form>
   <section class="toolbar">
     <div class="toolbar__row">
       <label class="search">
@@ -794,10 +921,19 @@ function renderClassFilters() {
     .map((c) => opt(c.value, taxLabel("categories", c.value, true), count(c), c.value === state.cat)).join("")}</select>`;
 }
 
+// Branch above the legal category, as in the knowledge base; each one filters the list.
+function classCell(c) {
+  if (!c) return `<span class="muted">—</span>`;
+  return `<div class="entry__class" data-branch="${esc(c.branch)}">
+    <button type="button" class="entry__branch" data-filter-branch="${esc(c.branch)}" title="${esc(taxLabel("branches", c.branch))}">${esc(taxLabel("branches", c.branch, true))}</button>
+    <button type="button" class="entry__cat" data-filter-branch="${esc(c.branch)}" data-filter-cat="${esc(c.primary)}" title="${esc(taxLabel("categories", c.primary))}">${esc(taxLabel("categories", c.primary, true))}</button>
+  </div>`;
+}
+
 function renderTable() {
   const items = state.items;
   const wrap = $("#tableWrap");
-  const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.branch || state.cat || state.period !== "all";
+  const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.branch || state.cat || state.period !== DEFAULT_PERIOD;
   if (!items.length) {
     wrap.innerHTML = `<div class="empty"><h2>${esc(t("empty.title"))}</h2>${
       !filtered ? `<p>${esc(t("empty.db"))} <code>make load</code></p>` : `<p>${esc(t("empty.filtered"))}</p>`}</div>`;
@@ -813,20 +949,19 @@ function renderTable() {
     const reason = reasoningOf(r);
     const div = divisionCode(r.docket);
     return `<tr data-docket="${esc(r.docket)}" class="${band(r.score) === "low" ? "is-low" : ""}">
-      <td class="c-score">${scoreBadge(r.score)}</td>
+      <td class="c-score">${scoreBadge(r.score)}${r.expert_score ? `<span class="score__expert" title="${esc(t("r.expert"))}">${PENCIL}</span>` : ""}</td>
       <td class="c-docket"><a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
         <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " " + esc(t("untriaged")) : ""}</span></td>
       <td class="c-date num">${fmtDate(r.decision_date)}</td>
-      <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>${r.classification ? `<div class="ruling-tags">${classChips(r.classification)}</div>` : ""}
+      <td class="c-cat">${classCell(r.classification)}</td>
+      <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>
         ${reason ? `<div class="ruling-reason">${esc(reason)}</div>` : ""}</td>
-      <td class="c-lang">${r.language ? `<span class="lang">${esc(r.language)}</span>` : ""}</td>
-      <td class="c-sum">${r.has_summary ? `<span class="sumflag is-yes">${ICONS.check}${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
     </tr>`;
   }).join("");
   wrap.innerHTML = `<table class="rulings">
     <thead><tr>
       ${th("score", t("col.score"), "c-score")}${th("docket", t("col.docket"), "c-docket")}${th("date", t("col.date"), "c-date")}
-      ${th("title", t("col.subject"), "")}${th("lang", t("col.lang"), "c-lang")}${th("summary", t("col.summary"), "c-sum")}
+      ${th("category", t("f.category"), "c-cat")}${th("title", t("col.subject"), "")}
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
@@ -896,11 +1031,18 @@ async function renderList() {
       reload();
       return;
     }
+    const cls = e.target.closest("[data-filter-branch]");
+    if (cls) {
+      state.branch = cls.dataset.filterBranch;
+      state.cat = cls.dataset.filterCat || "";
+      reload();
+      return;
+    }
     const s = e.target.closest("[data-sort]");
     if (s) {
       const key = s.dataset.sort;
       if (state.sort === key) state.dir = state.dir === "asc" ? "desc" : "asc";
-      else { state.sort = key; state.dir = ["docket", "title", "lang"].includes(key) ? "asc" : "desc"; }
+      else { state.sort = key; state.dir = ["docket", "title", "category"].includes(key) ? "asc" : "desc"; }
       reload();
       return;
     }
@@ -910,15 +1052,91 @@ async function renderList() {
       return;
     }
     if (e.target.id === "reset") {
-      Object.assign(state, { q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "", branch: "", cat: "", sort: "score", dir: "desc" });
+      Object.assign(state, { q: "", period: DEFAULT_PERIOD, from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "", branch: "", cat: "", sort: "score", dir: "desc" });
       renderList();
       return;
     }
     const tr = e.target.closest("tr[data-docket]");
     if (tr && !e.target.closest("a")) location.hash = `#/r/${encodeURIComponent(tr.dataset.docket)}`;
   }, opts);
+  bindAddRuling(opts);
 
   await reload();
+}
+
+// "Add ruling": fetch one ruling by its number, classify and triage it (POST /api/rulings),
+// then open it. Same normalisation as the server (suva/ingest.py), so typos show up at once.
+const DOCKET_INPUT_RE = /^\s*(\d{1,2}[A-Z]{1,2})[\s_.-]*(\d{1,5})\s*[/-]\s*(\d{4})\s*$/i;
+const normaliseDocket = (raw) => {
+  const m = DOCKET_INPUT_RE.exec(raw);
+  return m ? `${m[1].toUpperCase()}_${+m[2]}/${m[3]}` : null;
+};
+
+function bindAddRuling(opts) {
+  const form = $("#addForm");
+  const btn = $("#addBtn");
+  const input = $("#addDocket");
+  const status = $("#addStatus");
+  let busy = false;
+  const toggle = (open) => {
+    if (busy) return;
+    form.hidden = !open;
+    btn.setAttribute("aria-expanded", open);
+    status.innerHTML = "";
+    if (open) input.focus();
+    else btn.focus();
+  };
+  btn.addEventListener("click", () => toggle(form.hidden), opts);
+  $("#addCancel").addEventListener("click", () => toggle(false), opts);
+  form.addEventListener("keydown", (e) => { if (e.key === "Escape") toggle(false); }, opts);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const docket = normaliseDocket(input.value);
+    if (!docket) {
+      status.innerHTML = `<div class="alert">${esc(t("add.invalid"))}</div>`;
+      input.focus();
+      return;
+    }
+    busy = true;
+    form.classList.add("is-busy");
+    $$("input, button", form).forEach((el) => { el.disabled = true; });
+    // One blocking call; as for summaries, the steps are an estimate that follows the clock.
+    const steps = [t("add.s1"), t("add.s2"), t("add.s3")];
+    const started = Date.now();
+    status.innerHTML = `<div class="progress"><strong>${esc(t("add.running", docket))}</strong>
+      <div class="progress__bar"><i></i></div>
+      <ol class="progress__steps">${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
+      <div class="progress__time" id="addTime"></div></div>`;
+    const bar = $(".progress__bar i", status);
+    const tick = () => {
+      const s = Math.floor((Date.now() - started) / 1000);
+      const p = 0.9 * (1 - Math.exp(-s / 30));
+      bar.style.width = `${(p * 100).toFixed(1)}%`;
+      const idx = s < 3 ? 0 : Math.min(steps.length - 1, 1 + Math.floor(s / 20));
+      $$(".progress__steps li", status).forEach((li, i) => { li.className = i < idx ? "is-done" : i === idx ? "is-now" : ""; });
+      const tm = $("#addTime"); if (tm) tm.textContent = t("add.elapsed", s);
+    };
+    tick();
+    const timer = setInterval(tick, 500);
+    try {
+      const res = await API.add(docket);
+      clearInterval(timer);
+      busy = false;
+      if (res.created) scoreChanged(); // new row in the list, maybe in the knowledge base
+      toast(t(res.errors?.length ? "add.partial" : res.created ? "add.done" : "add.exists", res.docket));
+      location.hash = `#/r/${encodeURIComponent(res.docket)}`;
+    } catch (err) {
+      clearInterval(timer);
+      busy = false;
+      form.classList.remove("is-busy");
+      $$("input, button", form).forEach((el) => { el.disabled = false; });
+      const msg = err.status === 404 ? t("add.notfound", docket) : err.message;
+      status.innerHTML = `<div class="alert"><strong>${esc(t("add.err"))}</strong><br>${esc(msg)}</div>`;
+      input.focus();
+    }
+  }, opts);
 }
 
 // ---------------------------------------------------------------- detail view
@@ -959,6 +1177,7 @@ function summaryBlock(r, writeOwn = false) {
       <div class="generate" id="generate">
         <h3>${esc(t("gen.title"))}</h3>
         <p>${esc(t("gen.text"))}</p>
+        ${r.decision_date && r.decision_date <= EVAL_END ? `<p class="muted">${esc(t("gen.eval"))}</p>` : ""}
         <p style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
           <button type="button" class="btn btn--primary" id="genBtn">${ICONS.spark}${esc(t("gen.btn"))}</button>
           <button type="button" class="btn" id="writeOwnBtn">${PENCIL}${esc(t("d.writeOwn"))}</button>
@@ -1005,21 +1224,30 @@ function summaryBlock(r, writeOwn = false) {
   </section>`;
 }
 
+// Rulings at or above this score are relevant and appear in the knowledge base
+// (triage.RELEVANCE_THRESHOLD on the server).
+const RELEVANCE_THRESHOLD = 50;
+
 function relevanceCard(r) {
   const tr = r.triage;
+  const head = `<div class="card__head"><h2 class="card__title">${esc(t("r.title"))}</h2>
+    <button type="button" class="btn btn--ghost btn--sm" id="scoreEdit">${PENCIL}${esc(t("r.adjust"))}</button></div>`;
   if (!tr) {
-    return `<section class="card relevance"><div class="card__head"><h2 class="card__title">${esc(t("r.title"))}</h2></div>
+    return `<section class="card relevance" id="relevanceCard">${head}
       <div class="card__body"><div class="score-lg">${scoreRing(null)}<p class="muted" style="margin:0">${esc(t("r.none"))}</p></div></div></section>`;
   }
   const rel = tr.label === "relevant";
-  return `<section class="card relevance">
-    <div class="card__head"><h2 class="card__title">${esc(t("r.title"))}</h2></div>
+  const expert = tr.model === "expert";
+  return `<section class="card relevance" id="relevanceCard">${head}
     <div class="card__body">
       <div class="score-lg">
         ${scoreRing(tr.score)}
         <div>
           <div class="relevance__label ${rel ? "is-rel" : "is-not"}">${esc(rel ? t("r.rel") : t("r.not"))}</div>
-          <div class="relevance__hint">${esc(t("r.hint"))}</div>
+          ${expert ? `<div class="relevance__expert">${esc(t("r.expert"))}</div>
+            ${r.model_triage ? `<div class="relevance__hint">${esc(t("r.model", r.model_triage.score))}</div>` : ""}
+            <button type="button" class="linkbtn" id="scoreReset">${esc(t("r.reset"))}</button>`
+          : `<div class="relevance__hint">${esc(t("r.hint"))}</div>`}
         </div>
       </div>
       <div>
@@ -1028,6 +1256,92 @@ function relevanceCard(r) {
       </div>
     </div>
   </section>`;
+}
+
+/** The expert's editor in place of the relevance card's body: score slider and a reason. */
+function editScore(r, terms) {
+  const card = $("#relevanceCard");
+  if (!card) return;
+  const tr = r.triage;
+  const start = tr?.score ?? RELEVANCE_THRESHOLD;
+  // The expert's own reason, not the model's that stands in when they gave none.
+  const comment = tr?.model === "expert" && tr.reasoning_de !== r.model_triage?.reasoning_de ? tr.reasoning_de : "";
+  $("#scoreEdit", card)?.remove();
+  $(".card__body", card).innerHTML = `
+    <div class="score-lg">
+      <div data-ring>${scoreRing(start)}</div>
+      <div>
+        <div class="relevance__label" data-score-label></div>
+        <div class="relevance__hint" data-score-kb></div>
+      </div>
+    </div>
+    <div class="scoreedit__row">
+      <input type="range" min="0" max="100" step="1" value="${start}" aria-label="Score" data-score-range>
+      <input type="number" min="0" max="100" step="1" value="${start}" class="scoreedit__num" aria-label="Score" data-score-num>
+    </div>
+    <label class="scoreedit__label">${esc(t("r.edit.comment"))}
+      <textarea class="summary__edit scoreedit__comment" rows="3" placeholder="${esc(t("r.edit.placeholder"))}" data-score-comment>${esc(comment)}</textarea></label>
+    <div class="summary__editbar" style="justify-content:flex-end">
+      <span style="display:flex;gap:8px">
+        <button type="button" class="btn btn--ghost btn--sm" data-score-cancel>${esc(t("d.edit.cancel"))}</button>
+        <button type="button" class="btn btn--primary btn--sm" data-score-save>${esc(t("d.edit.save"))}</button>
+      </span>
+    </div>`;
+  const range = $("[data-score-range]", card), num = $("[data-score-num]", card);
+  const clamp = (v) => Math.max(0, Math.min(100, Math.round(+v || 0)));
+  const show = (v) => {
+    const rel = v >= RELEVANCE_THRESHOLD;
+    $("[data-ring]", card).innerHTML = scoreRing(v);
+    const label = $("[data-score-label]", card);
+    label.className = `relevance__label ${rel ? "is-rel" : "is-not"}`;
+    label.textContent = t(rel ? "r.rel" : "r.not");
+    $("[data-score-kb]", card).textContent = t(v >= RELEVANCE_THRESHOLD ? "r.edit.kb" : "r.edit.nokb");
+  };
+  show(start);
+  range.addEventListener("input", () => { num.value = range.value; show(+range.value); });
+  num.addEventListener("input", () => { if (num.value !== "") { range.value = clamp(num.value); show(clamp(num.value)); } });
+  num.addEventListener("change", () => { num.value = clamp(num.value); });
+  range.focus();
+  $("[data-score-cancel]", card).addEventListener("click", () => repaintRelevance(r, terms));
+  $("[data-score-save]", card).addEventListener("click", async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      const text = $("[data-score-comment]", card).value.trim();
+      Object.assign(r, await API.setScore(r.docket, clamp(num.value), text || null));
+      scoreChanged();
+      toast(t("r.edit.saved"));
+      repaintRelevance(r, terms);
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      toast(`${t("r.edit.err")}: ${err.message}`);
+    }
+  });
+}
+
+function repaintRelevance(r, terms) {
+  $("#relevanceCard").outerHTML = relevanceCard(r);
+  bindRelevance(r, terms);
+}
+function bindRelevance(r, terms) {
+  $("#scoreEdit")?.addEventListener("click", () => editScore(r, terms));
+  $("#scoreReset")?.addEventListener("click", async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      Object.assign(r, await API.resetScore(r.docket));
+      scoreChanged();
+      toast(t("r.edit.reset"));
+      repaintRelevance(r, terms);
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      toast(`${t("r.edit.err")}: ${err.message}`);
+    }
+  });
+}
+/** A changed score moves the ruling in the list and in or out of the knowledge base. */
+function scoreChanged() {
+  state.sig = "";
+  invalidateKnowledgeBase();
+  paintNav(); // branch counts in the side navigation
 }
 
 // One-line headline of what the court decided (`headline_de` / `headline_fr`, written by Apertus;
@@ -1149,7 +1463,7 @@ async function renderDetail(docket, params) {
 
 // The relevance score and its reasoning matter when screening every ruling ("Alle Urteile");
 // in the knowledge base every ruling is relevant already, so the box is left out there.
-const fromAllRulings = () => state.lastListHash.startsWith("#/all");
+const fromAllRulings = () => /^#\/(all|adjust)/.test(state.lastListHash);
 
 function paintDetail(r, terms) {
   document.title = `${r.docket} – BGer-Monitor`;
@@ -1181,6 +1495,7 @@ function paintDetail(r, terms) {
       </aside>
     </div>`;
   bindDetail(r, terms);
+  bindRelevance(r, terms);
 }
 
 /** Open the editor for the summary in `lang`, in place of its text. */

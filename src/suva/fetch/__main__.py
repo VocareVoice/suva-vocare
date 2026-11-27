@@ -15,25 +15,8 @@ from pathlib import Path
 
 from suva.config import get_settings
 from suva.db import open_corpus
-from suva.fetch.entscheidsuche import Client, Entry
+from suva.fetch.entscheidsuche import Client, Entry, pick_duplicates
 from suva.fetch.parse import build_record
-
-
-def pick_duplicates(client: Client, entries: list[Entry]) -> list[tuple[Entry, dict]]:
-    """The mirror sometimes holds one decision under two signatures; keep the
-    copy with an abstract (the bger.ch search scrape), else the newest scrape."""
-    best: dict[tuple[str, date], tuple[Entry, dict]] = {}
-    for entry in entries:
-        meta = json.loads(client.fetch(entry, "json"))
-        key = (entry.docket, entry.decision_date)
-        rank = (bool(meta.get("Abstract")), meta.get("Scrapedate", ""))
-        current = best.get(key)
-        if current is None or rank > (
-            bool(current[1].get("Abstract")),
-            current[1].get("Scrapedate", ""),
-        ):
-            best[key] = (entry, meta)
-    return list(best.values())
 
 
 def load_existing(path: Path, start: date, end: date) -> list[dict]:

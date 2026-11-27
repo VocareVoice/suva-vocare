@@ -6,6 +6,7 @@ and one `.html` (full text) file per decision, named
 `CH_BGer_<signatur>_<docket>_<decision date>`.
 """
 
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -25,7 +26,9 @@ USER_AGENT = (
     "suva-vocare-fetch/0.1 (Hack Apertus Zurich research crawler; "
     "+https://github.com/VocareVoice/suva-vocare)"
 )
+SEARCH_URL = "https://entscheidsuche.ch/_search.php"  # Elasticsearch query endpoint
 ENTRY_RE = re.compile(r'href="(CH_BGer_(\d{3})_(\d+[A-Z]+-\d+-\d{4})_(\d{4}-\d{2}-\d{2}))\.json"')
+ID_RE = re.compile(r"^(CH_BGer_(\d{3})_(\d+[A-Z]+-\d+-\d{4})_(\d{4}-\d{2}-\d{2}))$")
 
 
 @dataclass(frozen=True)
@@ -100,3 +103,54 @@ class Client:
     def fetch(self, entry: Entry, suffix: str) -> bytes:
         filename = f"{entry.name}.{suffix}"
         return self.get(BASE_URL + filename, self.cache_dir / "CH_BGer" / filename)
+
+    @retry(
+        retry=retry_if_exception(_retryable),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
+    def find(self, docket: str) -> list[Entry]:
+        """The mirror's files for one docket (`8C_129/2025`), looked up through the mirror's
+        search index instead of the ~120 MB directory listing. Usually one, sometimes the same
+        decision under two signatures (see `pick_duplicates`)."""
+        query = {
+            "size": 10,
+            "_source": ["id", "reference"],
+            "query": {
+                "bool": {
+                    "filter": [{"term": {"hierarchy": "CH_BGer"}}],
+                    "must": [{"match_phrase": {"reference": docket}}],
+                }
+            },
+        }
+        response = self.http.post(SEARCH_URL, json=query, timeout=30)
+        response.raise_for_status()
+        entries = []
+        for hit in response.json().get("hits", {}).get("hits", []):
+            source = hit.get("_source", {})
+            match = ID_RE.match(source.get("id") or hit.get("_id", ""))
+            if match is None or docket not in source.get("reference", []):
+                continue
+            name, signatur, raw_docket, raw_date = match.groups()
+            entries.append(
+                Entry(name, signatur, normalise_docket(raw_docket), date.fromisoformat(raw_date))
+            )
+        return entries
+
+
+def pick_duplicates(client: Client, entries: list[Entry]) -> list[tuple[Entry, dict]]:
+    """The mirror sometimes holds one decision under two signatures; keep the
+    copy with an abstract (the bger.ch search scrape), else the newest scrape."""
+    best: dict[tuple[str, date], tuple[Entry, dict]] = {}
+    for entry in entries:
+        meta = json.loads(client.fetch(entry, "json"))
+        key = (entry.docket, entry.decision_date)
+        rank = (bool(meta.get("Abstract")), meta.get("Scrapedate", ""))
+        current = best.get(key)
+        if current is None or rank > (
+            bool(current[1].get("Abstract")),
+            current[1].get("Scrapedate", ""),
+        ):
+            best[key] = (entry, meta)
+    return list(best.values())

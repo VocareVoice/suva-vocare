@@ -6,12 +6,13 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from suva import classify, db, laws, summarize
+from suva import adjustments, classify, db, ingest, laws, summarize, triage
 from suva.agent import loop as agent_loop
 from suva.agent import memory
 from suva.config import get_settings
@@ -64,7 +65,7 @@ def list_rulings(
     has_summary: bool | None = None,
     branch: str | None = None,
     category: str | None = None,
-    sort: Literal["score", "date", "docket", "title", "language", "summary"] = "score",
+    sort: Literal["score", "date", "docket", "title", "language", "summary", "category"] = "score",
     order: Literal["asc", "desc"] = "desc",
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -100,12 +101,81 @@ def _require_ruling(conn: sqlite3.Connection, docket: str) -> None:
         raise HTTPException(404, f"Unknown ruling {docket}")
 
 
+class AddRulingIn(BaseModel):
+    docket: str = Field(min_length=1, max_length=40)
+
+
+@app.post("/api/rulings")
+def add_ruling(body: AddRulingIn, conn: Conn, llm: LLM) -> dict[str, Any]:
+    """Add a Federal Supreme Court ruling by its number: download it from entscheidsuche.ch,
+    classify and triage it. A ruling already in the database is returned unchanged
+    (`created: false`); model steps that failed are listed in `errors`, the ruling is kept."""
+    docket = ingest.normalise(body.docket)
+    if docket is None:
+        raise HTTPException(422, f"Not a ruling number: {body.docket!r} (e.g. 8C_129/2025)")
+    try:
+        added = ingest.add_ruling(conn, docket, llm)
+    except ingest.NotFound:
+        raise HTTPException(404, f"{docket} not found on entscheidsuche.ch") from None
+    except httpx.HTTPError as exc:
+        logger.warning("entscheidsuche.ch unreachable for %s: %r", docket, exc)
+        raise HTTPException(502, f"entscheidsuche.ch unreachable: {exc}") from None
+    return {"docket": added.docket, "created": added.created, "errors": added.errors}
+
+
 # Dockets contain a slash (8C_129/2025), hence the path converters.
 @app.post("/api/rulings/{docket:path}/summarize")
 def summarize_ruling(docket: str, conn: Conn, llm: LLM) -> dict[str, Any]:
     _require_ruling(conn, docket)
     summarize.save(conn, docket, summarize.summarize(conn, docket, llm), llm.model)
     return db.get_ruling_detail(conn, docket)
+
+
+class ScoreIn(BaseModel):
+    score: int = Field(ge=0, le=100)
+    comment: str | None = Field(default=None, max_length=2_000)
+
+
+@app.put("/api/rulings/{docket:path}/score")
+def set_score(docket: str, body: ScoreIn, conn: Conn) -> dict[str, Any]:
+    """A legal expert's relevance score; it overrides the model's, also after a new triage run.
+    At or above the triage threshold the ruling counts as relevant (knowledge base)."""
+    _require_ruling(conn, docket)
+    label = "relevant" if body.score >= triage.RELEVANCE_THRESHOLD else "not_relevant"
+    comment = (body.comment or "").strip() or None
+    db.set_expert_score(conn, docket, score=body.score, label=label, comment=comment)
+    return db.get_ruling_detail(conn, docket)
+
+
+@app.delete("/api/rulings/{docket:path}/score")
+def reset_score(docket: str, conn: Conn) -> dict[str, Any]:
+    """Drop the expert's score; the model's applies again."""
+    _require_ruling(conn, docket)
+    db.clear_expert_score(conn, docket)
+    return db.get_ruling_detail(conn, docket)
+
+
+@app.get("/api/adjustments")
+def get_adjustments(conn: Conn, lang: Literal["de", "fr"] = "de") -> dict[str, Any]:
+    """The experts' score corrections in force, and the newest LLM summary of them."""
+    items = db.list_adjustments(conn)
+    return {
+        "items": items,
+        "stats": adjustments.stats(items),
+        "summary": db.latest_adjustment_summary(conn, lang),
+    }
+
+
+@app.post("/api/adjustments/summary")
+def summarize_adjustments(conn: Conn, llm: LLM, lang: Literal["de", "fr"] = "de") -> dict[str, Any]:
+    """Have the LLM summarize where the experts corrected the triage. Read-only for the pipeline:
+    the triage prompt does not change (that is the next step of the feedback loop)."""
+    items = db.list_adjustments(conn)
+    if not items:
+        raise HTTPException(409, "No adjustments to summarize")
+    text = adjustments.summarize(items, llm, lang)
+    db.save_adjustment_summary(conn, lang=lang, text=text, count=len(items), model=llm.model)
+    return get_adjustments(conn, lang)
 
 
 class SummaryIn(BaseModel):

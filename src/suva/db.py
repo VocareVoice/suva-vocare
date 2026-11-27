@@ -114,6 +114,19 @@ CREATE TABLE IF NOT EXISTS headlines (
 CREATE INDEX IF NOT EXISTS headlines_docket ON headlines(docket, lang);
 """
 
+# LLM summaries of the experts' score corrections ("Anpassungen"), one per run and language;
+# the page shows the newest. Input for a later step that feeds them back into the triage prompt.
+ADJUSTMENTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS adjustment_summaries (
+    id INTEGER PRIMARY KEY,
+    lang TEXT NOT NULL CHECK (lang IN ('de', 'fr')),
+    text TEXT NOT NULL,
+    adjustment_count INTEGER NOT NULL,
+    model TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+"""
+
 # The agent side panel: one chat per browser, its messages (user turns, tool steps, answers)
 # and the summary changes the agent proposed, which only take effect when the user applies them.
 AGENT_SCHEMA = """
@@ -171,7 +184,11 @@ RULING_FIELDS = (
 
 # Latest triage row per ruling; triage keeps history, newest id wins. Summaries keep one row per
 # ruling and language (`save_summary` replaces).
-_LATEST_TRIAGE = "t.id = (SELECT MAX(id) FROM triage WHERE docket = r.docket)"
+# A score set by a legal expert (model EXPERT_MODEL) wins over every model result, also over
+# later triage runs, until the expert resets it (`clear_expert_score`).
+EXPERT_MODEL = "expert"
+_TRIAGE_ORDER = f"ORDER BY (model = '{EXPERT_MODEL}') DESC, id DESC LIMIT 1"
+_LATEST_TRIAGE = f"t.id = (SELECT id FROM triage WHERE docket = r.docket {_TRIAGE_ORDER})"
 _HAS_SUMMARY = "(SELECT 1 FROM summaries s WHERE s.docket = r.docket)"
 _LATEST_CLASSIFICATION = "c.id = (SELECT MAX(id) FROM classification WHERE docket = r.docket)"
 _HEADLINE = (
@@ -191,6 +208,7 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.executescript(CLASSIFICATION_SCHEMA)
     conn.executescript(AGENT_SCHEMA)
     conn.executescript(HEADLINES_SCHEMA)
+    conn.executescript(ADJUSTMENTS_SCHEMA)
     _migrate(conn)
     return conn
 
@@ -349,6 +367,11 @@ SORTS = {
     "title": "r.title IS NULL, r.title COLLATE NOCASE {d}, t.score DESC",
     "language": "r.language {d}, t.score DESC",
     "summary": f"EXISTS {_HAS_SUMMARY} {{d}}, t.score DESC",
+    # Branch in the UI's fixed order (UV, IV, MV, ATSG, other), then category.
+    "category": (
+        "CASE c.branch WHEN 'uv' THEN 1 WHEN 'iv' THEN 2 WHEN 'mv' THEN 3 WHEN 'atsg' THEN 4 "
+        "WHEN 'other' THEN 5 ELSE 6 END {d}, c.primary_category {d}, t.score DESC"
+    ),
 }
 
 
@@ -369,6 +392,7 @@ def list_rulings(
         f"""
         SELECT r.docket, r.decision_date, r.publication_date, r.division, r.language,
                r.title, r.url, t.score, t.label, t.reasoning_de, t.reasoning_fr,
+               t.model = '{EXPERT_MODEL}' AS expert_score,
                {_HEADLINE.format(lang="de")}, {_HEADLINE.format(lang="fr")},
                EXISTS {_HAS_SUMMARY} AS has_summary,
                (SELECT verdict FROM feedback f WHERE f.docket = r.docket
@@ -387,6 +411,7 @@ def _list_item(row: dict[str, Any]) -> dict[str, Any]:
     keys = ("branch", "primary_category", "secondary", "outcome", "flags")
     branch, primary, secondary, outcome, flags = (row.pop(key) for key in keys)
     row["has_summary"] = bool(row["has_summary"])
+    row["expert_score"] = bool(row["expert_score"])
     row["classification"] = (
         {
             "branch": branch,
@@ -479,11 +504,15 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
     ruling = get_ruling(conn, docket)
     if ruling is None:
         return None
+    triage_cols = "score, label, reasoning_de, reasoning_fr, model, prompt_version, created_at"
     triage = conn.execute(
-        "SELECT score, label, reasoning_de, reasoning_fr, model, prompt_version, created_at "
-        "FROM triage "
-        "WHERE docket = ? ORDER BY id DESC LIMIT 1",
-        (docket,),
+        f"SELECT {triage_cols} FROM triage WHERE docket = ? {_TRIAGE_ORDER}", (docket,)
+    ).fetchone()
+    # The model's own result, shown next to an expert's score.
+    model_triage = conn.execute(
+        f"SELECT {triage_cols} FROM triage WHERE docket = ? AND model IS NOT ? "
+        "ORDER BY id DESC LIMIT 1",
+        (docket, EXPERT_MODEL),
     ).fetchone()
     summaries = {
         row["lang"]: dict(row)
@@ -509,6 +538,7 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
         "headline_de": headlines.get("de"),
         "headline_fr": headlines.get("fr"),
         "triage": dict(triage) if triage else None,
+        "model_triage": dict(model_triage) if model_triage else None,
         "summaries": {lang: summaries.get(lang) for lang in ("de", "fr")},
         "feedback": [dict(row) for row in feedback],
         "classification": get_classification(conn, docket),
@@ -915,6 +945,82 @@ def import_summaries(conn: sqlite3.Connection, path: Path | str) -> int:
                     )
                     count += 1
     return count
+
+
+def set_expert_score(
+    conn: sqlite3.Connection, docket: str, *, score: int, label: str, comment: str | None = None
+) -> None:
+    """Store a legal expert's relevance score. It replaces an earlier expert score and takes
+    precedence over the model's. The explanation is the expert's comment, or else the model's."""
+    model = conn.execute(
+        "SELECT reasoning_de, reasoning_fr FROM triage WHERE docket = ? AND model IS NOT ? "
+        "ORDER BY id DESC LIMIT 1",
+        (docket, EXPERT_MODEL),
+    ).fetchone()
+    reasoning_de = comment or (model["reasoning_de"] if model else "")
+    reasoning_fr = comment or (model["reasoning_fr"] if model else None)
+    with conn:
+        conn.execute("DELETE FROM triage WHERE docket = ? AND model = ?", (docket, EXPERT_MODEL))
+        conn.execute(
+            "INSERT INTO triage (docket, score, label, reasoning_de, reasoning_fr, model, "
+            "prompt_version) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (docket, score, label, reasoning_de, reasoning_fr, EXPERT_MODEL, EXPERT_MODEL),
+        )
+        # Kept as a record of the correction, e.g. for evaluating the triage prompt.
+        conn.execute(
+            "INSERT INTO feedback (docket, verdict, corrected_score, comment) VALUES (?, ?, ?, ?)",
+            (docket, label, score, comment),
+        )
+
+
+def list_adjustments(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every expert score in force, newest first, next to the model's own result. `comment` is
+    the expert's reason (None when they gave none)."""
+    rows = conn.execute(
+        f"""
+        SELECT r.docket, r.decision_date, r.title, r.language,
+               {_HEADLINE.format(lang="de")}, {_HEADLINE.format(lang="fr")},
+               e.score AS expert_score, e.label AS expert_label, e.created_at AS adjusted_at,
+               m.score AS model_score, m.label AS model_label,
+               m.reasoning_de AS model_reasoning_de, m.reasoning_fr AS model_reasoning_fr,
+               (SELECT comment FROM feedback f WHERE f.docket = r.docket
+                ORDER BY f.id DESC LIMIT 1) AS comment,
+               c.branch, c.primary_category
+        FROM triage e JOIN rulings r ON r.docket = e.docket
+        LEFT JOIN triage m ON m.id = (SELECT id FROM triage WHERE docket = e.docket
+                                      AND model IS NOT '{EXPERT_MODEL}' ORDER BY id DESC LIMIT 1)
+        LEFT JOIN classification c ON {_LATEST_CLASSIFICATION}
+        WHERE e.model = '{EXPERT_MODEL}'
+        ORDER BY e.id DESC
+        """
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def latest_adjustment_summary(conn: sqlite3.Connection, lang: str) -> dict[str, Any] | None:
+    row = conn.execute(
+        "SELECT lang, text, adjustment_count, model, created_at FROM adjustment_summaries "
+        "WHERE lang = ? ORDER BY id DESC LIMIT 1",
+        (lang,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def save_adjustment_summary(
+    conn: sqlite3.Connection, *, lang: str, text: str, count: int, model: str | None
+) -> None:
+    with conn:
+        conn.execute(
+            "INSERT INTO adjustment_summaries (lang, text, adjustment_count, model) "
+            "VALUES (?, ?, ?, ?)",
+            (lang, text, count, model),
+        )
+
+
+def clear_expert_score(conn: sqlite3.Connection, docket: str) -> None:
+    """Back to the model's score."""
+    with conn:
+        conn.execute("DELETE FROM triage WHERE docket = ? AND model = ?", (docket, EXPERT_MODEL))
 
 
 def save_feedback(

@@ -13,7 +13,7 @@ import sqlite3
 from collections import Counter
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, NamedTuple
 
 from suva import db, triage
@@ -1050,6 +1050,10 @@ def classify(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> Classific
     if ruling is None:
         raise KeyError(docket)
     return classify_ruling(ruling, llm, cited_for_publication(conn))
+
+
+def save(conn: sqlite3.Connection, docket: str, result: Classification) -> None:
+    db.save_classification(conn, docket, **asdict(result), prompt_version=VERSION)
 
 
 def classify_batch(

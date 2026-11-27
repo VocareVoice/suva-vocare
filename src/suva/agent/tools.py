@@ -185,7 +185,7 @@ def search_rulings(ctx: Context, query: str = "", limit: int = 15) -> str:
     sql = (
         "SELECT r.docket, r.decision_date, r.title, "
         "snippet(rulings_fts, 2, '«', '»', ' … ', 28) AS snip, "
-        "(SELECT t.score FROM triage t WHERE t.docket = r.docket ORDER BY t.id DESC LIMIT 1) "
+        f"(SELECT t.score FROM triage t WHERE t.docket = r.docket {db._TRIAGE_ORDER}) "
         "AS score "
         "FROM rulings_fts JOIN rulings r ON r.id = rulings_fts.rowid "
         "WHERE rulings_fts MATCH ? ORDER BY bm25(rulings_fts) LIMIT ?"
