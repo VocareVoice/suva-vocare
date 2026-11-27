@@ -6,7 +6,10 @@ ruling, with the evaluator's own summaries as style examples, and the other lang
 ruling with the first as outline; check each draft (rule checks plus a claim-by-claim model
 check against the ruling), revise and shorten it; let the model compare the two languages and
 fix contradictions; finally replace names by roles and make the closing sentence state the
-operative part. A one-line headline per language is written from the extracted conclusions.
+operative part. A last factual check of each final text looks for the error types a blind
+reading found (who decided what, a rule's meaning, facts, figures), checks every consideration
+reference against the segmented ruling and replaces any anonymised name left by a role. A
+one-line headline per language is written from the extracted conclusions.
 """
 
 import json
@@ -16,20 +19,20 @@ from bisect import bisect_left
 from collections import Counter
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import cache
 from pathlib import Path
 from string import Template
 from typing import NamedTuple
 
-from suva import db
+from suva import db, segment
 from suva.config import get_settings
 from suva.eval.examples import EXAMPLES_PATH, SPLIT_PATH, load_split, read_jsonl
 from suva.eval.glossary import load_glossary
 from suva.eval.metrics import citation_issues, contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message
 
-PROMPT_VERSION = "v6"
+PROMPT_VERSION = "v7"
 HEADLINE_VERSION = "v3"
 LANGUAGES = ("de", "fr")
 LANGUAGE_NAMES = {"de": "German", "fr": "French", "it": "Italian"}
@@ -202,6 +205,9 @@ class Case:
     # The ruling cites the Italian IV ordinance as OAI, which in French is also the IV office.
     oai_ordinance: bool = False
     holdings: str = ""  # the Court's conclusions, consideration by consideration
+    # Text of every consideration of the full ruling by number ("4", "4.1"), parents with
+    # their sub-considerations.
+    considerations: dict[str, str] = field(default_factory=dict)
 
 
 class Result(NamedTuple):
@@ -264,6 +270,7 @@ def prepare_case(ruling: dict, sections: dict[str, str], llm: LLMClient) -> Case
         result=result(operative),
         suva_party=bool(re.search(SUVA, parties(sections["header"]))),
         oai_ordinance=bool(re.search(r"\d\w*(?:\s+cpv\.\s*\d+)?\s+OAI\b", sections["reasons"])),
+        considerations=considerations(ruling["text"]),
     )
     # Writing from a list of the Court's conclusions keeps the model from merging
     # considerations (8C_185/2025: "duty to notify violated" became "not violated").
@@ -305,7 +312,7 @@ def summarize_ruling(ruling: dict, llm: LLMClient) -> Result:
     # Suva flags five-judge rulings (questions of principle); the bench is in the header.
     five = five_judges(sections["header"])
     texts = {
-        lang: superscripts(clean(fit(llm, lang, summaries[lang]), lang), lang)
+        lang: superscripts(clean(verify(llm, case, rules[lang], lang, summaries[lang]), lang), lang)
         + (f"\n\n{FIVE_JUDGES[lang]}" if five else "")
         for lang in LANGUAGES
     }
@@ -644,7 +651,9 @@ def revise(
         f"the revised {LANGUAGE_NAMES[lang]} summary text."
     )
     messages = [system, {"role": "user", "content": f"{case.source}\n\n---\n{task}"}]
-    return clean(llm.chat(messages, max_tokens=1500), lang) or draft
+    revised = clean(llm.chat(messages, max_tokens=1500), lang)
+    # Apertus once wrote NUL bytes for umlauts ("willk\x00r", 8C_613/2025).
+    return revised if revised and "\x00" not in revised else draft
 
 
 def consistency_issues(llm: LLMClient, case: Case, summaries: dict[str, str]) -> dict[str, list]:
@@ -1043,6 +1052,376 @@ def accuracy_issues(llm: LLMClient, case: Case, system: Message, draft: str) -> 
         for c in claims or []
         if isinstance(c, dict) and c.get("supported") is False
     ]
+
+
+def verify(llm: LLMClient, case: Case, system: Message, lang: str, text: str) -> str:
+    """Factual check of a final text: a blind reading of v6 found 36 errors in 20 summaries
+    that the claim check of `review` had let through, 13 of them consideration references.
+    Apertus finds the ruling's passage for each sentence (kept only if it is in the ruling),
+    compares each sentence with its passage, and the errors go back to a revision."""
+    text = fit(llm, lang, text)
+    passages = locate(llm, case, text)
+    if issues := rule_issues(text, case) + fact_issues(llm, case, passages):
+        revised = revise(llm, case, system, lang, text, issues)
+        text = fit(llm, lang, finish(llm, case, system, lang, revised))
+        passages = locate(llm, case, text)
+    text = fix_references(case, text, passages)
+    return opening(roles(fix_gender(drop_contradictions(text, case), case), lang), lang)
+
+
+def opening(text: str, lang: str) -> str:
+    """A French summary that opens with "Assuré, carreleur ..., s'est blessé" has no subject,
+    and one with "Assurée, jardinière, qui s'est blessée ..." no main verb (8C_686/2025): the
+    article goes in, the relative pronoun out."""
+    if lang != "fr":
+        return text
+    text = re.sub(r"^Assuré(e?),", lambda m: "Une assurée," if m[1] else "Un assuré,", text)
+    return re.sub(r"^(Une? assurée?, [^,.]+), qui ", r"\1, ", text)
+
+
+def drop_contradictions(text: str, case: Case) -> str:
+    """Body sentences that decide the appeal otherwise than the operative part: a revision
+    added "Es bestätigt die Abweisung ... und weist die Beschwerde ab" to a partly upheld
+    appeal (9C_65/2025). `fix_court_sentences` only sees sentences that name the Court."""
+    paras = sentences(text)
+    body = paras[:-1] if outcome_paragraph(paras) else paras
+    for para in body:
+        para[:] = [s for s in para if not (_DECIDES.search(s) and contradicts(s, case))] or para
+    return "\n\n".join(" ".join(para) for para in paras)
+
+
+_DECIDES = re.compile(
+    r"\b(?:weist|wies|heisst|hiess)\b[^.]*\bBeschwerde\b[^.]*\b(?:ab|gut)\b"
+    r"|\b(?:rejette|admet|a rejeté|a admis)\b[^.]*\brecours\b"
+)
+_GENDER = {
+    True: (
+        (r"\bDer Versicherte\b", "Die Versicherte"),
+        (r"\bder Versicherte\b", "die Versicherte"),
+        (r"\b([Dd])(?:es|em) Versicherten\b", r"\1er Versicherten"),
+        (r"\b([Ee])in Versicherter\b", r"\1ine Versicherte"),
+        (r"\b([Ll])['’]assuré\b(?!e)", r"\1'assurée"),
+        (r"\b([Uu])n assuré\b(?!e)", r"\1ne assurée"),
+        (r"\b([Ll])e recourant\b", r"\1a recourante"),
+    ),
+    False: (
+        (r"\bDie Versicherte\b", "Der Versicherte"),
+        (r"\b([Ee])ine Versicherte\b", r"\1in Versicherter"),
+        (r"\b([Ll])['’]assurée\b", r"\1'assuré"),
+        (r"\b([Uu])ne assurée\b", r"\1n assuré"),
+        (r"\b([Ll])a recourante\b", r"\1e recourant"),
+    ),
+}
+
+
+def fix_gender(text: str, case: Case) -> str:
+    """The insured person's role words in the gender of the ruling's parties block, by rule
+    where the revision left them ("Der Versicherte, diplomierte Kinderkrankenschwester",
+    9C_65/2025). Pronouns are left to the revision."""
+    feminine = insured_feminine(case)
+    for pattern, replacement in _GENDER.get(feminine, ()) if feminine is not None else ():
+        text = re.sub(pattern, replacement, text)
+    return text
+
+
+class Passage(NamedTuple):
+    sentence: str
+    consideration: str | None  # as Apertus names it
+    quote: str  # empty unless the ruling contains it
+
+
+# Also not after a day ("17. September 2022") or "med." ("Dr. med. E.").
+_CLAUSE_END = re.compile(
+    r"(?<!\bSt\.)(?<!\bDr\.)(?<!\bNr\.)(?<!\bvgl\.)(?<!\bmed\.)(?<!\d\.)(?<=[.!])\s+"
+    r"(?=[A-ZÀ-ÝÄÖÜ«\"])"
+)
+
+
+def sentences(text: str) -> list[list[str]]:
+    return [_CLAUSE_END.split(p.strip()) for p in text.split("\n\n") if p.strip()]
+
+
+def outcome_paragraph(paras: list[list[str]]) -> bool:
+    """Whether the last paragraph is the closing outcome sentence, which `fix_outcome` checks."""
+    return len(paras) > 1 and bool(_OUTCOME_START.search(paras[-1][0]))
+
+
+def locate(llm: LLMClient, case: Case, text: str) -> list[Passage]:
+    """The passage of the ruling each sentence relies on, by sentence in reading order. One
+    call per sentence: given all sentences at once, Apertus answered for one of them or
+    quoted the summary instead of the ruling."""
+    paras = sentences(text)
+    listed = [s for para in paras[:-1] if outcome_paragraph(paras) for s in para] or [
+        s for para in paras for s in para
+    ]
+    ruling = case.source + "\n" + case.considerations.get("", "")
+
+    def one(sentence: str) -> Passage:
+        task = (
+            f"{case.source}\n\n---\nA sentence of a summary of this ruling:\n«{sentence}»"
+            f"\n\n---\n{prompt('summary_references')}"
+        )
+        try:
+            reply = llm.chat_json([{"role": "user", "content": task}], max_tokens=600)
+        except ValueError:
+            reply = {}
+        reply = reply if isinstance(reply, dict) else {}
+        number = reply.get("consideration")
+        number = str(number).removeprefix("E. ").rstrip(".") if number else None
+        quote = str(reply.get("quote") or "")
+        return Passage(sentence, number, quote if quoted(quote, ruling) else "")
+
+    with ThreadPoolExecutor(4) as pool:
+        return list(pool.map(one, listed))
+
+
+def fact_issues(llm: LLMClient, case: Case, passages: list[Passage]) -> list[str]:
+    """Sentences that do not say what their passage of the ruling says, by a comparison of
+    each pair on its own: asked to find errors in the whole summary against the whole ruling,
+    Apertus found none in any of the 20 hold-out texts."""
+    pairs = [p for p in passages if p.quote]
+    if not pairs:
+        return []
+
+    def where(p: Passage) -> str:
+        if p.consideration and p.consideration in case.considerations:
+            return f"reasons, consideration {p.consideration}"
+        return "facts or operative part"
+
+    listed = "\n\n".join(
+        f"[{n}] Sentence: {p.sentence}\nPassage ({where(p)}): {p.quote}"
+        for n, p in enumerate(pairs, 1)
+    )
+    try:
+        reply = llm.chat_json(
+            [{"role": "user", "content": f"{listed}\n\n---\n{prompt('summary_facts')}"}],
+            max_tokens=3000,
+        )
+    except ValueError:
+        return []
+    answers = reply.get("pairs") if isinstance(reply, dict) else None
+    answers = [a for a in answers or [] if isinstance(a, dict)]
+    by_number = {int(a["pair"]): a for a in answers if str(a.get("pair")).isdigit()}
+    if len(by_number) < len(answers) and len(answers) == len(pairs):
+        by_number = dict(enumerate(answers, 1))
+    flagged = [
+        (p, a)
+        for n, p in enumerate(pairs, 1)
+        if (a := by_number.get(n)) and a.get("correct") is False
+    ]
+    return [
+        f'"{p.sentence}" does not match the ruling: {a.get("error", "")}; the ruling '
+        f'({where(p)}): "{p.quote}"; fix: {a.get("fix", "")}'
+        for p, a in flagged
+        if contradicts_passage(llm, p, a)
+    ]
+
+
+def contradicts_passage(llm: LLMClient, p: Passage, flag: dict) -> bool:
+    """A second, narrower question for each flagged pair: the pair check also flagged correct
+    sentences, among them the outcome ("Letztlich wies das Bundesgericht die Beschwerde ab"
+    taken for the cantonal court's decision), and a revision from such a flag adds an error."""
+    task = (
+        f"Sentence of a case-law summary: {p.sentence}\n\nPassage of the ruling: {p.quote}\n\n"
+        f"A reviewer says: {flag.get('error', '')}\n\nIs the reviewer right that the sentence "
+        "states something the passage contradicts, not merely something the passage leaves out "
+        'or words differently? Answer with JSON only: {"contradicts": true} or '
+        '{"contradicts": false}'
+    )
+    try:
+        reply = llm.chat_json([{"role": "user", "content": task}], max_tokens=20)
+    except ValueError:
+        return False
+    return isinstance(reply, dict) and reply.get("contradicts") is True
+
+
+_FEMININE_ROLE = re.compile(r"Beschwerde(?:führer|gegner)in|recourante|intimée")
+_MASCULINE_ROLE = re.compile(r"Beschwerde(?:führer|gegner)\b|recourant\b|intimé\b")
+_MASCULINE = re.compile(
+    r"\b(?:[Dd]er Versicherte\b|des Versicherten|dem Versicherten|[Ee]in Versicherter"
+    r"|l['’]assuré\b(?!e)|[Ll]e recourant\b|[Uu]n assuré\b)"
+)
+_FEMININE = re.compile(
+    r"\b(?:[Dd]ie Versicherte\b|[Ee]ine Versicherte\b|l['’]assurée\b|[Ll]a recourante\b)"
+)
+
+
+def rule_issues(text: str, case: Case) -> list[str]:
+    """Facts checked by rule: the insured person's gender and an objection procedure, which
+    invalidity insurance does not have (8C_185/2025 fr: "annulé la décision sur opposition")."""
+    issues = []
+    if (feminine := insured_feminine(case)) is not None:
+        wrong = (_MASCULINE if feminine else _FEMININE).findall(text)
+        if wrong:
+            gender = "a woman" if feminine else "a man"
+            issues.append(
+                f"The insured person is {gender}; correct {', '.join(sorted(set(wrong)))} "
+                "and the pronouns that refer to the insured person."
+            )
+    objection = re.search(r"Einsprache|opposition|opposizione", case.source)
+    if not objection and (found := re.findall(r"\b\w*Einsprache\w*|\b(?:sur )?opposition\b", text)):
+        issues.append(
+            f"The ruling has no objection procedure ({', '.join(sorted(set(found)))}); "
+            "name the decision as the ruling does (Verfügung / décision)."
+        )
+    return issues
+
+
+def insured_feminine(case: Case) -> bool | None:
+    """Whether the insured person is a woman, from the role after the anonymised name in the
+    parties block; None when the ruling does not say (Italian roles have no gender)."""
+    if case.appellant == "insured":
+        return case.feminine
+    header = re.split(SECTIONS["facts"], case.source, maxsplit=1)[0][:4000]
+    match = re.search(
+        r"\n[A-Z]\._+,[^\n]*\n(?:[^\n]*\n){0,4}?([^\n]*(?:Beschwerde|recour|intim)\w*)", header
+    )
+    if not match:
+        return None
+    if _FEMININE_ROLE.search(match[1]):
+        return True
+    return False if _MASCULINE_ROLE.search(match[1]) else None
+
+
+def _normal(text: str) -> str:
+    text = re.sub(r"[«»“”„\"]", "", re.sub(r"[’`]", "'", text))
+    return re.sub(r"\s+", " ", re.sub(r"_+", "", text)).strip().lower()
+
+
+def quoted(quote: str, text: str) -> bool:
+    """Whether every part of `quote` between ellipses occurs in `text`."""
+    parts = [_normal(p) for p in re.split(r"\.\.\.|…|\[\.\.\.\]", quote)]
+    parts = [p.strip(" .,;:") for p in parts if len(p.strip(" .,;:")) >= 8]
+    target = _normal(text)
+    return bool(parts) and all(p in target for p in parts)
+
+
+_SUB_NUMBER = re.compile(r"^(\d{1,2}(?:\.\d{1,2})+)\.?(?:\s|$)", re.M)
+
+
+def considerations(text: str) -> dict[str, str]:
+    """Consideration texts by number from the segmented ruling, under "" the whole reasons."""
+    segments = segment.segment(text)
+    found = {"": segments.reasons}
+    for c in segments.considerations:
+        if not c.number:
+            continue
+        found[c.number] = c.text
+        heads = [(m[1], m.start()) for m in _SUB_NUMBER.finditer(c.text)]
+        for i, (number, start) in enumerate(heads):
+            end = next(
+                (s for n, s in heads[i + 1 :] if not n.startswith(number + ".")), len(c.text)
+            )
+            found.setdefault(number, c.text[start:end])
+    return found
+
+
+# A reference to one or more considerations: "E. 4.2", "E. 6.2 und 6.3", "consid. 5.1 et 5.6".
+_REF = re.compile(
+    r"\b(?:E\.|consid\.)\s*\d+(?:\.\d+)*(?:\s*(?:,|und|et|sowie|-|–)\s*\d+(?:\.\d+)*)*"
+)
+
+
+def fix_references(case: Case, text: str, passages: list[Passage]) -> str:
+    """Each consideration reference checked by rule against the segmented ruling: a reference
+    whose consideration does not contain the sentence's passage is set to the consideration
+    that does; one that cannot be verified and does not exist in the ruling is removed. The
+    outcome sentence cites none ("Letztlich wies das Bundesgericht die Beschwerde ab (E. 5)"
+    cited the costs, 8C_78/2025)."""
+    known = case.considerations
+    paras = sentences(text)
+    flat = [(i, j) for i, para in enumerate(paras) for j in range(len(para))]
+    by_sentence = dict(zip(flat, passages, strict=False))
+    for i, j in flat:
+        sentence = paras[i][j]
+        if outcome_paragraph(paras) and i == len(paras) - 1:
+            paras[i][j] = set_refs(sentence, [])
+            continue
+        if len(known) < 2 or not _REF.search(sentence):
+            continue
+        passage = by_sentence.get((i, j))
+        quote = passage.quote if passage else ""
+        holding = [x for x in known if x and quote and quoted(quote, known[x])]
+        refs = list(_REF.finditer(sentence))
+        numbers = [x for m in refs for x in re.findall(r"\d+(?:\.\d+)*", m[0])]
+        if any(x in holding for x in numbers):
+            continue
+        if len(refs) > 1:
+            # Several references in one sentence ("Kriterien ... (E. 4.2.1), ... (E. 4.2.2)")
+            # each cite their own part; only those that do not exist go.
+            for m in reversed(refs):
+                kept = [x for x in re.findall(r"\d+(?:\.\d+)*", m[0]) if x in known]
+                sentence = sentence[: m.start()] + set_refs(m[0], kept) + sentence[m.end() :]
+            paras[i][j] = tidy(sentence)
+            continue
+        if passage and passage.consideration in holding:
+            numbers = [passage.consideration]
+        elif holding:
+            numbers = [max(holding, key=lambda x: (x.count("."), x))]
+        else:
+            numbers = [x for x in numbers if x in known]
+        paras[i][j] = set_refs(sentence, numbers)
+    return "\n\n".join(" ".join(para) for para in paras)
+
+
+def set_refs(sentence: str, numbers: list[str]) -> str:
+    """The sentence with its consideration references replaced by `numbers`, in the sentence's
+    citation format, or removed with their brackets and separators."""
+    matches = list(_REF.finditer(sentence))
+    if not matches:
+        return sentence
+    label = matches[0][0].split()[0]
+    new = f"{label} " + (" und " if label == "E." else " et ").join(numbers) if numbers else ""
+    parts, last = [], 0
+    for k, m in enumerate(matches):
+        parts += [sentence[last : m.start()], new if k == 0 else ""]
+        last = m.end()
+    return tidy("".join([*parts, sentence[last:]]))
+
+
+def tidy(out: str) -> str:
+    """Brackets and separators left empty by a removed reference."""
+    out = re.sub(r"\s*(?:vgl\.|cf\.)\s*(?=[;,)])", "", out)
+    out = re.sub(r"\s*[;,]\s*(?=[;,)])", "", out)
+    out = re.sub(r"\(\s*[;,]\s*", "(", out)
+    out = re.sub(r"\s*\(\s*\)", "", out)
+    return re.sub(r"\s+([.,;])", r"\1", out)
+
+
+# A doctor's anonymised name ("Dr. med. D.________"), and the role that replaces it after the
+# preposition or article before it.
+_DOCTOR = r"(?:Dr\.?|Prof\.)\s?(?:med\.\s?)?[A-Z]\.(?:_+)?"
+_DOCTOR_ROLES = {
+    "de": (
+        (r"\b(?:des|eines) ", "eines Arztes"),
+        (r"\b(von|bei|mit|nach|zu) ", r"\1 einem Arzt"),
+        (r"\b(?:dem|einem) ", "einem Arzt"),
+        (r"\b(durch|für|gegen) ", r"\1 einen Arzt"),
+        (r"\b(?:den|einen) ", "einen Arzt"),
+        (r"\b(?:der|ein) ", "ein Arzt"),
+        ("", "ein Arzt"),
+    ),
+    "fr": (
+        (r"\b(du|le|au) ", r"\1 médecin"),
+        (r"\bde ", "d'un médecin"),
+        (r"\b(par|à|chez|avec|selon) ", r"\1 un médecin"),
+        ("", "un médecin"),
+    ),
+}
+
+
+def roles(text: str, lang: str) -> str:
+    """Anonymised doctors' names that the renaming in `finish` left (8C_78/2025 kept "Dr.
+    med. D.________" and "Dr. med. E.________"): dropped after the role ("des Suva-Arztes
+    Dr. med. D.________"), in apposition and in brackets, otherwise replaced by "Arzt" /
+    "médecin"."""
+    text = re.sub(rf"\b([A-ZÄÖÜ][\w-]{{3,}}) {_DOCTOR}", r"\1", text)
+    text = re.sub(rf" \({_DOCTOR}\)|, {_DOCTOR},", "", text)
+    for before, role in _DOCTOR_ROLES[lang]:
+        text = re.sub(before + _DOCTOR, role, text)
+    if lang == "de":
+        text = re.sub(r"\bSuva-(Ärzt|Arzt)", lambda m: "Suva" + m[1].lower(), text)
+    return text
 
 
 def instructions(source: str, shots: list[tuple[str, str]], lang: str) -> str:
