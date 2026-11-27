@@ -41,9 +41,10 @@ authors FRT, LC4 and VIL), never shown to the model.
    - no anonymised names or initials, and no birth years;
    - no insurer other than Suva named, and Suva only when it is a party;
    - no sentence in which the Federal Supreme Court decides the appeal otherwise than the
-     operative part (v2: "Das Bundesgericht weist die Beschwerde der Suva ab" in the middle of a
-     summary of an upheld appeal, 8C_254/2025, which the closing-sentence fix did not reach);
-   - no Italian abbreviations (LAINF, OAINF, OAI, INSAI) in summaries of Italian rulings (v2);
+     operative part, or decides the appeal of a party that did not appeal (v2: "Das
+     Bundesgericht weist die Beschwerde der Suva ab" in the middle of a summary of Suva's
+     upheld appeal, 8C_254/2025, which the closing-sentence fix did not reach; the finishing
+     step replaces such a sentence by the operative part when the revision keeps it);
    - the target language's statute abbreviations and terms, the glossary's avoid list and the
      citation format.
 
@@ -61,8 +62,9 @@ authors FRT, LC4 and VIL), never shown to the model.
    with grammatical gender, the IV office, another insurer), the result from the first point of
    the operative part, and a closing sentence with the wrong result or party is replaced by the
    standard formula. Five-judge rulings, detected from the bench in the rubrum, end with
-   "Fünfer-Entscheid." / "Décision à cinq.". Citation format, Swiss amounts and "Suva" for "CNA"
-   are normalised deterministically.
+   "Fünfer-Entscheid." / "Décision à cinq.". Citation format, Swiss amounts, "Suva" for "CNA",
+   the Italian abbreviations of Italian rulings (LAINF, OAINF, OAI, INSAI; v2) and anonymised
+   places ("in U.________"; v2) are normalised deterministically.
 
 A summary takes 10 to 16 model calls and 1 to 5 minutes on the shared gateway, so in the UI it
 runs on demand with a progress state, or ahead of time with `suva summarize-relevant`. The model

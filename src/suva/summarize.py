@@ -168,13 +168,14 @@ OUTCOMES = {
     "dismissed": r"abgewiesen|(?:wies|weist)\b[^.]*\bab\b|rejet(?:é|te)\b|respinto",
 }
 # A sentence in which the Federal Supreme Court decides the appeal, the Court first ("Das
-# Bundesgericht weist die Beschwerde ... ab"); the closing sentence is left to `fix_outcome`.
+# Bundesgericht weist die Beschwerde ... ab").
 _COURT_DECIDES = re.compile(
-    r"(?:Bundesgericht|Tribunal fédéral)\s+(?:\S+\s+){0,2}?(?:weist|wies|heisst|hiess|tritt|trat"
-    r"|rejette|admet|a rejeté|a admis|a partiellement admis|n'entre|n'est pas entré)\b[^.]*\."
+    r"(?:(?:Das|das|Le|le) )?(?:Bundesgericht|Tribunal fédéral)\s+(?:\S+\s+){0,2}?"
+    r"(?:weist|wies|heisst|hiess|tritt|trat|rejette|admet|a rejeté|a admis|a partiellement admis"
+    r"|n'entre|n'est pas entré)\b[^.]*\."
 )
-# Statute and institution abbreviations of Italian rulings, which neither language uses.
-_ITALIAN = re.compile(r"\b(?:LAINF|OAINF|INSAI)\b|\d\w*(?:\s+(?:al|let)\.\s*\w+)*\s+OAI\b")
+# Statute and institution abbreviations of Italian rulings: German and French forms.
+ITALIAN = {"LAINF": ("UVG", "LAA"), "OAINF": ("UVV", "OLAA"), "INSAI": ("Suva", "Suva")}
 _BENCH_TITLES = re.compile(
     r"Bundesrichter\w*|Mmes?\b|MM?\.|les Juges fédéraux|Giudic[ei] federal[ei]|Präsident\w*"
     r"|Présidente?|Presidente|präsidierendes Mitglied|Juges? suppléant\w*|nebenamtlich\w*"
@@ -375,7 +376,33 @@ def finish(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
         renamed = clean(reply, lang)
         if not _NAMES.search(renamed) and len(renamed.split()) >= 0.8 * len(text.split()):
             text = renamed
-    return fix_outcome(text, case, lang)
+    return fix_outcome(fix_court_sentences(text, case, lang), case, lang)
+
+
+def contradicts(sentence: str, case: Case) -> bool:
+    """Whether a sentence decides the appeal otherwise than the operative part, or decides the
+    appeal of a party that did not appeal."""
+    other_party = any(
+        re.search(pattern, sentence)
+        for key, (*_, pattern) in APPELLANTS.items()
+        if key != case.appellant and pattern
+    )
+    return bool(case.result) and (result(sentence) not in (None, case.result) or other_party)
+
+
+def fix_court_sentences(text: str, case: Case, lang: str) -> str:
+    """Replace a sentence that opens with the Court deciding the appeal wrongly by the operative
+    part: the revisions did not reliably remove "Das Bundesgericht weist die Beschwerde des
+    Versicherten ab" from a summary of Suva's upheld appeal (8C_254/2025)."""
+    expected = outcome_sentence(case, lang)
+    if not expected:
+        return text
+    stated = re.sub(r"^Letztlich (\S+) das Bundesgericht", r"Das Bundesgericht \1", expected)
+    stated = stated.replace("En définitive, le", "Le")
+    for sentence in _COURT_DECIDES.findall(text):
+        if sentence[0].isupper() and contradicts(sentence, case):
+            text = text.replace(sentence, stated)
+    return text
 
 
 def paragraphs(text: str) -> int:
@@ -686,13 +713,8 @@ def form_issues(draft: str, case: Case, lang: str) -> list[str]:
     issues += [
         f'"{sentence}" contradicts the operative part: «{case.operative}»'
         for sentence in _COURT_DECIDES.findall(draft)
-        if case.result and result(sentence) not in (None, case.result)
+        if contradicts(sentence, case)
     ]
-    if italian := sorted({m.group().split()[-1] for m in _ITALIAN.finditer(draft)}):
-        issues.append(
-            f"Replace the Italian abbreviations ({', '.join(italian)}) by the "
-            f"{LANGUAGE_NAMES[lang]} ones."
-        )
     if insurers := set(_INSURERS.findall(draft)):
         issues.append(
             f"Do not name the insurer ({', '.join(sorted(insurers))}); only Suva is named, "
@@ -827,8 +849,18 @@ def clean(text: str, lang: str) -> str:
     text = re.sub(r"\b(\d{1,3}(?:'\d{3})*) fr\. (\d{2})\b", r"CHF \1.\2", text)
     text = re.sub(r"\b(\d{1,3}(?:'\d{3})*) fr\.(?=[\s,;)])", r"CHF \1.-", text)
     text = re.sub(r"\bFr\. (?=\d)", "CHF ", text)
-    # Suva's summaries always say Suva, also where French rulings say CNA.
+    # Suva's summaries always say Suva, also where French rulings say CNA (Italian: INSAI).
     text = re.sub(r"\bCNA\b", "Suva", text)
+    text = re.sub(r"\b([Ll])['’]INSAI\b", lambda m: f"{m[1]}a Suva", text)
+    text = re.sub(r"\b(?:LAINF|OAINF|INSAI)\b", lambda m: ITALIAN[m[0]][lang == "fr"], text)
+    # OAI is the Italian IVV, but in French also the IV office, so only after an article number.
+    text = re.sub(
+        r"(\d\w*(?:\s+(?:Abs|al|cpv)\.\s*\d+)*(?:\s+(?:lit|let|Bst)\.\s*\w+)?\s+)OAI\b",
+        rf"\1{'RAI' if lang == 'fr' else 'IVV'}",
+        text,
+    )
+    # An anonymised place or employer goes without its preposition ("in U.________").
+    text = re.sub(r" (?:in|bei|à|chez|auprès de) [A-Z]\._+", "", text)
     # Names in apposition or brackets go without touching the grammar ("der Suvaarzt,
     # Dr. med. D., hielt fest"); others are replaced by the person's role in `finish`.
     text = re.sub(
