@@ -1066,7 +1066,30 @@ def verify(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
         text = fit(llm, lang, finish(llm, case, system, lang, revised))
         passages = locate(llm, case, text)
     text = fix_references(case, text, passages)
-    return opening(roles(fix_gender(drop_contradictions(text, case), case), lang), lang)
+    text = fix_gender(drop_contradictions(no_objection(text, case), case), case)
+    return opening(roles(text, lang), lang)
+
+
+# The objection decision named as invalidity insurance names it: the Verfügung / décision.
+_NO_OBJECTION = (
+    (r"\b(?:den|der) Einspracheentscheid\b", "die Verfügung"),
+    (r"\bdes Einspracheentscheid(?:e?s)?\b", "der Verfügung"),
+    (r"\bdem Einspracheentscheid\b", "der Verfügung"),
+    (r"\b(?:einen|ein) Einspracheentscheid\b", "eine Verfügung"),
+    (r"\bEinspracheentscheid(?:e?s)?\b", "Verfügung"),
+    (r"\b(décisions?) sur opposition\b", r"\1"),
+)
+
+
+def no_objection(text: str, case: Case) -> str:
+    """An objection decision in a ruling without an objection procedure, by rule where the
+    revision kept it (8C_185/2025 fr: "la Cour cantonale a annulé la décision sur opposition"
+    of an IV office, which decides by Verfügung)."""
+    if re.search(r"Einsprache|opposition|opposizione", case.source):
+        return text
+    for pattern, replacement in _NO_OBJECTION:
+        text = re.sub(pattern, replacement, text)
+    return text
 
 
 def opening(text: str, lang: str) -> str:
@@ -1300,11 +1323,12 @@ _SUB_NUMBER = re.compile(r"^(\d{1,2}(?:\.\d{1,2})+)\.?(?:\s|$)", re.M)
 
 
 def considerations(text: str) -> dict[str, str]:
-    """Consideration texts by number from the segmented ruling, under "" the whole reasons."""
+    """Consideration texts by number from the segmented ruling, under "" the whole reasons.
+    The costs considerations are left out: no point of a summary rests on them."""
     segments = segment.segment(text)
     found = {"": segments.reasons}
     for c in segments.considerations:
-        if not c.number:
+        if not c.number or c.kind == "costs":
             continue
         found[c.number] = c.text
         heads = [(m[1], m.start()) for m in _SUB_NUMBER.finditer(c.text)]
@@ -1323,11 +1347,13 @@ _REF = re.compile(
 
 
 def fix_references(case: Case, text: str, passages: list[Passage]) -> str:
-    """Each consideration reference checked by rule against the segmented ruling: a reference
-    whose consideration does not contain the sentence's passage is set to the consideration
-    that does; one that cannot be verified and does not exist in the ruling is removed. The
-    outcome sentence cites none ("Letztlich wies das Bundesgericht die Beschwerde ab (E. 5)"
-    cited the costs, 8C_78/2025)."""
+    """Consideration references checked by rule against the segmented ruling. A reference to a
+    consideration that does not exist (or to the costs) is set to the consideration whose text
+    contains the sentence's passage, preferring the one Apertus named, or else removed. One
+    that exists stays: moved to the consideration of the passage, it was wrong about as often
+    as right in the blind reading (the passage often stands in the consideration that states
+    the general rule). The outcome sentence cites none ("Letztlich wies das Bundesgericht die
+    Beschwerde ab (E. 5)" cited the costs, 8C_78/2025)."""
     known = case.considerations
     paras = sentences(text)
     flat = [(i, j) for i, para in enumerate(paras) for j in range(len(para))]
@@ -1337,29 +1363,27 @@ def fix_references(case: Case, text: str, passages: list[Passage]) -> str:
         if outcome_paragraph(paras) and i == len(paras) - 1:
             paras[i][j] = set_refs(sentence, [])
             continue
-        if len(known) < 2 or not _REF.search(sentence):
-            continue
-        passage = by_sentence.get((i, j))
-        quote = passage.quote if passage else ""
-        holding = [x for x in known if x and quote and quoted(quote, known[x])]
         refs = list(_REF.finditer(sentence))
         numbers = [x for m in refs for x in re.findall(r"\d+(?:\.\d+)*", m[0])]
-        if any(x in holding for x in numbers):
+        if len(known) < 2 or all(x in known for x in numbers):
             continue
-        if len(refs) > 1:
-            # Several references in one sentence ("Kriterien ... (E. 4.2.1), ... (E. 4.2.2)")
-            # each cite their own part; only those that do not exist go.
+        if len(refs) > 1 or any(x in known for x in numbers):
+            # Only the numbers that do not exist go ("E. 4.2.1 ... E. 4.2.9" of a ruling
+            # without 4.2.9; several references in one sentence each cite their own part).
             for m in reversed(refs):
                 kept = [x for x in re.findall(r"\d+(?:\.\d+)*", m[0]) if x in known]
                 sentence = sentence[: m.start()] + set_refs(m[0], kept) + sentence[m.end() :]
             paras[i][j] = tidy(sentence)
             continue
+        passage = by_sentence.get((i, j))
+        quote = passage.quote if passage else ""
+        holding = [x for x in known if x and quote and quoted(quote, known[x])]
         if passage and passage.consideration in holding:
             numbers = [passage.consideration]
         elif holding:
             numbers = [max(holding, key=lambda x: (x.count("."), x))]
         else:
-            numbers = [x for x in numbers if x in known]
+            numbers = []
         paras[i][j] = set_refs(sentence, numbers)
     return "\n\n".join(" ".join(para) for para in paras)
 
