@@ -3,28 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Suva BGer Triage</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #ddd; }
-  </style>
+  <title>BGer-Monitor · Unfallversicherung</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23174a6b'/%3E%3Cpath d='M9 23V9h7.5a4 4 0 0 1 0 8H9m7.5 0 5.5 6' stroke='%23fff' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Suva BGer Triage</h1>
-  <p>Placeholder UI. JSON API: <a href="/docs">/docs</a></p>
-  <table>
-    <thead><tr><th>Docket</th><th>Date</th><th>Title</th><th>Score</th></tr></thead>
-    <tbody id="rulings"></tbody>
-  </table>
-  <script>
-    fetch("/api/rulings").then(r => r.json()).then(({ items }) => {
-      const body = document.getElementById("rulings");
-      for (const r of items) {
-        const tr = body.insertRow();
-        for (const v of [r.docket, r.decision_date, r.title, r.score]) tr.insertCell().textContent = v ?? "";
-      }
-    });
-  </script>
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a class="brand" href="#/">
+        <span class="brand__mark" aria-hidden="true">§</span>
+        <span class="brand__text">
+          <strong>BGer-Monitor</strong>
+          <span data-i18n="brand.sub">Rechtsprechung Unfallversicherung</span>
+        </span>
+      </a>
+      <nav class="topbar__nav">
+        <a href="#/" data-i18n="nav.rulings">Urteile</a>
+        <a href="/docs" target="_blank" rel="noopener">API</a>
+        <div class="langswitch" role="group" aria-label="Sprache / Langue">
+          <button type="button" data-lang="de">DE</button>
+          <button type="button" data-lang="fr">FR</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app" class="page" tabindex="-1"></main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>
