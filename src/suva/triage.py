@@ -1,10 +1,12 @@
 """Relevance triage of a ruling for Suva.
 
 Stage 1 is a deterministic prior from the docket and the text (subject, division, statutes,
-Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call.
-Stage 2 asks Apertus for a relevance level and an explanation in German and in French, with the
-topics of Suva's example summaries as context. The score blends the level, weighted by its token
-probabilities, with the prior. Results and metrics: docs/eval_triage.md.
+Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call, and
+so are decisions that do not rule on the merits (the gate: inadmissible, struck off, single
+judge, no substantive consideration). Stage 2 asks Apertus for a relevance level and an
+explanation in German and in French, with the topics of Suva's example summaries as context. The
+score blends the level, weighted by its token probabilities, with the prior. Results and metrics:
+docs/eval_triage.md.
 """
 
 import json
@@ -17,13 +19,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from suva import db
+from suva import classify, db
 from suva.eval.metrics import contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
 from suva.segment import clean, segment
 
 PROMPT_VERSION = "v4"
 PREFILTER_MODEL = "prefilter"
+GATE_MODEL = "gate"
 RELEVANCE_THRESHOLD = 50
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
@@ -506,6 +509,42 @@ def prefiltered(prior_: Prior) -> TriageResult:
     )
 
 
+def gate(text: str) -> tuple[str, str] | None:
+    """Why a ruling does not decide on the merits (German, French), or None if it does.
+
+    Suva never lists such decisions: none of the 82 candidates of Q4 2025 and Q1 2026 is listed.
+    """
+    outcome = classify.outcome(text)
+    if outcome == "not_entertained":
+        return "Nichteintretensentscheid", "décision d'irrecevabilité"
+    if outcome == "struck_off":
+        return "Abschreibung", "radiation du rôle"
+    if classify.panel_size(text) in (1, 2):
+        return "Entscheid des Einzelrichters", "décision du juge unique"
+    if not segment(text).substantive:
+        return "keine materielle Erwägung", "aucun considérant sur le fond"
+    return None
+
+
+def gated(prior_: Prior, reason: tuple[str, str]) -> TriageResult:
+    de, fr = reason
+    return TriageResult(
+        score=prior_.score // 4,
+        label="not_relevant",
+        reasoning_de=(
+            f"Ohne Bewertung durch das Sprachmodell ausgeschieden ({de}): Das Bundesgericht "
+            "entscheidet nicht in der Sache, und solche Entscheide nimmt die Suva nicht in ihre "
+            "Rechtsprechungsübersicht auf."
+        ),
+        reasoning_fr=(
+            f"Écarté sans évaluation par le modèle de langage ({fr}): le Tribunal fédéral ne "
+            "statue pas sur le fond, et la Suva ne reprend pas de telles décisions dans sa revue "
+            "de jurisprudence."
+        ),
+        model=GATE_MODEL,
+    )
+
+
 def triage_ruling(
     ruling: dict[str, Any],
     llm: LLMClient,
@@ -515,6 +554,8 @@ def triage_ruling(
     prior_ = prior(ruling)
     if prior_.score < PRIOR_CUTOFF:
         return prefiltered(prior_)
+    if reason := gate(ruling.get("text") or ""):
+        return gated(prior_, reason)
     messages = build_messages(ruling, prior_, examples, glossary)
     completion = llm.complete(messages, max_tokens=900, logprobs=True, top_logprobs=10)
     result = parse_result(
