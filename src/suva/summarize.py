@@ -6,7 +6,7 @@ ruling, with the evaluator's own summaries as style examples, and the other lang
 ruling with the first as outline; check each draft (rule checks plus a claim-by-claim model
 check against the ruling), revise and shorten it; let the model compare the two languages and
 fix contradictions; finally replace names by roles and make the closing sentence state the
-operative part.
+operative part. A one-line headline per language is written from the extracted conclusions.
 """
 
 import json
@@ -18,6 +18,7 @@ from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 from string import Template
+from typing import NamedTuple
 
 from suva import db
 from suva.eval.examples import EXAMPLES_PATH, SPLIT_PATH, load_split, read_jsonl
@@ -25,7 +26,11 @@ from suva.eval.glossary import load_glossary
 from suva.eval.metrics import citation_issues, contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message
 
-PROMPT_VERSION = "v1"
+# Pinned like classify.MODEL, whatever LLM_NAME says: the thinking variant wrote no better
+# summaries.
+MODEL = "apertus-v1-5-70b"
+PROMPT_VERSION = "v2"
+HEADLINE_VERSION = "v2"
 LANGUAGES = ("de", "fr")
 LANGUAGE_NAMES = {"de": "German", "fr": "French", "it": "Italian"}
 PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -39,6 +44,30 @@ STYLE_EXAMPLES = ("8C_7/2025", "8C_172/2025")
 LENGTH = {"de": "150 to 200 words, about 180", "fr": "160 to 220 words, about 190"}
 MAX_WORDS = {"de": 230, "fr": 250}
 FIVE_JUDGES = {"de": "Fünfer-Entscheid.", "fr": "Décision à cinq."}
+HEADLINE_WORDS = 12
+# The prompt asks for 12 words; a remand on two points needs a few more, French more than German.
+MAX_HEADLINE_WORDS = {"de": 15, "fr": 17}
+HEADLINE_EXAMPLES = {
+    "de": (
+        "Keine analoge Anwendung von Art. 26bis IVV in der Unfallversicherung",
+        "Psychische Beschwerden nach Auffahrunfall nicht adäquat kausal",
+        "Rückweisung zur Einholung eines Gerichtsgutachtens zur Arbeitsfähigkeit",
+    ),
+    "fr": (
+        "Pas d'application par analogie de l'art. 26bis RAI dans l'assurance-accidents",
+        "Troubles psychiques après une collision par l'arrière sans causalité adéquate",
+        "Renvoi pour une expertise judiciaire sur la capacité de travail",
+    ),
+}
+# Function words that tell a German from a French headline.
+_MARKERS = {
+    lang: set(words.split())
+    for lang, words in {
+        "de": "der die das den dem und ein eine einer kein keine nicht von im in zur zum bei "
+        "für auf mit nach",
+        "fr": "le la les du de et un une pas au aux dans pour sur par l d en",
+    }.items()
+}
 
 # Statute abbreviations: French and Italian forms mapped to the German one.
 STATUTES = {
@@ -132,11 +161,26 @@ _COSTS_WORDS = re.compile(
 )
 # Checked in this order: a partly upheld appeal also contains "upheld" and "dismissed" words.
 OUTCOMES = {
-    "partly upheld": r"teilweise gut|partiellement admis|parzialmente accolto",
-    "inadmissible": r"nicht eingetreten|trat\b[^.]*\bnicht\b[^.]*\bein\b|irrecevable"
+    "partly upheld": r"teilweise gut|partiellement admis|admet partiellement|parzialmente accolto",
+    "inadmissible": r"nicht eingetreten|tr[ia]tt?\b[^.]*\bnicht\b[^.]*\bein\b|irrecevable"
     r"|entré en matière|entre pas en matière|inammissibile",
-    "upheld": r"gutgeheissen|hiess\b[^.]*\bgut\b|\badmis\b|\baccolto",
-    "dismissed": r"abgewiesen|wies\b[^.]*\bab\b|rejeté|respinto",
+    "upheld": r"gutgeheissen|(?:hiess|heisst)\b[^.]*\bgut\b|\badm(?:is|et)\b|\baccolto",
+    "dismissed": r"abgewiesen|(?:wies|weist)\b[^.]*\bab\b|rejet(?:é|te)\b|respinto",
+}
+# A sentence in which the Federal Supreme Court decides the appeal, the Court first ("Das
+# Bundesgericht weist die Beschwerde ... ab").
+_COURT_DECIDES = re.compile(
+    r"(?:(?:Das|das|Le|le) )?(?:Bundesgericht|Tribunal fédéral)\s+(?:\S+\s+){0,2}?"
+    r"(?:weist|wies|heisst|hiess|tritt|trat|rejette|admet|a rejeté|a admis|a partiellement admis"
+    r"|n'entre|n'est pas entré)\b[^.]*\."
+)
+# Statute and institution abbreviations of Italian rulings: German and French forms.
+# "OAA" is no abbreviation at all; the model wrote it for OLAA in 8C_254/2025.
+ITALIAN = {
+    "LAINF": ("UVG", "LAA"),
+    "OAINF": ("UVV", "OLAA"),
+    "OAA": ("UVV", "OLAA"),
+    "INSAI": ("Suva", "Suva"),
 }
 _BENCH_TITLES = re.compile(
     r"Bundesrichter\w*|Mmes?\b|MM?\.|les Juges fédéraux|Giudic[ei] federal[ei]|Präsident\w*"
@@ -158,28 +202,47 @@ class Case:
     holdings: str = ""  # the Court's conclusions, consideration by consideration
 
 
-def summarize(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> dict[str, str]:
-    """Return {"de": ..., "fr": ...} summaries of ruling `docket`. Does not persist."""
+class Result(NamedTuple):
+    summaries: dict[str, str]  # by language; empty when only headlines were written
+    headlines: dict[str, str]  # by language; a language without a valid headline is missing
+
+
+def summarize(conn: sqlite3.Connection, docket: str, llm: LLMClient) -> Result:
+    """Summaries and headlines of ruling `docket` in German and French. Does not persist."""
     ruling = db.get_ruling(conn, docket)
     if ruling is None:
         raise KeyError(f"Unknown ruling {docket}")
     return summarize_ruling(ruling, llm)
 
 
+def save(conn: sqlite3.Connection, docket: str, result: Result, model: str) -> None:
+    for lang, text in result.summaries.items():
+        db.save_summary(
+            conn, docket, lang=lang, text=text, model=model, prompt_version=PROMPT_VERSION
+        )
+    for lang, text in result.headlines.items():
+        db.save_headline(
+            conn, docket, lang=lang, text=text, model=model, prompt_version=HEADLINE_VERSION
+        )
+
+
 def summarize_batch(
-    conn: sqlite3.Connection, dockets: list[str], llm: LLMClient, workers: int = 4
-) -> Iterator[tuple[str, dict[str, str] | Exception]]:
-    """Summarise many rulings in parallel, yielding results as they complete.
+    conn: sqlite3.Connection,
+    dockets: list[str],
+    llm: LLMClient,
+    workers: int = 4,
+    *,
+    headlines_only: bool = False,
+) -> Iterator[tuple[str, Result | Exception]]:
+    """Summarise many rulings (or only write their headlines) in parallel, yielding results as
+    they complete.
 
     A failed ruling yields its exception instead of stopping the batch; rerunning picks it up.
     """
+    step = headline_ruling if headlines_only else summarize_ruling
     rulings = [db.get_ruling(conn, docket) for docket in dockets]
     with ThreadPoolExecutor(workers) as pool:
-        futures = {
-            pool.submit(summarize_ruling, ruling, llm): ruling["docket"]
-            for ruling in rulings
-            if ruling is not None
-        }
+        futures = {pool.submit(step, ruling, llm): ruling["docket"] for ruling in rulings if ruling}
         for future in as_completed(futures):
             try:
                 yield futures[future], future.result()
@@ -187,13 +250,11 @@ def summarize_batch(
                 yield futures[future], exc
 
 
-def summarize_ruling(ruling: dict, llm: LLMClient) -> dict[str, str]:
-    docket = ruling["docket"]
-    sections = split_sections(ruling["text"])
+def prepare_case(ruling: dict, sections: dict[str, str], llm: LLMClient) -> Case:
     operative = re.sub(r"\s+", " ", re.sub(r"^.*?\n1\.\n", "", sections["ruling"], flags=re.S))
     party, feminine = appellant(sections["header"])
     case = Case(
-        docket=docket,
+        docket=ruling["docket"],
         source=prepare_source(ruling, sections, llm),
         appellant=party,
         feminine=feminine,
@@ -203,7 +264,21 @@ def summarize_ruling(ruling: dict, llm: LLMClient) -> dict[str, str]:
     )
     # Writing from a list of the Court's conclusions keeps the model from merging
     # considerations (8C_185/2025: "duty to notify violated" became "not violated").
-    case = replace(case, holdings=extract_holdings(llm, case))
+    return replace(case, holdings=extract_holdings(llm, case))
+
+
+def headline_ruling(ruling: dict, llm: LLMClient) -> Result:
+    """Headlines only: the source and holdings steps plus one short call per language, the same
+    calls a full summary makes first, so a later summary reuses them from the cache."""
+    case = prepare_case(ruling, split_sections(ruling["text"]), llm)
+    return Result({}, headlines(llm, case, ruling.get("title"), ruling["language"]))
+
+
+def summarize_ruling(ruling: dict, llm: LLMClient) -> Result:
+    docket = ruling["docket"]
+    sections = split_sections(ruling["text"])
+    case = prepare_case(ruling, sections, llm)
+    titles = headlines(llm, case, ruling.get("title"), ruling["language"])
 
     # The ruling's own language first: that summary stays closest to the source and sets the
     # content; the other one is written from the ruling with it as outline.
@@ -226,10 +301,11 @@ def summarize_ruling(ruling: dict, llm: LLMClient) -> dict[str, str]:
         summaries[lang] = finish(llm, case, rules[lang], lang, revised)
     # Suva flags five-judge rulings (questions of principle); the bench is in the header.
     five = five_judges(sections["header"])
-    return {
+    texts = {
         lang: clean(summaries[lang], lang) + (f"\n\n{FIVE_JUDGES[lang]}" if five else "")
         for lang in LANGUAGES
     }
+    return Result(texts, titles)
 
 
 def generate(
@@ -306,7 +382,33 @@ def finish(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
         renamed = clean(reply, lang)
         if not _NAMES.search(renamed) and len(renamed.split()) >= 0.8 * len(text.split()):
             text = renamed
-    return fix_outcome(text, case, lang)
+    return fix_outcome(fix_court_sentences(text, case, lang), case, lang)
+
+
+def contradicts(sentence: str, case: Case) -> bool:
+    """Whether a sentence decides the appeal otherwise than the operative part, or decides the
+    appeal of a party that did not appeal."""
+    other_party = any(
+        re.search(pattern, sentence)
+        for key, (*_, pattern) in APPELLANTS.items()
+        if key != case.appellant and pattern
+    )
+    return bool(case.result) and (result(sentence) not in (None, case.result) or other_party)
+
+
+def fix_court_sentences(text: str, case: Case, lang: str) -> str:
+    """Replace a sentence that opens with the Court deciding the appeal wrongly by the operative
+    part: the revisions did not reliably remove "Das Bundesgericht weist die Beschwerde des
+    Versicherten ab" from a summary of Suva's upheld appeal (8C_254/2025)."""
+    expected = outcome_sentence(case, lang)
+    if not expected:
+        return text
+    stated = re.sub(r"^Letztlich (\S+) das Bundesgericht", r"Das Bundesgericht \1", expected)
+    stated = stated.replace("En définitive, le", "Le")
+    for sentence in _COURT_DECIDES.findall(text):
+        if sentence[0].isupper() and contradicts(sentence, case):
+            text = text.replace(sentence, stated)
+    return text
 
 
 def paragraphs(text: str) -> int:
@@ -339,7 +441,7 @@ def outcome_sentence(case: Case, lang: str) -> str | None:
         return None
     party = APPELLANTS[case.appellant][1 if lang == "de" else 2]
     party = party[case.feminine] if isinstance(party, tuple) else party
-    remand = bool(re.search(r"zurückgewiesen|renvoyée?|rinviata", case.operative))
+    remand = remanded(case.operative)
     if lang == "de":
         appeal = f"die Beschwerde {party}".strip()
         verbs = {
@@ -359,6 +461,10 @@ def outcome_sentence(case: Case, lang: str) -> str | None:
     }
     tail = " et renvoyé la cause pour nouvelle décision" if remand else ""
     return f"En définitive, le Tribunal fédéral {verbs[case.result]}{tail}."
+
+
+def remanded(operative: str) -> bool:
+    return bool(re.search(r"zurückgewiesen|renvoyée?|rinviata", operative))
 
 
 def revise(
@@ -402,6 +508,123 @@ def consistency_issues(llm: LLMClient, case: Case, summaries: dict[str, str]) ->
 def extract_holdings(llm: LLMClient, case: Case) -> str:
     task = f"{case.source}\n\n---\n{prompt('summary_holdings')}"
     return llm.chat([{"role": "user", "content": task}], max_tokens=1500).strip()
+
+
+def headlines(llm: LLMClient, case: Case, subject: str | None, language: str) -> dict[str, str]:
+    """Headlines in the ruling's language first, then the other with the first as reference,
+    so that both state the same point."""
+    first = language if language in LANGUAGES else "de"
+    result: dict[str, str] = {}
+    for lang in [first, *(lang for lang in LANGUAGES if lang != first)]:
+        if text := headline(llm, case, subject, lang, reference=result.get(first)):
+            result[lang] = text
+    return result
+
+
+def headline(
+    llm: LLMClient, case: Case, subject: str | None, lang: str, *, reference: str | None = None
+) -> str | None:
+    """One line saying what the Court decided, written in `lang` from the holdings; None when
+    the model gives no valid headline after two corrections."""
+    task = Template(prompt("headline")).substitute(
+        language=LANGUAGE_NAMES[lang],
+        words=HEADLINE_WORDS,
+        examples="\n".join(f"- {example}" for example in HEADLINE_EXAMPLES[lang]),
+    )
+    if reference:
+        task += (
+            f"\n\nState the same point as this headline in the other language, in your own "
+            f"{LANGUAGE_NAMES[lang]} wording: {reference}"
+        )
+    if terms := terminology(case.source, lang):
+        task += f"\n\nTerminology (German - French), use the {LANGUAGE_NAMES[lang]} form:\n{terms}"
+    # The outcome spelled out: from "a remand is superfluous" in the holdings the model
+    # wrote a remand headline for a dismissed appeal (8C_344/2025).
+    outcome = (
+        f"the appeal by {APPELLANTS[case.appellant][0]} was "
+        f"{case.result or 'decided as in the operative part'}; "
+        + ("the case is remitted" if remanded(case.operative) else "no remand")
+    )
+    context = (
+        f"Subject: {subject or 'unknown'}\nOperative part: «{case.operative}»\nOutcome: "
+        f"{outcome}\n\nThe Court's conclusions, consideration by consideration:\n{case.holdings}"
+    )
+    request = f"{context}\n\n---\n{task}"
+    for attempt in range(3):
+        messages: list[Message] = [{"role": "user", "content": request}]
+        # Some sampling on the corrections: at temperature 0 the model kept the same draft.
+        reply = llm.chat(messages, max_tokens=100, temperature=0.4 if attempt else 0.0)
+        text = clean_headline(reply, lang)
+        issues = headline_issues(text, lang)
+        if not issues:
+            return text
+        # A fresh request rather than a follow-up turn: in a conversation the model repeated
+        # its overlong headline unchanged.
+        listed = "\n".join(f"- {issue}" for issue in issues)
+        request = (
+            f"{context}\n\n---\n{task}\n\nThis draft headline breaks the rules:\n{text}\n"
+            f"Problems:\n{listed}\nWrite a new headline of at most {HEADLINE_WORDS} words."
+        )
+    return None
+
+
+def clean_headline(text: str, lang: str) -> str:
+    lines = [line for line in clean(text, lang).splitlines() if line.strip()]
+    line = lines[0] if lines else ""
+    line = re.sub(
+        r"^(?:Headline|Schlagzeile|Titel|Titre|(?:Das |Le )?(?:Bundesgericht|Tribunal fédéral)"
+        r"(?: bestätigt| confirme)?)\s*:\s*",
+        "",
+        line,
+        flags=re.I,
+    )
+    # One paragraph number goes; with several ("Art. 10 Abs. 1 und Abs. 5") the rest would
+    # read as a list of articles.
+    if len(re.findall(r" (?:Abs|al)\. \d+\b", line)) == 1:
+        line = re.sub(r" (?:Abs|al)\. \d+\b", "", line)
+    # "Zurückweisung" is a rejection; a remand is a "Rückweisung".
+    line = re.sub(r"^Zurückweisung zur\b", "Rückweisung zur", line)
+    line = _HEADLINE_DATE.sub("", line)
+    line = line[:1].upper() + line[1:]
+    return line.strip(" \t\"'«»“”„").rstrip(".").strip()
+
+
+# A date with the preposition that introduces it ("über den 30. November 2023 hinaus", "au-delà
+# du 30 novembre 2023"): the model kept such dates through every correction.
+_HEADLINE_DATE = re.compile(
+    r"\s*(?:(?:über|ab|per|seit|bis|nach|vom|zum|am|au-delà du|à partir du|dès le|depuis le"
+    r"|jusqu'au|au|du|le)\s+)?(?:den\s+|dem\s+)?\d{1,2}(?:\.|er)?\s*(?:"
+    + "|".join(_MONTHS)
+    + r")\s+\d{4}(?:\s+hinaus)?",
+    re.I,
+)
+
+
+def headline_issues(text: str, lang: str) -> list[str]:
+    if not text:
+        return ["The headline is empty."]
+    issues = []
+    words = len(text.split())
+    if words > MAX_HEADLINE_WORDS[lang]:
+        issues.append(
+            f"The headline has {words} words; use at most {HEADLINE_WORDS}: keep the legal "
+            "point and drop the rest (the confirmation of a decision, paragraph numbers)."
+        )
+    if re.match(r"(?:Das |Le )?(?:Bundesgericht|Tribunal fédéral)\b", text):
+        issues.append("State the decision itself; do not start with the Court.")
+    if re.search(r"\b\d{1,2}[A-Z]_\d+/\d{4}\b", text):
+        issues.append("Remove the docket number.")
+    if any(re.fullmatch(r"\d{4}-\d\d-\d\d", f) for f in figures(text)) or re.search(
+        r"\b\d{1,2}\.\d{1,2}\.\d{4}\b", text
+    ):
+        issues.append("Remove the date.")
+    if names := _NAMES.findall(text):
+        issues.append(f"Remove the anonymised names ({', '.join(sorted(set(names)))}).")
+    tokens = re.findall(r"[a-zà-ÿ]+", text.lower())
+    other = "fr" if lang == "de" else "de"
+    if sum(t in _MARKERS[other] for t in tokens) > sum(t in _MARKERS[lang] for t in tokens):
+        issues.append(f"Write the headline in {LANGUAGE_NAMES[lang]}.")
+    return issues + term_issues(text, lang)
 
 
 def parties(header: str) -> str:
@@ -493,6 +716,11 @@ def form_issues(draft: str, case: Case, lang: str) -> list[str]:
             "Suva is not a party to this ruling; refer to the insurer by its role "
             "(the accident insurer, the IV office)."
         )
+    issues += [
+        f'"{sentence}" contradicts the operative part: «{case.operative}»'
+        for sentence in _COURT_DECIDES.findall(draft)
+        if contradicts(sentence, case)
+    ]
     if insurers := set(_INSURERS.findall(draft)):
         issues.append(
             f"Do not name the insurer ({', '.join(sorted(insurers))}); only Suva is named, "
@@ -504,24 +732,30 @@ def form_issues(draft: str, case: Case, lang: str) -> list[str]:
         f"The figure or date {figure} does not appear in the ruling; correct or remove it."
         for figure in sorted(figures(draft) - figures(source))
     ]
+    return issues + term_issues(draft, lang)
+
+
+def term_issues(text: str, lang: str) -> list[str]:
+    """The other language's statute abbreviations and terms, the glossary's avoid list and the
+    citation format."""
     glossary = _glossary()
-    issues += [
+    issues = [
         f"Use the {LANGUAGE_NAMES[lang]} abbreviation instead of {abbr}."
-        for abbr in foreign_statutes(draft, glossary, lang)
+        for abbr in foreign_statutes(text, glossary, lang)
     ]
-    issues += [f"Citation format: {problem}." for problem in citation_issues(draft, lang)]
+    issues += [f"Citation format: {problem}." for problem in citation_issues(text, lang)]
     issues += [
         f'Do not use "{form}"; use "{term[lang]}".'
         for term in glossary["terms"]
         for form in term.get(f"{lang}_avoid", [])
-        if contains_term(draft, [form])
+        if contains_term(text, [form])
     ]
     other = "fr" if lang == "de" else "de"
     issues += [
         f'"{form}" is the {LANGUAGE_NAMES[other]} term; use "{term[lang]}".'
         for term in glossary["terms"]
         for form in term_forms(term, other)
-        if form not in term_forms(term, lang) and contains_term(draft, [form])
+        if form not in term_forms(term, lang) and contains_term(text, [form])
     ]
     return issues
 
@@ -621,8 +855,18 @@ def clean(text: str, lang: str) -> str:
     text = re.sub(r"\b(\d{1,3}(?:'\d{3})*) fr\. (\d{2})\b", r"CHF \1.\2", text)
     text = re.sub(r"\b(\d{1,3}(?:'\d{3})*) fr\.(?=[\s,;)])", r"CHF \1.-", text)
     text = re.sub(r"\bFr\. (?=\d)", "CHF ", text)
-    # Suva's summaries always say Suva, also where French rulings say CNA.
+    # Suva's summaries always say Suva, also where French rulings say CNA (Italian: INSAI).
     text = re.sub(r"\bCNA\b", "Suva", text)
+    text = re.sub(r"\b([Ll])['’]INSAI\b", lambda m: f"{m[1]}a Suva", text)
+    text = re.sub(r"\b(?:LAINF|OAINF|OAA|INSAI)\b", lambda m: ITALIAN[m[0]][lang == "fr"], text)
+    # OAI is the Italian IVV, but in French also the IV office, so only after an article number.
+    text = re.sub(
+        r"(\d\w*(?:\s+(?:Abs|al|cpv)\.\s*\d+)*(?:\s+(?:lit|let|Bst)\.\s*\w+)?\s+)OAI\b",
+        rf"\1{'RAI' if lang == 'fr' else 'IVV'}",
+        text,
+    )
+    # An anonymised place or employer goes without its preposition ("in U.________").
+    text = re.sub(r" (?:in|bei|à|chez|auprès de) [A-Z]\._+", "", text)
     # Names in apposition or brackets go without touching the grammar ("der Suvaarzt,
     # Dr. med. D., hielt fest"); others are replaced by the person's role in `finish`.
     text = re.sub(
@@ -635,6 +879,10 @@ def clean(text: str, lang: str) -> str:
         # "Der Dachdecker A. rutschte": an initial after a noun (five letters or more, so never
         # after an article: "Der A.________ erhielt" is left to `finish`).
         text = re.sub(r"\b([A-ZÄÖÜ][a-zäöüß]{4,}) [A-Z]\.(?= [a-zäöü])", r"\1", text)
+        # The same for anonymised names the model kept ("des Spitals E.________", "der
+        # C.________ GmbH"); `finish` only asks for roles, and its answer is not always usable.
+        text = re.sub(r"\b([A-ZÄÖÜ][a-zäöüß]{3,}) [A-Z]\._+(?! (?:AG|GmbH)\b)", r"\1", text)
+        text = re.sub(r"\b[A-Z]\._+ (AG|GmbH)\b", r"\1", text)
         # "wies die Beschwerde ... gut" mixes up "hiess ... gut" and "wies ... ab".
         text = re.sub(r"\bwies\b([^.]*?)\bgut\b", r"hiess\1gut", text)
         text = re.sub(r"\b(?:consid|Erw)\. ?(?=\d)", "E. ", text)
@@ -643,6 +891,12 @@ def clean(text: str, lang: str) -> str:
         text = re.sub(r"\bart\. (?=\d)", "Art. ", text)
     else:
         text = re.sub(r"(?<![\w.])(?:E|Erw)\. ?(?=\d)", "consid. ", text)
+        text = re.sub(
+            r"\b(société|entreprise|doctoresse|docteur|médecin|experte?|hôpital|clinique) "
+            r"[A-Z]\._+(?: (?:SA|Sàrl|GmbH|AG)\b)?",
+            r"\1",
+            text,
+        )
         text = re.sub(r"(?:(?<=[a-zà-ÿ,;] )|(?<=['’]))Art\. (?=\d)", "art. ", text)
     return text.strip()
 

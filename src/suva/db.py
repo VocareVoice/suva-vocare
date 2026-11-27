@@ -1,11 +1,12 @@
-"""SQLite knowledge base: rulings with FTS5 search, triage results, summaries and feedback."""
+"""SQLite knowledge base: rulings with FTS5 search, triage results, summaries, headlines and
+feedback."""
 
 import gzip
 import io
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS rulings (
@@ -98,6 +99,20 @@ CREATE TABLE IF NOT EXISTS classification (
 CREATE INDEX IF NOT EXISTS classification_docket ON classification(docket);
 """
 
+# One line per ruling and language saying what the Court decided, written with the summaries.
+HEADLINES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS headlines (
+    id INTEGER PRIMARY KEY,
+    docket TEXT NOT NULL REFERENCES rulings(docket) ON DELETE CASCADE,
+    lang TEXT NOT NULL CHECK (lang IN ('de', 'fr')),
+    text TEXT NOT NULL,
+    model TEXT,
+    prompt_version TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS headlines_docket ON headlines(docket, lang);
+"""
+
 # The agent side panel: one chat per browser, its messages (user turns, tool steps, answers)
 # and the summary changes the agent proposed, which only take effect when the user applies them.
 AGENT_SCHEMA = """
@@ -150,6 +165,10 @@ RULING_FIELDS = (
 _LATEST_TRIAGE = "t.id = (SELECT MAX(id) FROM triage WHERE docket = r.docket)"
 _HAS_SUMMARY = "(SELECT 1 FROM summaries s WHERE s.docket = r.docket)"
 _LATEST_CLASSIFICATION = "c.id = (SELECT MAX(id) FROM classification WHERE docket = r.docket)"
+_HEADLINE = (
+    "(SELECT text FROM headlines h WHERE h.docket = r.docket AND h.lang = '{lang}' "
+    "ORDER BY h.id DESC LIMIT 1) AS headline_{lang}"
+)
 
 
 def connect(path: Path | str) -> sqlite3.Connection:
@@ -162,6 +181,7 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.executescript(SCHEMA)
     conn.executescript(CLASSIFICATION_SCHEMA)
     conn.executescript(AGENT_SCHEMA)
+    conn.executescript(HEADLINES_SCHEMA)
     _migrate(conn)
     return conn
 
@@ -334,6 +354,7 @@ def list_rulings(
         f"""
         SELECT r.docket, r.decision_date, r.publication_date, r.division, r.language,
                r.title, r.url, t.score, t.label, t.reasoning_de, t.reasoning_fr,
+               {_HEADLINE.format(lang="de")}, {_HEADLINE.format(lang="fr")},
                EXISTS {_HAS_SUMMARY} AS has_summary,
                (SELECT verdict FROM feedback f WHERE f.docket = r.docket
                 ORDER BY f.id DESC LIMIT 1) AS feedback_verdict,
@@ -457,6 +478,12 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
             (docket,),
         )
     }
+    headlines = {
+        row["lang"]: row["text"]
+        for row in conn.execute(
+            "SELECT lang, text FROM headlines WHERE docket = ? ORDER BY id", (docket,)
+        )
+    }
     feedback = conn.execute(
         "SELECT verdict, corrected_score, comment, created_at FROM feedback "
         "WHERE docket = ? ORDER BY id DESC",
@@ -464,6 +491,8 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
     ).fetchall()
     return {
         **ruling,
+        "headline_de": headlines.get("de"),
+        "headline_fr": headlines.get("fr"),
         "triage": dict(triage) if triage else None,
         "summaries": {lang: summaries.get(lang) for lang in ("de", "fr")},
         "feedback": [dict(row) for row in feedback],
@@ -542,12 +571,13 @@ def dockets_to_summarize(
     prompt_version: str,
     date_from: str | None = None,
     date_to: str | None = None,
+    table: Literal["summaries", "headlines"] = "summaries",
 ) -> list[str]:
-    """Rulings whose latest triage score is at least `min_score` and that have no summary of
-    `prompt_version` and none a user edited, highest score first."""
+    """Rulings whose latest triage score is at least `min_score` and that have no summary (or
+    headline) of `prompt_version` and no summary a user edited, highest score first."""
     where = [
         "t.score >= ?",
-        "NOT EXISTS (SELECT 1 FROM summaries s WHERE s.docket = r.docket "
+        f"NOT EXISTS (SELECT 1 FROM {table} s WHERE s.docket = r.docket "
         "AND s.prompt_version IN (?, ?))",
     ]
     params: list[Any] = [min_score, prompt_version, EDITED_VERSION]
@@ -766,6 +796,107 @@ def save_summary(
             "VALUES (?, ?, ?, ?, ?)",
             (docket, lang, text, model, prompt_version),
         )
+
+
+def save_headline(
+    conn: sqlite3.Connection,
+    docket: str,
+    *,
+    lang: str,
+    text: str,
+    model: str | None,
+    prompt_version: str | None,
+) -> None:
+    """Store the headline of `docket` in `lang`, replacing the previous one."""
+    with conn:
+        conn.execute("DELETE FROM headlines WHERE docket = ? AND lang = ?", (docket, lang))
+        conn.execute(
+            "INSERT INTO headlines (docket, lang, text, model, prompt_version) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (docket, lang, text, model, prompt_version),
+        )
+
+
+_TEXT_FIELDS = ("text", "model", "prompt_version", "created_at")
+
+
+def export_summaries(
+    conn: sqlite3.Connection,
+    path: Path | str,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> int:
+    """Write the latest summary and headline per language of every ruling in the date range
+    that has one as JSONL, one ruling per line, best triage score first."""
+    where = [
+        "(EXISTS (SELECT 1 FROM summaries WHERE docket = r.docket) "
+        "OR EXISTS (SELECT 1 FROM headlines WHERE docket = r.docket))"
+    ]
+    params: list[Any] = []
+    if date_from:
+        where.append(f"{_DATE} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{_DATE} <= ?")
+        params.append(date_to)
+    dockets = [
+        row["docket"]
+        for row in conn.execute(
+            f"SELECT r.docket FROM rulings r LEFT JOIN triage t ON {_LATEST_TRIAGE} "
+            f"WHERE {' AND '.join(where)} ORDER BY t.score IS NULL, t.score DESC, r.docket",
+            params,
+        )
+    ]
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for docket in dockets:
+            record: dict[str, Any] = {"docket": docket}
+            for table in ("summaries", "headlines"):
+                rows = conn.execute(
+                    f"SELECT lang, {', '.join(_TEXT_FIELDS)} FROM {table} WHERE docket = ? "
+                    "ORDER BY id",
+                    (docket,),
+                )
+                record[table] = {row["lang"]: {k: row[k] for k in _TEXT_FIELDS} for row in rows}
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return len(dockets)
+
+
+def import_summaries(conn: sqlite3.Connection, path: Path | str) -> int:
+    """Load summaries and headlines written by `export_summaries`, replacing older ones; returns
+    the number of texts stored. Texts for unknown rulings, or for a ruling and language that
+    already have one of the same prompt version or one a user edited, are skipped."""
+    count = 0
+    with conn, open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if get_ruling(conn, record["docket"]) is None:
+                continue
+            for table in ("summaries", "headlines"):
+                for lang, text in record.get(table, {}).items():
+                    row = {field: text.get(field) for field in _TEXT_FIELDS}
+                    row |= {"docket": record["docket"], "lang": lang, "edited": EDITED_VERSION}
+                    kept = conn.execute(
+                        f"SELECT 1 FROM {table} WHERE docket = :docket AND lang = :lang "
+                        "AND prompt_version IN (:prompt_version, :edited)",
+                        row,
+                    ).fetchone()
+                    if kept:
+                        continue
+                    conn.execute(
+                        f"DELETE FROM {table} WHERE docket = :docket AND lang = :lang", row
+                    )
+                    conn.execute(
+                        f"INSERT INTO {table} (docket, lang, {', '.join(_TEXT_FIELDS)}) VALUES "
+                        "(:docket, :lang, :text, :model, :prompt_version, "
+                        "COALESCE(:created_at, datetime('now')))",
+                        row,
+                    )
+                    count += 1
+    return count
 
 
 def save_feedback(
