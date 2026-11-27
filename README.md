@@ -120,7 +120,9 @@ Any other command runs in the same container, e.g. `docker compose run --rm api 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),
 `triage.py`, `classify.py` and `summarize.py` (LLM steps), `segment.py` (parts of a ruling), `api.py` (FastAPI), `web/` (frontend), `fetch/`
-(ruling crawler).
+(ruling crawler), `agent/` (legal assistant), `laws.py` (UVG, ATSG and UVV from Fedlex), `eval/` (scorers).
+Architecture, target deployment, use of Apertus and evaluation: `technical_report.md`, with the
+diagram in `docs/architecture.svg`.
 
 Evaluation: `docs/style_guide.md` is the house style for the DE/FR summaries and the relevance
 signals, derived from Suva's examples in `judgements/`. `data/eval/` holds the parsed examples,
