@@ -131,9 +131,6 @@ const I18N = {
     "c.title": "Rechtsgebiet",
     "c.secondary": "Weitere Fragen",
     "c.outcome": "Ausgang",
-    "c.method.llm": "Apertus",
-    "c.method.subject": "aus dem Gegenstand",
-    "c.method.rule": "Regel",
   },
   fr: {
     "nav.rel": "Base de connaissances",
@@ -258,9 +255,6 @@ const I18N = {
     "c.title": "Domaine juridique",
     "c.secondary": "Autres questions",
     "c.outcome": "Issue",
-    "c.method.llm": "Apertus",
-    "c.method.subject": "d'après l'objet",
-    "c.method.rule": "règle",
   },
 };
 
@@ -890,7 +884,6 @@ function classificationCard(c) {
       <dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${c.flags.length ? `<div class="statutes">${c.flags.map((f) => `<span class="chip chip--accent">${esc(taxLabel("flags", f))}</span>`).join("")}</div>` : ""}
       ${c.rationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
-      <div class="metaline"><span>${esc(t(`c.method.${c.method}`))}${c.model ? ` · ${esc(c.model)}` : ""}</span>${c.prompt_version ? `<span>Prompt ${esc(c.prompt_version)}</span>` : ""}</div>
     </div>
   </section>`;
 }
