@@ -1067,7 +1067,7 @@ def verify(llm: LLMClient, case: Case, system: Message, lang: str, text: str) ->
         passages = locate(llm, case, text)
     text = fix_references(case, text, passages)
     text = fix_gender(drop_contradictions(no_objection(text, case), case), case)
-    return opening(roles(text, lang), lang)
+    return opening(roles(text, lang), lang, insured_feminine(case))
 
 
 # The objection decision named as invalidity insurance names it: the Verfügung / décision.
@@ -1092,12 +1092,14 @@ def no_objection(text: str, case: Case) -> str:
     return text
 
 
-def opening(text: str, lang: str) -> str:
+def opening(text: str, lang: str, feminine: bool | None) -> str:
     """A French summary that opens with "Assuré, carreleur ..., s'est blessé" has no subject,
     and one with "Assurée, jardinière, qui s'est blessée ..." no main verb (8C_686/2025): the
-    article goes in, the relative pronoun out."""
+    article goes in, the relative pronoun out. An opening anonymised name ("A.________,
+    coffreur, s'est blessé", 8C_419/2025) becomes the role."""
     if lang != "fr":
         return text
+    text = re.sub(r"^[A-Z]\._+,", "Une assurée," if feminine else "Un assuré,", text)
     text = re.sub(r"^Assuré(e?),", lambda m: "Une assurée," if m[1] else "Un assuré,", text)
     return re.sub(r"^(Une? assurée?, [^,.]+), qui ", r"\1, ", text)
 
