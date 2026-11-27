@@ -86,6 +86,14 @@ def test_judge_prompt_and_parsing():
         )
     with pytest.raises(ValueError):
         score_summaries.parse_judgement('["not", "an", "object"]')
+    unescaped = (
+        '{"legal_accuracy": 2, "coverage": 3, "style": 2, "terminology": 4, '
+        '"comment": "uses first person ("Das Bundesgericht schützt")"}'
+    )
+    assert score_summaries.parse_judgement(unescaped)["style"] == 2
+    assert "schützt" in score_summaries.parse_judgement(unescaped)["comment"]
+    with pytest.raises(KeyError):
+        score_summaries.parse_judgement('{"legal_accuracy": 2, "comment": "a "b" c"}')
 
 
 class FakeJudge:

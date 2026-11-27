@@ -13,6 +13,9 @@ triage:
 classify:
 	uv run suva classify
 
+summarize:
+	uv run suva summarize-relevant
+
 run:
 	uv run suva serve
 
@@ -23,4 +26,4 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-.PHONY: install load triage classify run test lint
+.PHONY: install load triage classify summarize run test lint
