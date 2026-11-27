@@ -8,24 +8,22 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar__inner">
-      <a class="brand" href="#/">
-        <img class="brand__logo" src="suva-logo.svg" alt="Suva" width="89" height="35">
-        <span class="brand__name">BGer-Monitor</span>
-      </a>
-      <nav class="topbar__nav">
-        <span class="pillnav">
-          <a href="#/" data-i18n="nav.rel">Wissensbasis</a>
-          <a href="#/all" data-i18n="nav.all">Alle Urteile</a>
-        </span>
-        <div class="langswitch" role="group" aria-label="Sprache / Langue">
-          <button type="button" data-lang="de">DE</button>
-          <button type="button" data-lang="fr">FR</button>
-        </div>
-      </nav>
+  <aside class="sidenav" aria-label="Navigation">
+    <a class="brand" href="#/">
+      <img class="brand__logo" src="suva-logo.svg" alt="Suva" width="89" height="35">
+      <span class="brand__name">BGer-Monitor</span>
+    </a>
+    <nav class="sidenav__nav">
+      <a class="navlink" href="#/" data-nav="kb"><span data-i18n="nav.rel">Wissensbasis</span><span class="navlink__n" id="kbCount"></span></a>
+      <ul class="navsub" id="navKb"></ul>
+      <a class="navlink" href="#/all" data-nav="all"><span data-i18n="nav.all">Alle Urteile</span></a>
+      <a class="navlink" href="#/law" data-nav="law"><span data-i18n="nav.law">Gesetze</span></a>
+    </nav>
+    <div class="langswitch" role="group" aria-label="Sprache / Langue">
+      <button type="button" data-lang="de">DE</button>
+      <button type="button" data-lang="fr">FR</button>
     </div>
-  </header>
+  </aside>
 
   <main id="app" class="page" tabindex="-1"></main>
 

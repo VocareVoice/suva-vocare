@@ -3,14 +3,19 @@
 // lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js.
 
 import { initAgent, paintAgent } from "./agent.js";
-import { ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
-import { renderRelevant } from "./relevant.js";
+import { branchLaw, buildRegister, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
+import { renderLaw } from "./law.js";
+import { loadKnowledgeBase, renderRelevant } from "./relevant.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
   de: {
     "nav.rel": "Wissensbasis",
     "nav.all": "Alle Urteile",
+    "nav.law": "Gesetze",
+    "law.inforce": (d) => `Stand ${d}`,
+    "law.filter": "Artikel oder Stichwort, z. B. 6 oder Heilbehandlung",
+    "law.none": "Kein Artikel gefunden.",
     "rel.title": "Wissensbasis",
     "rel.register": "Register",
     "rel.all": "Alle Rechtsfragen",
@@ -20,11 +25,29 @@ const I18N = {
     "agent.tab": "Agent",
     "agent.title": "Agent",
     "agent.close": "Agent schliessen",
-    "agent.intro": "Hier können Sie bald mit einem Agenten über die Rechtsprechung sprechen, z. B. «Welche Urteile 2026 betreffen die adäquate Kausalität bei Schleudertrauma?».",
-    "agent.ph": "Frage an den Agenten …",
+    "agent.intro": "Schildern Sie einen Fall oder stellen Sie eine Frage. Ich suche die einschlägigen UVG-Artikel und Bundesgerichtsurteile aus der Wissensbasis und verlinke sie. Auf Wunsch schlage ich auch eine überarbeitete Zusammenfassung eines Urteils vor.",
+    "agent.ph": "Fall schildern oder Frage stellen …",
     "agent.send": "Senden",
-    "agent.soon": "Der Agent ist noch nicht angebunden. Ihre Frage wurde nicht übermittelt.",
+    "agent.new": "Neuer Chat",
+    "agent.new.title": "Diesen Chat löschen und neu beginnen",
+    "agent.thinking": "Der Agent recherchiert …",
+    "agent.busy": "Der Agent beantwortet noch die vorige Nachricht.",
+    "agent.error": (e) => `Fehler: ${e}`,
     "agent.context": (d) => `Kontext: ${d}`,
+    "agent.step.read_uvg_article": (a) => `Art. ${a.art ?? ""} UVG gelesen`,
+    "agent.step.read_article": (a) => `Art. ${a.art ?? ""} ${({ LAA: "UVG", LPGA: "ATSG", OLAA: "UVV" })[(a.law || "UVG").toUpperCase()] || (a.law || "UVG").toUpperCase()} gelesen`,
+    "agent.step.list_rulings": (a) => a.category ? `Wissensbasis durchsucht (Kategorie ${a.category})` : a.query ? `Wissensbasis durchsucht: «${a.query}»` : "Wissensbasis durchgesehen",
+    "agent.step.search_rulings": (a) => `Volltextsuche: «${a.query ?? ""}»`,
+    "agent.step.read_ruling": (a) => `Urteil ${a.docket ?? ""} gelesen${a.offset ? " (Fortsetzung)" : ""}`,
+    "agent.step.propose_summary": (a) => `Zusammenfassung ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) entworfen`,
+    "agent.step.other": (name) => `Werkzeug ${name}`,
+    "agent.prop.title": (d, l) => `Vorschlag: neue Zusammenfassung ${l} für`,
+    "agent.prop.apply": "Übernehmen",
+    "agent.prop.discard": "Verwerfen",
+    "agent.prop.applied": "Übernommen – die bisherige Zusammenfassung wurde ersetzt.",
+    "agent.prop.discarded": "Verworfen.",
+    "agent.prop.current": "Bisherige Zusammenfassung",
+    "agent.prop.none": "Noch keine Zusammenfassung.",
     "kb.empty": "Keine Urteile in der Wissensbasis",
     "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
     "brand.sub": "Rechtsprechung Unfallversicherung",
@@ -129,6 +152,10 @@ const I18N = {
   fr: {
     "nav.rel": "Base de connaissances",
     "nav.all": "Tous les arrêts",
+    "nav.law": "Lois",
+    "law.inforce": (d) => `État le ${d}`,
+    "law.filter": "Article ou mot-clé, p. ex. 6 ou traitement",
+    "law.none": "Aucun article trouvé.",
     "rel.title": "Base de connaissances",
     "rel.register": "Registre",
     "rel.all": "Toutes les questions",
@@ -138,11 +165,29 @@ const I18N = {
     "agent.tab": "Agent",
     "agent.title": "Agent",
     "agent.close": "Fermer l'agent",
-    "agent.intro": "Vous pourrez bientôt discuter ici de la jurisprudence avec un agent, p. ex. « Quels arrêts de 2026 portent sur la causalité adéquate en cas de coup du lapin ? ».",
-    "agent.ph": "Question à l'agent …",
+    "agent.intro": "Décrivez un cas ou posez une question. Je cherche les articles pertinents de la LAA et les arrêts du Tribunal fédéral de la base de connaissances, avec des liens. Sur demande, je propose aussi un résumé révisé d'un arrêt.",
+    "agent.ph": "Décrire un cas ou poser une question …",
     "agent.send": "Envoyer",
-    "agent.soon": "L'agent n'est pas encore connecté. Votre question n'a pas été transmise.",
+    "agent.new": "Nouveau chat",
+    "agent.new.title": "Supprimer ce chat et recommencer",
+    "agent.thinking": "L'agent fait ses recherches …",
+    "agent.busy": "L'agent répond encore au message précédent.",
+    "agent.error": (e) => `Erreur : ${e}`,
     "agent.context": (d) => `Contexte : ${d}`,
+    "agent.step.read_uvg_article": (a) => `Art. ${a.art ?? ""} LAA lu`,
+    "agent.step.read_article": (a) => `Art. ${a.art ?? ""} ${({ UVG: "LAA", ATSG: "LPGA", UVV: "OLAA" })[(a.law || "UVG").toUpperCase()] || (a.law || "UVG").toUpperCase()} lu`,
+    "agent.step.list_rulings": (a) => a.category ? `Base de connaissances parcourue (catégorie ${a.category})` : a.query ? `Base de connaissances : « ${a.query} »` : "Base de connaissances parcourue",
+    "agent.step.search_rulings": (a) => `Recherche plein texte : « ${a.query ?? ""} »`,
+    "agent.step.read_ruling": (a) => `Arrêt ${a.docket ?? ""} lu${a.offset ? " (suite)" : ""}`,
+    "agent.step.propose_summary": (a) => `Résumé ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) rédigé`,
+    "agent.step.other": (name) => `Outil ${name}`,
+    "agent.prop.title": (d, l) => `Proposition : nouveau résumé ${l} pour`,
+    "agent.prop.apply": "Appliquer",
+    "agent.prop.discard": "Rejeter",
+    "agent.prop.applied": "Appliqué – l'ancien résumé a été remplacé.",
+    "agent.prop.discarded": "Rejeté.",
+    "agent.prop.current": "Résumé actuel",
+    "agent.prop.none": "Pas encore de résumé.",
     "kb.empty": "Aucun arrêt dans la base de connaissances",
     "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
     "brand.sub": "Jurisprudence assurance-accidents",
@@ -503,17 +548,53 @@ function listHash() {
   return "#/all" + (s ? "?" + s : "");
 }
 
+// ---------------------------------------------------------------- side navigation
+// Knowledge base with its insurance branches (no categories), all rulings, the law. On a ruling
+// page the section it was opened from stays marked.
+async function paintNav() {
+  const ul = $("#navKb");
+  if (!ul.children.length) ul.innerHTML = '<li><div class="skel"></div></li><li><div class="skel" style="width:70%"></div></li>';
+  let items;
+  try {
+    [items] = await Promise.all([loadKnowledgeBase(), ensureTaxonomy()]);
+  } catch {
+    ul.innerHTML = "";
+    return;
+  }
+  $("#kbCount").textContent = items.length || "";
+  ul.innerHTML = buildRegister(items).map((b) => `<li data-branch="${esc(b.branch)}">
+    <a href="#/?branch=${encodeURIComponent(b.branch)}" data-navbranch="${esc(b.branch)}" title="${esc(taxLabel("branches", b.branch))}">
+      <span class="navsub__swatch" aria-hidden="true"></span>
+      <span class="navsub__name">${esc(taxLabel("branches", b.branch, true))}${branchLaw(b.branch) ? `<span class="navsub__law">${esc(branchLaw(b.branch))}</span>` : ""}</span>
+      <span class="navlink__n">${b.count}</span></a></li>`).join("");
+  markNav();
+}
+
+function markNav() {
+  const { path, params } = readHash();
+  const onDetail = path.startsWith("/r/");
+  const [refPath, refQuery = ""] = (onDetail ? state.lastListHash.slice(1) : `${path}?${params}`).split("?");
+  const section = refPath.startsWith("/all") ? "all" : refPath.startsWith("/law") ? "law" : "kb";
+  const branch = section === "kb" ? new URLSearchParams(refQuery).get("branch") || "" : "";
+  $$("[data-nav]").forEach((a) => {
+    const on = a.dataset.nav === section && !(section === "kb" && branch) && !onDetail;
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  $$("[data-navbranch]").forEach((a) => {
+    if (a.dataset.navbranch === branch) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+  });
+}
+
 async function route() {
   const { path, params } = readHash();
   const m = /^\/r\/(.+)$/.exec(path);
   window.scrollTo(0, 0);
-  const section = path.startsWith("/all") ? "#/all" : m ? "" : "#/";
-  $$(".pillnav a").forEach((a) => {
-    if (a.getAttribute("href") === section) a.setAttribute("aria-current", "page");
-    else a.removeAttribute("aria-current");
-  });
+  markNav();
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
+  } else if (path.startsWith("/law")) {
+    state.lastListHash = location.hash;
+    await renderLaw(path.split("/")[2] || "uvg", params, resetListeners());
   } else if (!path.startsWith("/all")) {
     if (path !== "/" && path !== "") { location.replace("#/"); return; } // old #/c/<topic> links
     await renderRelevant(params, resetListeners());
@@ -1080,6 +1161,7 @@ $$(".langswitch button").forEach((b) => b.addEventListener("click", () => {
   uiLang = b.dataset.lang;
   localStorage.setItem("uiLang", uiLang);
   applyLang();
+  paintNav();
   route();
 }));
 
@@ -1091,12 +1173,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && location.hash.startsWith("#/r/") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) location.hash = state.lastListHash;
 });
 
-// Sticky table headers sit right below the sticky top bar, whatever its rendered height.
-const syncTopbar = () => document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
-new ResizeObserver(syncTopbar).observe($(".topbar"));
-syncTopbar();
-
 window.addEventListener("hashchange", route);
 initAgent();
 applyLang();
+paintNav();
 route();
