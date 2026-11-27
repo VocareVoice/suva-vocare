@@ -109,7 +109,7 @@ function headHtml(f, n) {
 // ---------------------------------------------------------------- view
 export async function renderRelevant(params, opts) {
   const f = readParams(params);
-  document.title = `${t("rel.title")} – BGer-Monitor`;
+  document.title = `${t("rel.title")} – Praecedens`;
   state.lastListHash = toHash(f);
   const app = $("#app");
   app.innerHTML = `

@@ -60,7 +60,7 @@ async function run(button, method, path, body) {
 
 export async function renderKnowledge(opts) {
   const app = $("#app");
-  document.title = `${t("nav.agent")} – BGer-Monitor`;
+  document.title = `${t("nav.agent")} – Praecedens`;
   saved = null;
   app.innerHTML = `<header class="pagehead">
       <h1>${esc(t("nav.agent"))}</h1>

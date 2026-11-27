@@ -95,7 +95,7 @@ const switcher = (list, code) => `<span class="seg" role="group" aria-label="${e
 
 export async function renderLaw(code, params, opts) {
   const app = $("#app");
-  document.title = `${t("nav.law")} – BGer-Monitor`;
+  document.title = `${t("nav.law")} – Praecedens`;
   app.innerHTML = `<header class="lawhead"><div class="skel" style="width:40%;height:28px"></div></header>
     <div class="card card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(8)}</div>`;
   let data, list;
@@ -105,7 +105,7 @@ export async function renderLaw(code, params, opts) {
     app.innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
     return;
   }
-  document.title = `${data.law} – BGer-Monitor`;
+  document.title = `${data.law} – Praecedens`;
   app.innerHTML = `
     <header class="lawhead">
       ${switcher(list, data.code)}

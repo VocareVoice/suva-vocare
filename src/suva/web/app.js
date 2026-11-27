@@ -1,4 +1,4 @@
-// BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
+// Praecedens UI — vanilla ES module, no build step, no external dependencies.
 // Talks to the FastAPI JSON API in src/suva/api.py. The root view (relevant rulings by category)
 // lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js,
 // the agent's knowledge page in knowledge.js.
@@ -995,7 +995,7 @@ function resetListeners() {
 }
 
 async function renderList() {
-  document.title = `${t("list.title")} – BGer-Monitor`;
+  document.title = `${t("list.title")} – Praecedens`;
   const opts = resetListeners();
   app.innerHTML = listShell();
   $("#tableWrap").innerHTML = `<div class="skelblock">${'<div class="skel"></div>'.repeat(8)}</div>`;
@@ -1491,7 +1491,7 @@ async function renderDetail(docket, params) {
 const fromAllRulings = () => /^#\/(all|adjust)/.test(state.lastListHash);
 
 function paintDetail(r, terms) {
-  document.title = `${r.docket} – BGer-Monitor`;
+  document.title = `${r.docket} – Praecedens`;
   app.innerHTML = `
     <header class="dhead">
       <div class="dhead__id">
