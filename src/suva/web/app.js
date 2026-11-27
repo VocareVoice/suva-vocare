@@ -1,13 +1,56 @@
 // BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
-// Talks to the FastAPI JSON API in src/suva/api.py.
+// Talks to the FastAPI JSON API in src/suva/api.py. Knowledge-base views live in kb.js.
+
+import { categoriesOf, renderCategory, renderHome } from "./kb.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
   de: {
+    "nav.kb": "Wissensbasis",
+    "nav.all": "Alle Urteile",
+    "kb.title": "Wissensbasis Unfallversicherung",
+    "kb.sub": "Für die Suva relevante Bundesgerichtsurteile, geordnet nach Rechtsfrage",
+    "kb.f.corpus": "Publizierte Urteile",
+    "kb.f.corpus.sub": "bger.ch, gewählter Zeitraum",
+    "kb.f.relevant": "Relevant für die Suva",
+    "kb.f.cats": "Rechtsfragen",
+    "kb.f.cats.sub": (n) => `${n} relevante Urteile eingeordnet`,
+    "kb.f.sum": "Zusammengefasst DE · FR",
+    "kb.search": "In der Wissensbasis filtern – Rechtsfrage, Urteil oder Stichwort",
+    "kb.view.map": "Themenkarte",
+    "kb.view.tiles": "Übersicht",
+    "kb.map.aria": "Themenkarte: Rechtsfragen mit den zugeordneten Urteilen",
+    "kb.n": (n) => `${n} ${n === 1 ? "Urteil" : "Urteile"}`,
+    "kb.avg": (n) => `Durchschnittliche Relevanz ${n}`,
+    "kb.more": (n) => `+ ${n} weitere`,
+    "kb.lg.high": "Hohe Relevanz",
+    "kb.lg.mid": "Mittlere Relevanz",
+    "kb.lg.open": "Noch ohne Zusammenfassung",
+    "kb.lg.hint": "Punkt = Urteil · Kreis = Rechtsfrage · Klick öffnet",
+    "kb.tip.sum": "Zusammenfassung DE · FR vorhanden",
+    "kb.tip.nosum": "Noch keine Zusammenfassung",
+    "kb.uncat": "Ohne Zuordnung",
+    "kb.empty": "Keine Urteile in der Wissensbasis",
+    "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
+    "kb.cat.sub": (n) => `${n} für die Suva relevante ${n === 1 ? "Urteil" : "Urteile"} zu dieser Rechtsfrage`,
+    "kb.sort.score": "Nach Relevanz",
+    "kb.sort.date": "Neueste zuerst",
+    "kb.related": "Verwandte Rechtsfragen",
+    "kb.nosum": "Noch keine Zusammenfassung – im Urteil erstellen.",
+    "kb.open": "Öffnen",
+    "d.cats": "Rechtsfragen",
+    "area.uv": "Unfallversicherung",
+    "area.iv": "Invalidenversicherung",
+    "area.ahv": "Alters- und Hinterlassenenversicherung",
+    "area.el": "Ergänzungsleistungen",
+    "area.bvg": "Berufliche Vorsorge",
+    "area.kv": "Krankenversicherung",
+    "area.alv": "Arbeitslosenversicherung",
+    "area.sv": "Sozialversicherung (allgemein)",
     "brand.sub": "Rechtsprechung Unfallversicherung",
     "nav.rulings": "Urteile",
     "list.title": "Bundesgerichtsurteile",
-    "list.sub": "Relevanzbewertung und Zusammenfassungen für die Unfallversicherung",
+    "list.sub": "Alle publizierten Urteile mit Relevanzbewertung für die Suva",
     "stat.total": "Urteile im Zeitraum",
     "stat.relevant": "Als relevant bewertet",
     "stat.summaries": "Relevant, mit Zusammenfassung",
@@ -46,7 +89,7 @@ const I18N = {
     "empty.filtered": "Passen Sie Suche oder Filter an.",
     "empty.db": "Die Datenbank ist leer. Laden Sie Urteile mit",
     "err.load": "Daten konnten nicht geladen werden",
-    "back": "Alle Urteile",
+    "back": "Zurück",
     "d.original": "Original auf bger.ch",
     "d.copy": "Kopieren",
     "d.copyAll": "DE + FR kopieren",
@@ -84,21 +127,6 @@ const I18N = {
     "r.hint": "Score 0–100 für die Bedeutung für die Unfallversicherung",
     "r.none": "Dieses Urteil wurde noch nicht bewertet.",
     "r.reason": "Begründung",
-    "fb.title": "Feedback",
-    "fb.q": "Ist diese Einschätzung korrekt?",
-    "fb.agree": "Zutreffend",
-    "fb.disagree": "Nicht zutreffend",
-    "fb.is": "Das Urteil ist",
-    "fb.verdict.rel": "relevant",
-    "fb.verdict.not": "nicht relevant",
-    "fb.score": "Korrigierter Score (optional)",
-    "fb.comment": "Kommentar (optional)",
-    "fb.comment.ph": "Warum? Diese Rückmeldung fliesst in die künftige Bewertung ein.",
-    "fb.send": "Feedback senden",
-    "fb.cancel": "Abbrechen",
-    "fb.thanks": "Danke – Feedback gespeichert",
-    "fb.history": "Bisheriges Feedback",
-    "fb.err": "Feedback konnte nicht gespeichert werden",
     "st.title": "Zitierte Normen",
     "st.none": "Keine Normen erkannt.",
     "m.title": "Angaben",
@@ -108,7 +136,6 @@ const I18N = {
     "m.division": "Abteilung",
     "m.language": "Sprache",
     "m.source": "Quelle",
-    "m.model": "Modell",
     "copied": "In die Zwischenablage kopiert",
     "lang.de": "Deutsch",
     "lang.fr": "Französisch",
@@ -116,10 +143,51 @@ const I18N = {
     "notfound": "Urteil nicht gefunden",
   },
   fr: {
+    "nav.kb": "Base de connaissances",
+    "nav.all": "Tous les arrêts",
+    "kb.title": "Base de connaissances assurance-accidents",
+    "kb.sub": "Arrêts du Tribunal fédéral pertinents pour la Suva, classés par question juridique",
+    "kb.f.corpus": "Arrêts publiés",
+    "kb.f.corpus.sub": "bger.ch, période choisie",
+    "kb.f.relevant": "Pertinents pour la Suva",
+    "kb.f.cats": "Questions juridiques",
+    "kb.f.cats.sub": (n) => `${n} arrêts pertinents classés`,
+    "kb.f.sum": "Résumés DE · FR",
+    "kb.search": "Filtrer la base – question juridique, arrêt ou mot-clé",
+    "kb.view.map": "Carte thématique",
+    "kb.view.tiles": "Vue d'ensemble",
+    "kb.map.aria": "Carte thématique : questions juridiques et arrêts associés",
+    "kb.n": (n) => `${n} ${n === 1 ? "arrêt" : "arrêts"}`,
+    "kb.avg": (n) => `Pertinence moyenne ${n}`,
+    "kb.more": (n) => `+ ${n} autres`,
+    "kb.lg.high": "Pertinence élevée",
+    "kb.lg.mid": "Pertinence moyenne",
+    "kb.lg.open": "Pas encore de résumé",
+    "kb.lg.hint": "Point = arrêt · cercle = question juridique · clic pour ouvrir",
+    "kb.tip.sum": "Résumé DE · FR disponible",
+    "kb.tip.nosum": "Pas encore de résumé",
+    "kb.uncat": "Non classé",
+    "kb.empty": "Aucun arrêt dans la base de connaissances",
+    "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
+    "kb.cat.sub": (n) => `${n} ${n === 1 ? "arrêt pertinent" : "arrêts pertinents"} pour la Suva sur cette question`,
+    "kb.sort.score": "Par pertinence",
+    "kb.sort.date": "Plus récents",
+    "kb.related": "Questions apparentées",
+    "kb.nosum": "Pas encore de résumé – à générer dans l'arrêt.",
+    "kb.open": "Ouvrir",
+    "d.cats": "Questions juridiques",
+    "area.uv": "Assurance-accidents",
+    "area.iv": "Assurance-invalidité",
+    "area.ahv": "Assurance-vieillesse et survivants",
+    "area.el": "Prestations complémentaires",
+    "area.bvg": "Prévoyance professionnelle",
+    "area.kv": "Assurance-maladie",
+    "area.alv": "Assurance-chômage",
+    "area.sv": "Assurances sociales (général)",
     "brand.sub": "Jurisprudence assurance-accidents",
     "nav.rulings": "Arrêts",
     "list.title": "Arrêts du Tribunal fédéral",
-    "list.sub": "Évaluation de la pertinence et résumés pour l'assurance-accidents",
+    "list.sub": "Tous les arrêts publiés avec leur évaluation de pertinence pour la Suva",
     "stat.total": "Arrêts de la période",
     "stat.relevant": "Jugés pertinents",
     "stat.summaries": "Pertinents, avec résumé",
@@ -158,7 +226,7 @@ const I18N = {
     "empty.filtered": "Modifiez la recherche ou les filtres.",
     "empty.db": "La base de données est vide. Chargez des arrêts avec",
     "err.load": "Impossible de charger les données",
-    "back": "Tous les arrêts",
+    "back": "Retour",
     "d.original": "Original sur bger.ch",
     "d.copy": "Copier",
     "d.copyAll": "Copier DE + FR",
@@ -196,21 +264,6 @@ const I18N = {
     "r.hint": "Score 0–100 pour l'importance en assurance-accidents",
     "r.none": "Cet arrêt n'a pas encore été évalué.",
     "r.reason": "Motivation",
-    "fb.title": "Feedback",
-    "fb.q": "Cette évaluation est-elle correcte ?",
-    "fb.agree": "Correcte",
-    "fb.disagree": "Incorrecte",
-    "fb.is": "L'arrêt est",
-    "fb.verdict.rel": "pertinent",
-    "fb.verdict.not": "non pertinent",
-    "fb.score": "Score corrigé (facultatif)",
-    "fb.comment": "Commentaire (facultatif)",
-    "fb.comment.ph": "Pourquoi ? Ce retour sera pris en compte pour les évaluations futures.",
-    "fb.send": "Envoyer",
-    "fb.cancel": "Annuler",
-    "fb.thanks": "Merci – feedback enregistré",
-    "fb.history": "Feedback précédent",
-    "fb.err": "Le feedback n'a pas pu être enregistré",
     "st.title": "Normes citées",
     "st.none": "Aucune norme détectée.",
     "m.title": "Informations",
@@ -220,7 +273,6 @@ const I18N = {
     "m.division": "Cour",
     "m.language": "Langue",
     "m.source": "Source",
-    "m.model": "Modèle",
     "copied": "Copié dans le presse-papiers",
     "lang.de": "Allemand",
     "lang.fr": "Français",
@@ -229,18 +281,18 @@ const I18N = {
   },
 };
 
-let uiLang = localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
-function t(key, ...args) {
+export let uiLang = localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
+export function t(key, ...args) {
   const v = I18N[uiLang][key] ?? I18N.de[key] ?? key;
   return typeof v === "function" ? v(...args) : v;
 }
 
 // ---------------------------------------------------------------- helpers
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+export const $ = (sel, root = document) => root.querySelector(sel);
+export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const app = $("#app");
 
-function esc(s) {
+export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -251,19 +303,13 @@ function parseDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
-function fmtDate(iso, style = "short") {
+export function fmtDate(iso, style = "short") {
   const d = parseDate(iso);
   if (!d) return "—";
   const loc = uiLang === "fr" ? "fr-CH" : "de-CH";
   return style === "long"
     ? d.toLocaleDateString(loc, { day: "numeric", month: "long", year: "numeric" })
     : d.toLocaleDateString(loc, { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-function fmtDateTime(s) {
-  if (!s) return "";
-  const d = new Date(s.replace(" ", "T") + (/[zZ+]/.test(s) ? "" : "Z"));
-  if (isNaN(d)) return s;
-  return d.toLocaleString(uiLang === "fr" ? "fr-CH" : "de-CH", { dateStyle: "medium", timeStyle: "short" });
 }
 // Suva's title convention follows the language of the ruling:
 //   de "BGer-Urteil 8C_313/2024 vom 13. November 2025"
@@ -294,11 +340,11 @@ function rulingDivision(r) {
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
-function band(score) {
+export function band(score) {
   if (score == null) return "none";
   return score >= 70 ? "high" : score >= 40 ? "mid" : "low";
 }
-function scoreBadge(score) {
+export function scoreBadge(score) {
   const b = band(score);
   return `<span class="score score--${b}" title="${score == null ? esc(t("untriaged")) : `Score ${score}/100`}">
     <span class="score__num">${score == null ? "–" : score}</span>
@@ -313,7 +359,7 @@ function scoreRing(score) {
   </div>`;
 }
 
-const ICONS = {
+export const ICONS = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
@@ -371,11 +417,10 @@ async function api(path, opts = {}) {
 }
 // Dockets contain a slash (8C_129/2025); the API accepts it as a path segment.
 const docketPath = (docket) => docket.split("/").map(encodeURIComponent).join("/");
-const API = {
+export const API = {
   list: (params) => api(`/api/rulings?${new URLSearchParams(params)}`),
   detail: (docket) => api(`/api/rulings/${docketPath(docket)}`),
   summarize: (docket) => api(`/api/rulings/${docketPath(docket)}/summarize`, { method: "POST" }),
-  feedback: (docket, body) => api(`/api/rulings/${docketPath(docket)}/feedback`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 // ---------------------------------------------------------------- statutes
@@ -412,7 +457,7 @@ function extractStatutes(...texts) {
 }
 
 // Escape text, then mark statute citations and search terms.
-function highlight(text, terms = []) {
+export function highlight(text, terms = []) {
   let html = esc(text);
   html = html.replace(new RegExp(CITE_RE.source.replace("des\\s+|de\\s+la\\s+|du\\s+|de\\s+l')", "des\\s+|de\\s+la\\s+|du\\s+|de\\s+l&#39;)"), "g"),
     (m, art, _sub, law) => `<span class="cite" data-cite="${esc((LAW_PAIRS[law] || law) + " " + art.replace(/\s+/g, ""))}">${m}</span>`);
@@ -447,7 +492,7 @@ function paragraphs(text, terms) {
 }
 
 // ---------------------------------------------------------------- router
-const state = {
+export const state = {
   // list filters (mirrored in the URL hash)
   q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
   sort: "score", dir: "desc",
@@ -456,7 +501,7 @@ const state = {
   lastListHash: "#/",
 };
 
-const PERIODS = [
+export const PERIODS = [
   { id: "all", label: () => t("f.period.all"), from: "", to: "" },
   { id: "2026q2", label: () => "Q2 2026", from: "2026-04-01", to: "2026-06-30" },
   { id: "2026q1", label: () => "Q1 2026", from: "2026-01-01", to: "2026-03-31" },
@@ -476,15 +521,23 @@ function listHash() {
   if (state.min) p.set("min", state.min);
   if (state.sort !== "score" || state.dir !== "desc") { p.set("sort", state.sort); p.set("dir", state.dir); }
   const s = p.toString();
-  return "#/" + (s ? "?" + s : "");
+  return "#/all" + (s ? "?" + s : "");
 }
 
 async function route() {
   const { path, params } = readHash();
   const m = /^\/r\/(.+)$/.exec(path);
+  const cat = /^\/c\/(.+)$/.exec(path);
   window.scrollTo(0, 0);
+  const section = path.startsWith("/all") ? "#/all" : m ? "" : "#/";
+  $$(".topbar__nav > a").forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === section));
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
+  } else if (cat) {
+    resetListeners();
+    await renderCategory(decodeURIComponent(cat[1]), params);
+  } else if (path === "/" || path === "") {
+    await renderHome(params, resetListeners());
   } else {
     for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
     state.min = +params.get("min") || 0;
@@ -754,7 +807,7 @@ function suvaExport(r) {
   return `<!DOCTYPE html><html lang="${esc(r.language || "de")}"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body><hr>` +
     `<h1>${esc(title)}</h1><h2>Text DE</h2>${p(de)}<h2>Text FR</h2>${p(fr)}` +
     `<h2>Link zum Urteil</h2><p><a href="${esc(r.url || "")}">${esc(r.docket)} ${esc(fmtDate(r.decision_date))} - Schweizerisches Bundesgericht</a></p>` +
-    `<h2>Autor</h2><p>${esc(t("d.ai"))} (${esc(r.summaries?.de?.model || r.summaries?.fr?.model || "Apertus")})</p></body></html>`;
+    `<h2>Autor</h2><p>${esc(t("d.ai"))}</p></body></html>`;
 }
 function plainExport(r) {
   return `${suvaTitle(r)}\n\nText DE\n${r.summaries?.de?.text || ""}\n\nText FR\n${r.summaries?.fr?.text || ""}\n\nLink zum Urteil\n${r.url || ""}`;
@@ -785,8 +838,7 @@ function summaryBlock(r) {
       ${sum
         ? `<div class="summary__text">${sum.text.split(/\n\s*\n/).map((p) => `<p>${highlight(p.trim())}</p>`).join("")}</div>
            <div class="summary__meta"><span class="chip chip--accent">${ICONS.spark.replace("<svg", '<svg width="13" height="13"')}${esc(t("d.ai"))}</span>
-             <span>${esc(sum.model || "")}${sum.prompt_version ? ` · ${esc(sum.prompt_version)}` : ""}</span>
-             <span>· ${esc(fmtDateTime(sum.created_at))}</span><span>· ${esc(t("d.words", wordCount(sum.text)))}</span></div>`
+             <span>${esc(t("d.words", wordCount(sum.text)))}</span></div>`
         : `<p class="summary--missing">${esc(t("d.missing.lang"))}</p>`}
     </article>`;
   };
@@ -832,42 +884,6 @@ function relevanceCard(r) {
         <h3 class="card__title" style="margin-bottom:6px">${esc(t("r.reason"))}</h3>
         <p class="reasoning">${highlight(tr.reasoning || "")}</p>
       </div>
-      <div class="metaline">${tr.model ? `<span>${esc(t("m.model"))}: ${esc(tr.model)}</span>` : ""}${tr.prompt_version ? `<span>Prompt ${esc(tr.prompt_version)}</span>` : ""}${tr.created_at ? `<span>${esc(fmtDateTime(tr.created_at))}</span>` : ""}</div>
-    </div>
-  </section>`;
-}
-
-function feedbackCard(r) {
-  const hist = r.feedback || [];
-  return `<section class="card feedback" id="feedbackCard">
-    <div class="card__head"><h2 class="card__title">${esc(t("fb.title"))}</h2></div>
-    <div class="card__body">
-      <p class="feedback__q">${esc(t("fb.q"))}</p>
-      <div class="feedback__btns">
-        <button type="button" class="btn" data-fb="agree">${ICONS.up}${esc(t("fb.agree"))}</button>
-        <button type="button" class="btn" data-fb="disagree">${ICONS.downv}${esc(t("fb.disagree"))}</button>
-      </div>
-      <form class="feedback__form" id="fbForm" hidden>
-        <label>${esc(t("fb.is"))}
-          <span class="seg" role="group">
-            <button type="button" data-verdict="relevant">${esc(t("fb.verdict.rel"))}</button>
-            <button type="button" data-verdict="not_relevant">${esc(t("fb.verdict.not"))}</button>
-          </span>
-        </label>
-        <label>${esc(t("fb.score"))}
-          <span class="range-row"><input type="range" min="0" max="100" step="5" id="fbScore"><output id="fbScoreOut">–</output></span>
-        </label>
-        <label>${esc(t("fb.comment"))}
-          <textarea id="fbComment" placeholder="${esc(t("fb.comment.ph"))}"></textarea>
-        </label>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button type="button" class="btn btn--ghost btn--sm" id="fbCancel">${esc(t("fb.cancel"))}</button>
-          <button type="submit" class="btn btn--primary btn--sm">${esc(t("fb.send"))}</button>
-        </div>
-      </form>
-      ${hist.length ? `<ul class="history"><li class="card__title" style="list-style:none">${esc(t("fb.history"))}</li>${hist.map((f) => `
-        <li><span class="chip ${f.verdict === "relevant" ? "chip--accent" : ""}">${esc(f.verdict === "relevant" ? t("fb.verdict.rel") : t("fb.verdict.not"))}${f.corrected_score != null ? ` · ${f.corrected_score}` : ""}</span>
-          <span class="when">${esc(fmtDateTime(f.created_at))}</span>${f.comment ? `<p>${esc(f.comment)}</p>` : ""}</li>`).join("")}</ul>` : ""}
     </div>
   </section>`;
 }
@@ -949,6 +965,8 @@ function paintDetail(r, terms) {
         </div>
         <h1>${esc(suvaTitle(r))}</h1>
         ${r.title ? `<p class="dhead__title">${esc(r.title)}</p>` : ""}
+        ${tr?.label === "relevant" ? `<div class="related"><span class="muted">${esc(t("d.cats"))}</span>${categoriesOf(r)
+          .map((c) => `<a class="chip chip--accent" href="#/c/${encodeURIComponent(c)}">${esc(c)}</a>`).join("")}</div>` : ""}
       </div>
       <div class="dhead__actions">
         ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
@@ -962,7 +980,6 @@ function paintDetail(r, terms) {
       </div>
       <aside class="daside">
         ${relevanceCard(r)}
-        ${feedbackCard(r)}
         ${statutesCard(statutes)}
         ${metaCard(r)}
       </aside>
@@ -1049,50 +1066,6 @@ function bindDetail(r, terms) {
     target.scrollIntoView({ behavior: "smooth", block: "center" });
     target.classList.remove("is-flash"); void target.offsetWidth; target.classList.add("is-flash");
   }));
-
-  // Feedback
-  const form = $("#fbForm");
-  let verdict = null;
-  const setVerdict = (v) => {
-    verdict = v;
-    $$("[data-verdict]", form).forEach((b) => b.setAttribute("aria-pressed", b.dataset.verdict === v));
-  };
-  const score = $("#fbScore");
-  const scoreOut = $("#fbScoreOut");
-  let scoreTouched = false;
-  score.value = r.triage?.score ?? 50;
-  score.addEventListener("input", () => { scoreTouched = true; scoreOut.textContent = score.value; });
-  $$("[data-verdict]", form).forEach((b) => b.addEventListener("click", () => setVerdict(b.dataset.verdict)));
-  $$("[data-fb]").forEach((b) => b.addEventListener("click", () => {
-    const agree = b.dataset.fb === "agree";
-    $$("[data-fb]").forEach((x) => x.classList.toggle("is-active", x === b));
-    b.classList.toggle("is-neg", !agree);
-    const current = r.triage?.label || "relevant";
-    setVerdict(agree ? current : current === "relevant" ? "not_relevant" : "relevant");
-    form.hidden = false;
-    if (!agree) $("#fbComment").focus();
-  }));
-  on("#fbCancel", () => { form.hidden = true; $$("[data-fb]").forEach((x) => x.classList.remove("is-active", "is-neg")); });
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!verdict) return;
-    const btn = form.querySelector("[type=submit]");
-    btn.disabled = true;
-    try {
-      const updated = await API.feedback(r.docket, {
-        verdict,
-        corrected_score: scoreTouched ? +score.value : null,
-        comment: $("#fbComment").value.trim() || null,
-      });
-      toast(t("fb.thanks"));
-      r.feedback = updated.feedback;
-      $("#feedbackCard").outerHTML = feedbackCard(updated);
-      bindDetail(updated, terms);
-    } catch (err) {
-      btn.disabled = false;
-      toast(`${t("fb.err")}: ${err.message}`);
-    }
-  });
 }
 
 // ---------------------------------------------------------------- boot
@@ -1116,6 +1089,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Escape" && location.hash.startsWith("#/r/") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) location.hash = state.lastListHash;
 });
+
+// Sticky table headers sit right below the sticky top bar, whatever its rendered height.
+const syncTopbar = () => document.documentElement.style.setProperty("--topbar-h", `${$(".topbar").offsetHeight}px`);
+new ResizeObserver(syncTopbar).observe($(".topbar"));
+syncTopbar();
 
 window.addEventListener("hashchange", route);
 applyLang();
