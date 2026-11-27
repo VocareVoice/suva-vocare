@@ -118,7 +118,7 @@ const I18N = {
     "add.partial": (d) => `${d} hinzugefügt, aber nicht vollständig bewertet`,
     "search.ph": "Volltextsuche in Urteilen – z. B. «Kausalzusammenhang», «Art. 6 UVG», 8C_129/2025",
     "f.period": "Zeitraum",
-    "f.period.all": "Alle",
+    "f.period.all": "Alle Zeiträume",
     "f.custom": "Benutzerdefiniert",
     "f.period.eval": "Evaluation",
     "gen.eval": "Dieses Urteil liegt im Evaluationszeitraum (Q4 2025 – Q1 2026). Er diente zum Vergleich mit den Zusammenfassungen der Suva, deshalb wurden hier keine Zusammenfassungen im Voraus erstellt.",
@@ -235,9 +235,9 @@ const I18N = {
     "lang.it": "Italienisch",
     "notfound": "Urteil nicht gefunden",
     "f.branch": "Versicherungszweig",
-    "f.branch.all": "Alle",
+    "f.branch.all": "Alle Versicherungszweige",
     "f.category": "Kategorie",
-    "f.category.all": "Alle",
+    "f.category.all": "Alle Kategorien",
     "c.title": "Rechtsgebiet",
     "c.secondary": "Weitere Fragen",
     "c.outcome": "Ausgang",
@@ -348,7 +348,7 @@ const I18N = {
     "add.partial": (d) => `${d} ajouté, mais pas entièrement évalué`,
     "search.ph": "Recherche plein texte – p. ex. « causalité adéquate », « art. 6 LAA », 8C_129/2025",
     "f.period": "Période",
-    "f.period.all": "Toutes",
+    "f.period.all": "Toutes les périodes",
     "f.custom": "Personnalisée",
     "f.period.eval": "évaluation",
     "gen.eval": "Cet arrêt se situe dans la période d'évaluation (T4 2025 – T1 2026). Elle a servi à la comparaison avec les résumés de la Suva ; aucun résumé n'y a donc été rédigé à l'avance.",
@@ -465,9 +465,9 @@ const I18N = {
     "lang.it": "Italien",
     "notfound": "Arrêt introuvable",
     "f.branch": "Branche d'assurance",
-    "f.branch.all": "Toutes",
+    "f.branch.all": "Toutes les branches",
     "f.category": "Catégorie",
-    "f.category.all": "Toutes",
+    "f.category.all": "Toutes les catégories",
     "c.title": "Domaine juridique",
     "c.secondary": "Autres questions",
     "c.outcome": "Issue",
@@ -872,29 +872,28 @@ function listShell() {
         <input type="search" id="q" value="${esc(state.q)}" placeholder="${esc(t("search.ph"))}" autocomplete="off">
         <kbd>/</kbd>
       </label>
-    </div>
-    <div class="toolbar__row">
-      <span class="field">${esc(t("f.period"))}
-        ${sel("period", PERIODS.map((p) => [p.id, p.label()]), state.period)}
+      <span class="toolbar__actions">
+        <button type="button" class="btn btn--ghost btn--sm advtoggle" id="advToggle" aria-expanded="${advOpen}" aria-controls="advRow">
+          ${esc(t("f.advanced"))}<span class="advtoggle__n" id="advCount"${advN ? "" : " hidden"}>${advN}</span>${ICONS.chevron}
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
       </span>
+    </div>
+    <div class="toolbar__row toolbar__row--main">
+      <label class="field field--grow field--period" title="${esc(t("f.period"))}"><span class="sr-only">${esc(t("f.period"))}</span>
+        ${sel("period", PERIODS.map((p) => [p.id, p.label()]), state.period)}
+      </label>
       <span class="field" id="customRange" ${state.period === "custom" ? "" : "hidden"}>
         <input type="date" data-f="from" value="${esc(state.from)}"> – <input type="date" data-f="to" value="${esc(state.to)}">
       </span>
-      <span class="field">${esc(t("f.label"))}
-        <span class="seg" role="group">
+      <span class="field">
+        <span class="seg" role="group" aria-label="${esc(t("f.label"))}">
           ${[["", t("f.label.all")], ["relevant", t("f.label.rel")], ["not_relevant", t("f.label.not")]]
             .map(([v, l]) => `<button type="button" data-label="${v}" aria-pressed="${state.label === v}">${esc(l)}</button>`).join("")}
         </span>
       </span>
-      <span class="field">${esc(t("f.branch"))} <span id="branchSel"></span></span>
-      <span class="field">${esc(t("f.category"))} <span id="catSel"></span></span>
-      <span class="toolbar__spacer"></span>
-      <span class="toolbar__actions">
-      <button type="button" class="btn btn--ghost btn--sm advtoggle" id="advToggle" aria-expanded="${advOpen}" aria-controls="advRow">
-        ${esc(t("f.advanced"))}<span class="advtoggle__n" id="advCount"${advN ? "" : " hidden"}>${advN}</span>${ICONS.chevron}
-      </button>
-      <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
-      </span>
+      <label class="field field--grow" title="${esc(t("f.branch"))}"><span class="sr-only">${esc(t("f.branch"))}</span><span id="branchSel"></span></label>
+      <label class="field field--grow" title="${esc(t("f.category"))}"><span class="sr-only">${esc(t("f.category"))}</span><span id="catSel"></span></label>
     </div>
     <div class="toolbar__row toolbar__row--adv" id="advRow"${advOpen ? "" : " hidden"}>
       <span class="field">${esc(t("f.minscore"))}
@@ -1509,13 +1508,13 @@ function paintDetail(r, terms) {
         ${originalCard(r, terms)}
       </div>
       <aside class="daside">
+        ${fromAllRulings() ? relevanceCard(r) : ""}
+        ${metaCard(r)}
+        ${classificationCard(r.classification, headlineIsRationale(r))}
         <div class="dactions">
           ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
           <button type="button" class="btn" id="printBtn">${ICONS.print}${esc(t("d.print"))}</button>
         </div>
-        ${fromAllRulings() ? relevanceCard(r) : ""}
-        ${metaCard(r)}
-        ${classificationCard(r.classification, headlineIsRationale(r))}
         ${statutesCard(r.classification?.statutes || [])}
         ${precedentsCard(r.classification?.precedents)}
       </aside>

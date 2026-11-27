@@ -192,7 +192,14 @@ button.chip.chip--static:hover { border-color: var(--rule); color: var(--ink-2);
 }
 .field input[type="range"] { width: 120px; accent-color: var(--blue); }
 /* A select is as wide as its longest option; the category names would stretch the filter row. */
-#branchSel select, #catSel select, #divSel select { max-width: 220px; text-overflow: ellipsis; }
+#divSel select { max-width: 220px; text-overflow: ellipsis; }
+/* Main filters on one line: period, triage, branch, category. The selects share the space left
+   next to the triage buttons and shrink (with an ellipsis) down to 120 px before the row wraps. */
+.toolbar__row--main { gap: 10px; }
+.field--grow { flex: 1 1 0; min-width: 120px; }
+.field--period { flex: 0 1 140px; min-width: 110px; }
+.field--grow > span:not(.sr-only) { display: contents; }
+.field--grow select { width: 100%; min-width: 0; text-overflow: ellipsis; }
 .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: var(--sunk); border: 1px solid var(--rule); }
 .seg button {
   border: 0; background: transparent; padding: 0 13px; height: 32px; border-radius: var(--r-pill);
@@ -381,7 +388,7 @@ table.rulings { width: 100%; border-collapse: separate; border-spacing: 0; font-
 .daside { display: grid; gap: 0; position: sticky; top: calc(var(--topbar-h, 73px) + 16px); max-height: calc(100vh - var(--topbar-h, 73px) - 32px); overflow: auto; }
 .daside > .card { background: transparent; border: 0; border-radius: 0; border-top: 1px solid var(--rule); box-shadow: none; }
 .daside > .card:first-child { border-top: 0; }
-.dactions { display: grid; gap: 8px; padding: 2px 0 16px; }
+.dactions { display: grid; gap: 8px; padding: 0; }
 .dactions .btn { width: 100%; }
 .daside .card__head { padding: 16px 0 6px; border: 0; }
 .daside .card__body { padding: 4px 0 18px; }
