@@ -1,6 +1,6 @@
 # Summary evaluation
 
-How the summary writer `src/suva/summarize.py` (prompt version `v1`, model `apertus-v1-5-70b`)
+How the summary writer `src/suva/summarize.py` (prompt version `v2`, model `apertus-v1-5-70b`)
 works, and how its German and French summaries compare with Suva's human summaries on the
 hold-out of `data/eval/split.json`: 10 rulings (5 German-, 4 French- and 1 Italian-language;
 authors FRT, LC4 and VIL), never shown to the model.
@@ -40,6 +40,10 @@ authors FRT, LC4 and VIL), never shown to the model.
    - figures and dates that occur in the ruling;
    - no anonymised names or initials, and no birth years;
    - no insurer other than Suva named, and Suva only when it is a party;
+   - no sentence in which the Federal Supreme Court decides the appeal otherwise than the
+     operative part (v2: "Das Bundesgericht weist die Beschwerde der Suva ab" in the middle of a
+     summary of an upheld appeal, 8C_254/2025, which the closing-sentence fix did not reach);
+   - no Italian abbreviations (LAINF, OAINF, OAI, INSAI) in summaries of Italian rulings (v2);
    - the target language's statute abbreviations and terms, the glossary's avoid list and the
      citation format.
 

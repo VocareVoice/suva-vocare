@@ -29,7 +29,7 @@ from suva.llm import LLMClient, Message
 # Pinned like classify.MODEL, whatever LLM_NAME says: the thinking variant wrote no better
 # summaries.
 MODEL = "apertus-v1-5-70b"
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 HEADLINE_VERSION = "v2"
 LANGUAGES = ("de", "fr")
 LANGUAGE_NAMES = {"de": "German", "fr": "French", "it": "Italian"}
@@ -161,12 +161,20 @@ _COSTS_WORDS = re.compile(
 )
 # Checked in this order: a partly upheld appeal also contains "upheld" and "dismissed" words.
 OUTCOMES = {
-    "partly upheld": r"teilweise gut|partiellement admis|parzialmente accolto",
-    "inadmissible": r"nicht eingetreten|trat\b[^.]*\bnicht\b[^.]*\bein\b|irrecevable"
+    "partly upheld": r"teilweise gut|partiellement admis|admet partiellement|parzialmente accolto",
+    "inadmissible": r"nicht eingetreten|tr[ia]tt?\b[^.]*\bnicht\b[^.]*\bein\b|irrecevable"
     r"|entré en matière|entre pas en matière|inammissibile",
-    "upheld": r"gutgeheissen|hiess\b[^.]*\bgut\b|\badmis\b|\baccolto",
-    "dismissed": r"abgewiesen|wies\b[^.]*\bab\b|rejeté|respinto",
+    "upheld": r"gutgeheissen|(?:hiess|heisst)\b[^.]*\bgut\b|\badm(?:is|et)\b|\baccolto",
+    "dismissed": r"abgewiesen|(?:wies|weist)\b[^.]*\bab\b|rejet(?:é|te)\b|respinto",
 }
+# A sentence in which the Federal Supreme Court decides the appeal, the Court first ("Das
+# Bundesgericht weist die Beschwerde ... ab"); the closing sentence is left to `fix_outcome`.
+_COURT_DECIDES = re.compile(
+    r"(?:Bundesgericht|Tribunal fédéral)\s+(?:\S+\s+){0,2}?(?:weist|wies|heisst|hiess|tritt|trat"
+    r"|rejette|admet|a rejeté|a admis|a partiellement admis|n'entre|n'est pas entré)\b[^.]*\."
+)
+# Statute and institution abbreviations of Italian rulings, which neither language uses.
+_ITALIAN = re.compile(r"\b(?:LAINF|OAINF|INSAI)\b|\d\w*(?:\s+(?:al|let)\.\s*\w+)*\s+OAI\b")
 _BENCH_TITLES = re.compile(
     r"Bundesrichter\w*|Mmes?\b|MM?\.|les Juges fédéraux|Giudic[ei] federal[ei]|Präsident\w*"
     r"|Présidente?|Presidente|präsidierendes Mitglied|Juges? suppléant\w*|nebenamtlich\w*"
@@ -668,6 +676,16 @@ def form_issues(draft: str, case: Case, lang: str) -> list[str]:
         issues.append(
             "Suva is not a party to this ruling; refer to the insurer by its role "
             "(the accident insurer, the IV office)."
+        )
+    issues += [
+        f'"{sentence}" contradicts the operative part: «{case.operative}»'
+        for sentence in _COURT_DECIDES.findall(draft)
+        if case.result and result(sentence) not in (None, case.result)
+    ]
+    if italian := sorted({m.group().split()[-1] for m in _ITALIAN.finditer(draft)}):
+        issues.append(
+            f"Replace the Italian abbreviations ({', '.join(italian)}) by the "
+            f"{LANGUAGE_NAMES[lang]} ones."
         )
     if insurers := set(_INSURERS.findall(draft)):
         issues.append(
