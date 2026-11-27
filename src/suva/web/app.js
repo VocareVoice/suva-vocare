@@ -305,8 +305,9 @@ function rulingDivision(r) {
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
-// Triage reasoning in the interface language (reasoning_de / reasoning_fr), else the single field.
-export const reasoningOf = (o) => (o && (o[`reasoning_${uiLang}`] || o.reasoning || o.reason)) || "";
+// Triage explanation in the UI language (reasoning_de / reasoning_fr); older results only have
+// the German one or the single `reasoning` field.
+export const reasoningOf = (o) => (o && (o[`reasoning_${uiLang}`] || o.reasoning_de || o.reasoning || o.reason)) || "";
 
 export function band(score) {
   if (score == null) return "none";

@@ -39,7 +39,7 @@ def main() -> None:
     cls = commands.add_parser(
         "classify",
         help="classify every ruling without a result of the current prompt version: Apertus "
-        "for rulings that pass the triage pre-filter, the subject line for the rest",
+        "for rulings of the social-law divisions (8x, 9x), branch 'other' for the rest",
     )
     cls.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
     cls.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
@@ -59,6 +59,17 @@ def main() -> None:
 
     summ = commands.add_parser("summarize", help="summarise one ruling in German and French")
     summ.add_argument("docket")
+
+    summ_all = commands.add_parser(
+        "summarize-relevant",
+        help="summarise every ruling with a triage score of at least --min-score that has no "
+        "summary of the current prompt version, highest score first",
+    )
+    summ_all.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
+    summ_all.add_argument("--limit", type=int, help="summarise only the top N rulings")
+    summ_all.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
+    summ_all.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
+    summ_all.add_argument("--workers", type=int, default=4, help="rulings in parallel")
 
     serve = commands.add_parser("serve", help="run the API and web UI")
     serve.add_argument("--host", default="127.0.0.1")
@@ -94,7 +105,8 @@ def main() -> None:
                 docket,
                 score=result.score,
                 label=result.label,
-                reasoning=result.reasoning,
+                reasoning_de=result.reasoning_de,
+                reasoning_fr=result.reasoning_fr,
                 model=result.model,
                 prompt_version=triage.PROMPT_VERSION,
             )
@@ -107,7 +119,7 @@ def main() -> None:
     elif args.command == "import-triage":
         print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
     elif args.command == "classify":
-        llm = LLMClient(settings)
+        llm = LLMClient(settings, model=classify.MODEL)
         dockets = db.unclassified_dockets(
             conn,
             date_from=args.date_from,
@@ -151,6 +163,34 @@ def main() -> None:
                 prompt_version=summarize.PROMPT_VERSION,
             )
             print(f"--- {lang} ---\n{text}\n")
+    elif args.command == "summarize-relevant":
+        llm = LLMClient(settings)
+        dockets = db.dockets_to_summarize(
+            conn,
+            min_score=args.min_score,
+            prompt_version=summarize.PROMPT_VERSION,
+            date_from=args.date_from,
+            date_to=args.date_to,
+        )[: args.limit]
+        print(f"Summarising {len(dockets)} rulings with {llm.model}")
+        failed = 0
+        for docket, texts in summarize.summarize_batch(conn, dockets, llm, workers=args.workers):
+            if isinstance(texts, Exception):
+                failed += 1
+                print(f"{docket}: failed ({texts!r})")
+                continue
+            for lang, text in texts.items():
+                db.save_summary(
+                    conn,
+                    docket,
+                    lang=lang,
+                    text=text,
+                    model=llm.model,
+                    prompt_version=summarize.PROMPT_VERSION,
+                )
+            print(f"{docket}: {len(texts['de'].split())} / {len(texts['fr'].split())} words")
+        if failed:
+            raise SystemExit(f"{failed} rulings failed; run summarize-relevant again to retry")
     elif args.command == "serve":
         import uvicorn
 

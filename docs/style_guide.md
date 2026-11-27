@@ -407,3 +407,22 @@ uv run python -m suva.eval.score_triage triage.jsonl [--threshold 0.5] [--out re
 ```
 
 `score_summaries` reads rows `{"docket", "lang", "text"}` and reports length ratio, ROUGE-L, chrF, glossary recall (share of the reference's glossary terms the candidate uses) and style issues (avoid-list terms, foreign statute abbreviations, citation format). `--judge` adds a 1-5 rubric (legal accuracy, coverage, style, terminology) from the LLM configured by `LLM_NAME`, `LLM_BASE_URL` and `LLM_API_KEY`, using `src/suva/prompts/judge_summary.md`. `score_triage` reads rows `{"docket", "score"}` (JSONL or CSV) and reports coverage, precision@10/30, recall@30/60, optional threshold metrics, and the relevant rulings outside the top 60.
+
+## 11. Evaluator style: Villa Rebeca (VIL), as generated
+
+The summaries are expected to be judged by Villa Rebeca (VIL, Rechtsanwältin, Bereichsleiterin). Where the authors differ (section 6), the generator follows her, with one deliberate deviation: it is shorter. The operative prompt is `src/suva/prompts/summary_style.md` with the language conventions in `summary_de.md` and `summary_fr.md`.
+
+Her three summaries (8C_7/2025, 8C_172/2025, 8C_613/2025) are French originals of French rulings, 258 to 477 words (French), 4 to 5 paragraphs, with a consideration reference closing almost every paragraph.
+
+| Aspect | VIL | Generated |
+|---|---|---|
+| Length | 280 words median (French) | 150-200 words German, 160-220 French (captain: "rather shorter"); facts and repetition are cut first, never holdings |
+| Paragraph 1 | Facts: insured person and occupation, accident and injury, the insurer's decision with the decisive figures ("CHF 67'071.- (ESS)", "-15%") and dates ("avec effet au 8 juillet 2020") | Same, 1-3 sentences, only figures and dates the dispute turns on; no birth year |
+| Paragraph 2 | Cantonal court: "Saisie d'un recours de l'assuré, la Cour de justice genevoise a ...", its result and decisive ground, "(consid. 3.1)" | Same, 1-2 sentences |
+| Paragraph 3 (optional) | The appellant's argument: "La Suva a recouru au Tribunal fédéral faisant valoir que ... (consid. 3.2)" | Only when it frames the dispute |
+| Federal Court | "Les juges fédéraux ont tout d'abord rappelé la jurisprudence selon laquelle ... (consid. 4.2)" (2025) / "Le Tribunal fédéral rappelle que ... (art. 25 al. 1 LPGA)" (2026), then "En l'espèce, le Tribunal fédéral a considéré que ... (consid. 5.2.1)"; quotes a decisive phrase of the Court in « » | Principles in the present ("rappelle que", "erinnert daran, dass"), application in the past ("a considéré", "erwog"), consideration closing each statement, sub-numbers and ranges ("consid. 3.1 à 3.3", "E. 3.1 bis 3.3") |
+| Connectors | "tout d'abord", "Partant de là", "Or", "par ailleurs", "En clair", "Finalement", "Dans ces circonstances" | Same, and German equivalents ("zunächst", "Ausgehend davon", "Indessen", "Zudem", "Mit anderen Worten", "Schliesslich", "Unter diesen Umständen") |
+| Outcome | "En définitive, le Tribunal fédéral a rejeté le recours de la Suva." (2025) / "Le recours de la Suva est admis; la remise est refusée." (2026) | "En définitive, le Tribunal fédéral a admis / rejeté le recours de ..." / "Letztlich hiess das Bundesgericht die Beschwerde ... gut / wies ... ab"; built from the operative part and the parties block when the model gets it wrong |
+| Lower court | Named ("la Cour de justice genevoise", "le Tribunal cantonal") | Named in French; "das kantonale Gericht" or its German name in German |
+
+Few-shot examples: 8C_7/2025 and 8C_172/2025 come first in every prompt. 8C_613/2025 is in the evaluation hold-out and is never shown. Her German texts are translations with the artefacts of section 7 ("Einkommen ohne Invalidität", "wies die Beschwerde der Suva zurück" for a dismissal, "Erw.3.1"), so German prompts use corrected renderings of her French originals (`src/suva/prompts/style_examples_de.json`). No further example is shown: a third one picked by similarity to the ruling made the model copy its facts (the French summary of 8C_450/2025 took the 3.5 m fall onto a concrete slab from 8C_72/2025); the glossary entries that occur in the ruling carry the terminology instead.

@@ -19,10 +19,10 @@ The UI is where the lawyers review all of this.
 
 1. **See and browse the court rulings** - all rulings of a period, not only the relevant ones.
 2. **Relevance score** per ruling, sortable.
-3. **Reasoning** - why a ruling is relevant (or why not). This is the triage explanation.
+3. **Reasoning** - why a ruling is relevant (or why not). This is the triage explanation, written in German and in French; the UI shows the one in the UI language.
 4. **German and French summary** for relevant rulings.
 5. **Summarise on demand** - a lawyer finds a ruling the first pass did not mark as relevant and can trigger an automatic summary of it.
-6. **Feedback on the relevance score** - the lawyer can say the score is wrong (relevant / not relevant, optionally a corrected score and a comment). We plan to feed this back into later scoring, which is a good pitch point.
+6. **Feedback on the relevance score** - the lawyer can say the score is wrong (relevant / not relevant, optionally a corrected score and a comment). Deferred: the triage does not use feedback for now, so the UI hides the feedback card; the `feedback` table and the POST endpoint stay so the feature can return.
 
 Nice to have (bonus "improve the customer experience"):
 
@@ -36,8 +36,8 @@ Nice to have (bonus "improve the customer experience"):
 ## 4. Screens we expect
 
 1. **Ruling list (main screen)** - table with docket (e.g. `8C_129/2025`), decision date, division, language, subject/title, relevance score (sortable, visually prominent), short one-line reason, summary available yes/no. Search box and filters on top. Default sort: score descending.
-2. **Ruling detail** - header (docket, date, division, language, subject, link to the original on bger.ch), relevance score and full reasoning, feedback control, German summary, French summary (tabs or side by side), original full text (long, needs good reading typography and scroll), "Summarise" button when no summary exists yet (generation takes a while: needs a loading / progress state).
-3. **Feedback interaction** - lightweight: agree / disagree, optional corrected score, optional comment.
+2. **Ruling detail** - header (docket, date, division, language, subject, link to the original on bger.ch), relevance score and full reasoning, German summary, French summary (tabs or side by side), original full text (long, needs good reading typography and scroll), "Summarise" button when no summary exists yet (generation takes a while: needs a loading / progress state).
+3. **Feedback interaction** (deferred, hidden for now) - lightweight: agree / disagree, optional corrected score, optional comment.
 
 ## 5. What a summary looks like
 
@@ -54,14 +54,14 @@ A style guide derived from all examples will land at `docs/style_guide.md` (in p
 
 - Suva's experts will look at **2-3 summaries of our highest-ranked rulings** (many teams, little time). The detail view of a top-ranked ruling is the most important screen: it must look credible, clean and expert.
 - They check whether our **top-ranked rulings are really relevant**, so score + reasoning must be easy to scan in the list.
-- Deliverables also include a **2-minute demo video** and a **10-slide pitch deck**, both built around the UI. Design with the demo story in mind: list -> top ruling -> reasoning -> DE/FR summary -> summarise a missed ruling -> give feedback.
+- Deliverables also include a **2-minute demo video** and a **10-slide pitch deck**, both built around the UI. Design with the demo story in mind: list -> top ruling -> reasoning -> DE/FR summary -> summarise a missed ruling.
 
 ## 7. Data available to the UI
 
 Per ruling: docket, decision date, publication date, division, language (de/fr/it), title/subject, url to bger.ch, full text, source.
-Triage: score 0-100, label relevant / not relevant, reasoning text, model, prompt version.
+Triage: score 0-100, label relevant / not relevant, reasoning in German and French (`reasoning_de`, `reasoning_fr`; results from before prompt v4 have only the German one), model, prompt version.
 Summaries: one per language (de, fr), text, model, prompt version, created at.
-Feedback: verdict, corrected score, comment, created at.
+Feedback: verdict, corrected score, comment, created at (stored by the API, not shown in the UI for now).
 
 Volume: a 3-month period is a few hundred rulings; most are not relevant, roughly 30 per quarter are.
 Periods: Q4 2025 - Q1 2026 (practice period, has Suva's real labels) and April - June 2026 (the period the judges score).
@@ -72,7 +72,7 @@ Periods: Q4 2025 - Q1 2026 (practice period, has Suva's real labels) and April -
   - list rulings (filters: period, score, text search; sort by score)
   - ruling detail (text + triage + both summaries)
   - POST summarise a ruling on demand
-  - POST feedback on a ruling
+  - POST feedback on a ruling (kept for later; the UI does not use it for now)
 - Frontend: served by FastAPI as static files from `src/suva/web/`. A first working (plain) UI will be built by an automated worker against the API; the design work is meant to restyle and reshape it. Plain HTML/CSS/JS or a small framework is fine, but see constraints.
 - **Constraints:**
   - Must run on-premise / air-gapped / Swiss cloud: **no external CDNs, web fonts or analytics at runtime**. Vendor any library or font into the repo.

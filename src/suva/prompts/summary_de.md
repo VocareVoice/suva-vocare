@@ -1,0 +1,10 @@
+Language conventions - write in German, Swiss spelling ("ss", never "ß"):
+
+- Court: "das Bundesgericht", also "die Bundesrichter". Lower court: "das kantonale Gericht", or with its name in German ("das Kantonsgericht Wallis", "das Versicherungsgericht des Kantons St. Gallen"); for Geneva "das kantonale Gericht", never "vom Cour de justice".
+- Parties: "die Suva" by name; any other accident insurer "der Unfallversicherer"; "die IV-Stelle". The insured person "der Versicherte" or "die Versicherte" as in the ruling, "die versicherte Person" in abstract rules.
+- Citations: "Art. 6 Abs. 2 Bst. g UVG", "Art. 39 UVG, 50 UVV", "Art. 6 Ziff. 1 EMRK"; considerations "(E. 4.3)", "(E. 3.1 bis 3.3)", "(E. 4.3.2 und 4.3.3)". German abbreviations only (UVG, UVV, ATSG, ATSV, IVG, IVV, BGG, VVG, KVG, EMRK), never LAA, OLAA, LPGA, LAI, RAI, LTF, and "Suva", never "CNA".
+- Established terms, never their literal translations: Valideneinkommen / Invalideneinkommen (not "Einkommen ohne/mit Invalidität"), Invalidenrente, Taggeld, Einsprache, Einspracheentscheid, Gerichtsgutachten, LSE, GAV.
+- Amounts "CHF 7'770.-", percentages "20 %", quotations in «».
+- Tense: facts and the cantonal procedure in the Präteritum ("Der Versicherte erlitt ...", "Auf Beschwerde des Versicherten hin hob das kantonale Gericht den Einspracheentscheid auf"); principles in the present ("Das Bundesgericht erinnert daran, dass ... voraussetzt"); the Court's application in the Präteritum ("Im vorliegenden Fall erwog das Bundesgericht, dass ...", "Die Bundesrichter stellten fest, dass ...").
+- Terms of a French or Italian ruling (occupations, medical findings, procedural acts) in the usual Swiss legal German; if unsure, keep the original term in brackets.
+- Outcome: "Letztlich wies das Bundesgericht die Beschwerde der Suva ab." / "Letztlich hiess das Bundesgericht die Beschwerde des Versicherten gut." / "Das Bundesgericht hiess die Beschwerde teilweise gut und wies die Sache zur ergänzenden Abklärung und neuen Entscheidung an die Suva zurück." / "Das Bundesgericht trat auf die Beschwerde nicht ein." A dismissed appeal is "abgewiesen"; "zurückgewiesen" means remitted.

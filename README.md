@@ -57,18 +57,24 @@ make install   # uv sync
 make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage and classification results
 make triage    # score every ruling not triaged with the current prompt yet (Apertus)
 make classify  # classify every ruling not classified with the current prompt yet (Apertus)
+make summarize # DE + FR summaries of every relevant ruling without one yet, best first (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make lint      # ruff
 ```
 
-`uv run suva summarize 8C_129/2025` summarises a single ruling in German and French.
+`uv run suva summarize 8C_129/2025` summarises a single ruling in German and French;
+`uv run suva summarize-relevant [--limit 10]` summarises every ruling with a triage score of at
+least 50 that has no summary of the current prompt version, highest score first. How the summary
+writer works and how it scores: `docs/eval_summaries.md`; the style it writes: `docs/style_guide.md`,
+section 11.
 
 For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
 rulings with hand-written demo triage and Suva's reference summaries (marked as demo data).
 
 Triage (`triage.py`, results and metrics in `docs/eval_triage.md`) runs in two stages: a
 keyword prior from subject, statutes and parties drops rulings without an accident-insurance
-link, then Apertus rates the rest. `uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
+link, then Apertus rates the rest and explains each rating in German and in French.
+`uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
 a period (resumable, responses cached), `uv run suva export-triage PATH --from ... --to ...`
 writes the results as JSONL and `uv run suva import-triage PATH` loads them.
 `data/results/triage_2026q2.jsonl` holds the April-June 2026 triage, so the UI works without
@@ -79,8 +85,9 @@ closed two-level taxonomy, shown in the UI as badges and filters in German and F
 insurance branch (UVG, IVG, MVG, ATSG, or outside social insurance) and a legal category (one
 primary, up to two secondary, e.g. adequate causality or degree of invalidity). Statutes cited,
 the outcome and flags (five-judge panel, public deliberation, cited as intended for publication)
-are read from the text without an LLM. Rulings that pass the triage pre-filter are classified by
-Apertus with enum-constrained JSON; the rest get their labels from the subject line.
+are read from the text without an LLM. Every ruling of the social-law divisions (dockets 8x and
+9x) is classified by Apertus 70B with enum-constrained JSON; every other ruling is outside social
+insurance by its division.
 `uv run suva classify --from ... --to ...` classifies a period (resumable, parallel),
 `export-classification` / `import-classification` work like their triage counterparts, and
 `data/results/classification_*.jsonl` hold the results for October 2025 to June 2026.

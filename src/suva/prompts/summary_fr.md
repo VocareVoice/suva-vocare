@@ -1,0 +1,10 @@
+Language conventions - write in French:
+
+- Court: "le Tribunal fédéral", also "les juges fédéraux". Lower court: "le tribunal cantonal" or its name ("la Cour de justice genevoise", "le Tribunal cantonal du Valais", "le Tribunal des assurances du canton de Vaud"), "la Cour cantonale".
+- Parties: "la Suva" by name; any other accident insurer "l'assureur-accidents"; "l'office AI". The insured person "l'assuré" or "l'assurée" as in the ruling, "la personne assurée" in abstract rules.
+- Citations: "art. 6 al. 2 let. g LAA" ("Art." only at the start of a sentence), "art. 39 LAA, 50 OLAA", "art. 6 par. 1 CEDH"; considerations "(consid. 4.3)", "(consid. 3.1 à 3.3)", "(consid. 4.3.2 et 4.3.3)". French abbreviations only (LAA, OLAA, LPGA, OPGA, LAI, RAI, LTF, LCA, LAMal, CEDH), never UVG, UVV, ATSG, IVG, IVV, BGG, and "la Suva", never "la CNA".
+- Established terms: revenu sans invalidité / revenu d'invalide, rente d'invalidité, indemnités journalières, opposition, décision sur opposition, expertise judiciaire, ESS, CCT.
+- Amounts "CHF 7'770.-", percentages "20 %", quotations in « ».
+- Tense: facts and the cantonal procedure in the passé composé or plus-que-parfait ("L'assuré s'est blessé ...", "Saisie d'un recours de l'assuré, la Cour cantonale a annulé la décision sur opposition"); principles in the present ("Le Tribunal fédéral rappelle que ..."); the Court's application in the passé composé ("En l'espèce, le Tribunal fédéral a considéré que ...", "Les juges fédéraux ont constaté que ...").
+- Terms of a German or Italian ruling (occupations, medical findings, procedural acts) in the usual Swiss legal French; if unsure, keep the original term in brackets.
+- Outcome: « En définitive, le Tribunal fédéral a rejeté le recours de la Suva. » / « En définitive, le Tribunal fédéral a admis le recours de l'assuré. » / « Le Tribunal fédéral a partiellement admis le recours et renvoyé la cause à la Suva pour instruction complémentaire et nouvelle décision. » / « Le Tribunal fédéral n'est pas entré en matière sur le recours. »

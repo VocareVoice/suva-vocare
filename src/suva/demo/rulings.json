@@ -12,7 +12,8 @@
   "triage": {
    "score": 92,
    "label": "relevant",
-   "reasoning": "Die Suva ist Verfahrenspartei. Strittig ist die Unterstellung eines Reinigungsunternehmens unter die obligatorische Versicherung bei der Suva (Art. 66 UVG i.V.m. Art. 73 lit. b UVV). Das Bundesgericht bestätigt die Gesetzmässigkeit von Art. 73 lit. b UVV und präzisiert die Abgrenzung der Reinigungsbetriebe. Grundsätzliche Bedeutung für die Zuständigkeit der Suva und die Prämienfestsetzung."
+   "reasoning_de": "Die Suva ist Verfahrenspartei. Strittig ist die Unterstellung eines Reinigungsunternehmens unter die obligatorische Versicherung bei der Suva (Art. 66 UVG i.V.m. Art. 73 lit. b UVV). Das Bundesgericht bestätigt die Gesetzmässigkeit von Art. 73 lit. b UVV und präzisiert die Abgrenzung der Reinigungsbetriebe. Grundsätzliche Bedeutung für die Zuständigkeit der Suva und die Prämienfestsetzung.",
+   "reasoning_fr": "La Suva est partie à la procédure. Le litige porte sur l'assujettissement d'une entreprise de nettoyage à l'assurance obligatoire auprès de la Suva (art. 66 LAA en relation avec l'art. 73 let. b OLAA). Le Tribunal fédéral confirme la légalité de l'art. 73 let. b OLAA et précise la délimitation des entreprises de nettoyage. Portée de principe pour la compétence de la Suva et la fixation des primes."
   },
   "summaries": {
    "de": "Die Reinigung von Wohnungen und Büros fällt unter Art. 73 lit. b OLAA, und dieser Artikel steht im Einklang mit dem Gesetz. Es gibt keine Unterscheidung zwischen Reinigungsunternehmen, die innerhalb oder ausserhalb von Gebäuden tätig sind, da diese Tätigkeiten miteinander verbunden wären. Es ist nicht ausschlaggebend, ob ein Unternehmen eine Endreinigung (im Falle eines Umzugs) oder nur wöchentliche Reinigungsarbeiten durchführt, ebenso wenig wie die Frage, welche Reinigungsmittel verwendet werden oder ob das Unternehmen die vom Kunden zur Verfügung gestellten Reinigungsmittel verwendet oder nicht. Denn im umgekehrten Fall müsste das Unternehmen, das sein Angebot regelmässig der Kundennachfrage anpasst, mehrmals den Versicherer wechseln, was der Rechtsprechung des Bundesgerichts zuwiderliefe, wonach nach Möglichkeit eine dauerhafte Unterstellung gewährleistet sein sollte. Der Lohnunterschied nach dem GAV zwischen der Baureinigung und der Unterhaltsreinigung ist für die Unterstellung unter die Suva nicht relevant. Der Vergleich mit dem Reinigungsdienst im Rahmen des Betriebes eines Hotels ist falsch, da es sich bei diesem Dienst um ein Zubehörteil handelt. Auch wenn sich die Beschwerdeführerin als Lösung gegen Schwarzarbeit darstellt, übt sie in der Praxis eine Tätigkeit der professionellen Reinigung aus. Des Weiteren ist es möglich, die Prämien risikobezogen festzulegen.",
@@ -32,7 +33,8 @@
   "triage": {
    "score": 81,
    "label": "relevant",
-   "reasoning": "Einspracheverfahren in der Unfallversicherung: Anforderungen an Form und Begründung einer Einsprache (Art. 52 ATSG, Art. 10 ATSV) und Folgen einer unbegründeten Einsprache trotz Nachfrist. Verfahrensrechtliche Frage mit unmittelbarer Bedeutung für die Erledigung von Einsprachen durch Unfallversicherer."
+   "reasoning_de": "Einspracheverfahren in der Unfallversicherung: Anforderungen an Form und Begründung einer Einsprache (Art. 52 ATSG, Art. 10 ATSV) und Folgen einer unbegründeten Einsprache trotz Nachfrist. Verfahrensrechtliche Frage mit unmittelbarer Bedeutung für die Erledigung von Einsprachen durch Unfallversicherer.",
+   "reasoning_fr": "Procédure d'opposition en assurance-accidents: exigences de forme et de motivation de l'opposition (art. 52 LPGA, art. 10 OPGA) et conséquences d'une opposition non motivée malgré l'octroi d'un délai supplémentaire. Question de procédure qui intéresse directement le traitement des oppositions par les assureurs-accidents."
   },
   "summaries": {
    "de": "Mit einer Verfügung erkannte ein Unfallversicherer einen Anspruch auf eine Invalidenrente an, verneinte jedoch gleichzeitig die adäquate Kausalität der psychischen Beschwerden im Zusammenhang mit dem Unfall, sodass lediglich die Invalidität aufgrund von körperlichen Gesundheitsschädigungen berücksichtigt wurde.\n\nDie Versicherte erhob mit folgenden Worten Einsprache: «In Ihrem Schreiben vom 17. Juni 2024 haben Sie mir Ihre Verfügung bezüglich der Rentenrevision nach dem Gutachten vom 21. November 2023, erstellt durch Dr. C., mitgeteilt. Hiermit erhebe ich Einsprache gegen diese Verfügung und bitte Sie, diese erneut zu prüfen, und das möglichst umgehend.» Sie fügte hinzu: «Ein Bericht von Frau Dr. D., Psychotherapeutin in V., wird Ihnen ebenfalls zugehen.».\n\nDer Unfallversicherer setzte der Versicherten eine Frist zur Begründung der Einsprache unter Androhung der Unzulässigkeit. Am letzten Tag der Frist beantragte die psychiatrische Ärztin der Versicherten eine Fristerstreckung um eine Woche zur Erstellung eines medizinischen Berichts, wobei sie sich auf eine Arbeitsüberlastung berief. Ohne auf dieses Gesuch einzugehen, erklärte der Unfallversicherer die Einsprache wegen fehlender Begründung innerhalb der gesetzten Frist für unzulässig. Das Kantonsgericht Wallis hiess die Beschwerde der Versicherten gut und wies die Angelegenheit an den Versicherer zurück, damit dieser auf die Einsprache eintritt.\n\nAuf Beschwerde des Unfallversicherers hin erinnerte das Bundesgericht daran, dass eine Rückweisungsverfügung, die einen Versicherer zwingt, eine für ihn rechtswidrige und später nicht mehr anfechtbare Entscheidung zu treffen, einen nicht wieder gutzumachenden Nachteil im Sinne von Art. 93 Abs. 1 lit. a BGG darstellt, wodurch die Beschwerde zulässig ist (E. 1.1). Die Bundesrichter stellten ausserdem klar, dass, wenn der Streitfall den Weigerungsentscheid einer Unfallversicherung betrifft, mit dem auf eine Einsprache nicht eingetreten wird, die Ausnahme gemäss Art. 105 Abs. 3 BGG keine Anwendung findet. Infolgedessen ist das Bundesgericht grundsätzlich an die von der Vorinstanz festgestellten Tatsachen gebunden (E. 2.2).\n\nIn der Sache kam das Bundesgericht zum Schluss, dass die Versicherte in ihrer Einsprache lediglich den Willen ausgedrückt hatte, die Rentenrevisionsverfügung anzufechten, und den späteren Versand eines medizinischen Berichts angekündigt hatte. Diese Formulierung könne jedoch keine, auch nur minimale, Begründung im Sinne von Art. 52 ATSG und Art. 10 Abs. 1 ATSV darstellen. Der blosse Hinweis auf die spätere Vorlage eines medizinischen Berichts zeige nicht auf, weshalb die Beurteilung der Versicherung fehlerhaft sei; er drücke höchstens die Absicht aus, später Argumente vorzutragen. In dieser Konstellation sei der Unfallversicherer berechtigt gewesen, der Versicherten eine Frist zur Behebung des Mangels unter Androhung der Unzulässigkeit zu setzen.\n\nBezüglich des Eingreifens der Ärztin der Versicherten stellte das Bundesgericht fest, dass keine Anhaltspunkte dafür vorlägen, dass sie berechtigt gewesen sei, im Namen der Versicherten zu handeln. Selbst wenn man eine faktische Vertretung annehmen wollte, sei der Antrag auf Fristverlängerung am letzten Tag der Frist gestellt worden, was nach den Regeln von Treu und Glauben nicht zu der Annahme berechtige, dass eine erneute Verlängerung gewährt würde. Schliesslich habe die Versicherte trotz der geltend gemachten administrativen oder organisatorischen Überlastung ausreichend Zeit gehabt, eine minimale Begründung abzugeben (E. 5.2).\n\nSchliesslich hat das Bundesgericht befunden, dass der Versicherer in Übereinstimmung mit Art. 10 Abs. 5 ATSV gehandelt und keinen übertriebenen Formalismus angewandt hat, indem er es ablehnte, auf die Einsprache einzutreten, und hat damit die Beschwerde gutgeheissen.",
@@ -52,7 +54,8 @@
   "triage": {
    "score": 68,
    "label": "relevant",
-   "reasoning": "Invalidenversicherung, aber mit allgemeiner Tragweite für die Beweiswürdigung medizinischer Gutachten (Art. 44 ATSG): Ergänzende Stellungnahmen müssen vom fallführenden Facharzt mitunterzeichnet oder genehmigt sein, sonst fehlt ihnen der Beweiswert. Übertragbar auf Gutachten im UVG-Verfahren."
+   "reasoning_de": "Invalidenversicherung, aber mit allgemeiner Tragweite für die Beweiswürdigung medizinischer Gutachten (Art. 44 ATSG): Ergänzende Stellungnahmen müssen vom fallführenden Facharzt mitunterzeichnet oder genehmigt sein, sonst fehlt ihnen der Beweiswert. Übertragbar auf Gutachten im UVG-Verfahren.",
+   "reasoning_fr": "Assurance-invalidité, mais avec une portée générale pour l'appréciation des expertises médicales (art. 44 LPGA): les prises de position complémentaires doivent être cosignées ou approuvées par le médecin spécialiste responsable de l'expertise, faute de quoi elles n'ont pas de valeur probante. Transposable aux expertises en procédure LAA."
   },
   "summaries": {
    "de": "Nach einem polydisziplinären Gutachten nahm die MEDAS zu einem neuen medizinischen Bericht und nach Einwänden im Vorbescheidverfahren zweimal Stellung. Der fallführende Kardiologe signierte die ergänzenden Stellungnahmen weder handschriftlich noch elektronisch; lediglich die ärztliche Leitung der MEDAS unterzeichnete sie.\n\nDa der Kardiologe nach seiner Begutachtung die Durchführung einer Spiroergometrie als erforderlich erachtet hatte, hätte er die nachträglichen Stellungnahmen zu den vom Versicherten eingereichten Ergebnissen der Spiroergometrie (mit) unterzeichnen oder nachträglich ausdrücklich sein Einverständnis zu den darin festgehaltenen Erkenntnissen erklären müssen. Ob der Kardiologe tatsächlich Stellung genommen hat, bleibt im Ungewissen. Das Gutachten weist einen formellen Mangel auf, weshalb es (zumindest vorläufig) nicht beweiswertig ist. Die Sache ist an die IV zurückzuweisen, welche zu klären hat, ob der Kardiologe mit den ergänzenden Stellungnahmen und der darin festgehaltenen Arbeitsfähigkeitseinschätzung in Würdigung des neuen medizinischen Berichts einverstanden ist.",
@@ -72,7 +75,8 @@
   "triage": {
    "score": 88,
    "label": "relevant",
-   "reasoning": "Rentenrevision in der Unfallversicherung mit der Suva als Partei. Das Bundesgericht grenzt die prozessuale Revision (Art. 53 Abs. 1 ATSG, unechte Noven) von der materiellen Revision (Art. 17 ATSG) ab und klärt den Beginn der erhöhten Rente bei verschlechterten psychischen Beschwerden. Direkt relevant für die Leistungspraxis bei UVG-Renten."
+   "reasoning_de": "Rentenrevision in der Unfallversicherung mit der Suva als Partei. Das Bundesgericht grenzt die prozessuale Revision (Art. 53 Abs. 1 ATSG, unechte Noven) von der materiellen Revision (Art. 17 ATSG) ab und klärt den Beginn der erhöhten Rente bei verschlechterten psychischen Beschwerden. Direkt relevant für die Leistungspraxis bei UVG-Renten.",
+   "reasoning_fr": "Révision de rente en assurance-accidents, la Suva étant partie. Le Tribunal fédéral distingue la révision procédurale (art. 53 al. 1 LPGA, faits nouveaux improprement dits) de la révision matérielle (art. 17 LPGA) et précise le point de départ de la rente augmentée en cas d'aggravation des troubles psychiques. Directement pertinent pour la pratique en matière de rentes LAA."
   },
   "summaries": {
    "de": "Ein im Jahr 2004 verletzter Arbeiter (Steinschlag) erhielt eine UVG-Rente auf der Grundlage eines Invaliditätsgrades von 36 %. Im Juni 2018 beantragte er eine Revision und machte eine Verschlechterung seiner psychischen Beschwerden geltend, die seit 2016 zu einer vollständigen Arbeitsunfähigkeit geführt habe. Die Suva erkannte schliesslich eine Invalidität von 100 % ab Juni 2018 an, was der Versicherte mit dem Begehren einer rückwirkenden Ausrichtung anfocht.\n\nDas Bundesgericht erinnert zunächst daran, dass die prozessuale Revision (Art. 53 ATSG) insbesondere das Vorliegen erheblicher neuer Tatsachen (unechte Noven) voraussetzt, die bereits vor dem ursprünglichen Entscheid bestanden, jedoch trotz aller Sorgfalt nicht bekannt waren (E. 3.1.2). Im vorliegenden Fall hatten die psychischen Beschwerden vor 2014 keinen Einfluss auf die Arbeitsfähigkeit; ihre spätere Verschlechterung stellt daher keine neue Tatsache im Sinne dieser Bestimmung dar (E. 3.4).\n\nHinsichtlich der Revision nach Art. 17 ATSG hält das Bundesgericht fest, dass eine Rentenerhöhung bei Rückfall oder Spätfolgen frühestens ab dem Zeitpunkt des Revisionsgesuchs wirksam wird, sofern keine laufende medizinische Behandlung vorliegt (E. 4.1.2). Es ist nicht erforderlich, den genauen Beginn der vollständigen Arbeitsunfähigkeit festzustellen, wenn diese im Zeitpunkt des Gesuchs bereits gegeben ist (E. 4.4).\n\nDa das Revisionsgesuch im Juni 2018 eingereicht wurde, kann die ganze Rente somit erst ab diesem Zeitpunkt zugesprochen werden, auch wenn die Arbeitsunfähigkeit bereits zuvor bestand. Die Beschwerde wird abgewiesen.",
@@ -92,7 +96,8 @@
   "triage": {
    "score": 84,
    "label": "relevant",
-   "reasoning": "Rückforderung zu hoch berechneter UVG-Taggelder durch die Suva und Erlassgesuch (Art. 25 Abs. 1 ATSG). Das Bundesgericht präzisiert den Massstab des guten Glaubens bei grober Fahrlässigkeit und hält fest, dass die gebotene Aufmerksamkeit als Rechtsfrage frei überprüft wird. Häufige Konstellation in der Praxis der Suva."
+   "reasoning_de": "Rückforderung zu hoch berechneter UVG-Taggelder durch die Suva und Erlassgesuch (Art. 25 Abs. 1 ATSG). Das Bundesgericht präzisiert den Massstab des guten Glaubens bei grober Fahrlässigkeit und hält fest, dass die gebotene Aufmerksamkeit als Rechtsfrage frei überprüft wird. Häufige Konstellation in der Praxis der Suva.",
+   "reasoning_fr": "Restitution par la Suva d'indemnités journalières LAA calculées trop haut et demande de remise (art. 25 al. 1 LPGA). Le Tribunal fédéral précise la notion de bonne foi en cas de négligence grave et retient que l'attention exigible est une question de droit qu'il revoit librement. Constellation fréquente dans la pratique de la Suva."
   },
   "summaries": {
    "de": "Ein Versicherter bezog nach einem Schulterunfall Taggelder der Suva. Die Suva forderte von ihm später die Rückerstattung von CHF 16'751.65, da das für die Tätigkeit bei einem Arbeitgeber ausgerichtete Taggeld zu hoch berechnet worden war. Der Versicherte ersuchte um Erlass der Rückerstattungspflicht und berief sich auf seinen guten Glauben sowie auf seine schwierige finanzielle Lage.\n\nDas Bundesgericht erinnert daran, dass der Erlass kumulativ den guten Glauben und eine grosse Härte voraussetzt (Art. 25 Abs. 1 ATSG). Der gute Glaube ist ausgeschlossen, wenn der Versicherte bei gebotener Aufmerksamkeit hätte erkennen können, dass die Leistungen unrechtmässig bezogen wurden, insbesondere bei grober Fahrlässigkeit. Die Prüfung der zumutbaren Aufmerksamkeit ist eine Rechtsfrage, die das Bundesgericht frei überprüft (E. 3.1 bis 3.3).\n\nIm vorliegenden Fall erwog das Bundesgericht, dass das kantonale Gericht den Umstand ausgeblendet hatte, dass die vom Versicherten aufgrund seiner verschiedenen Tätigkeiten kumuliert bezogenen Taggelder deutlich höher waren als die vor dem Unfall erzielten Einkünfte. Insgesamt beliefen sie sich auf rund CHF 7'770.- pro Monat, also fast doppelt so viel wie die früheren Einkünfte von ungefähr CHF 4'000.-. Mit anderen Worten hatte das kantonale Gericht den Sachverhalt offensichtlich unrichtig und unvollständig festgestellt, was an Willkür grenzt (E. 5.2.1).\n\nZwar musste der Versicherte den Fehler nicht zwingend bereits bei blosser Lektüre des ursprünglichen Schreibens erkennen. Nach Erhalt der Zahlungen hätte er jedoch reagieren müssen, da diese im Vergleich zu seinen früheren Löhnen beim betreffenden Arbeitgeber offensichtlich unverhältnismässig waren. Dass er sich nicht erkundigte, stellt eine grobe Fahrlässigkeit dar, welche den guten Glauben ausschliesst (E. 5.2.2).\n\nDie Beschwerde der Suva wird gutgeheissen; der Erlass wird verweigert.",
@@ -112,7 +117,8 @@
   "triage": {
    "score": 72,
    "label": "relevant",
-   "reasoning": "Betrifft die Invalidenversicherung, die Erwägungen zum ATSG gelten aber auch für die Unfallversicherung: Rechtsverzögerung (Art. 56 Abs. 2 ATSG) und Kostenlosigkeit des kantonalen Beschwerdeverfahrens (Art. 61 lit. a und fbis ATSG) bei Rechtsverzögerungsbeschwerden. Zur Publikation vorgesehen."
+   "reasoning_de": "Betrifft die Invalidenversicherung, die Erwägungen zum ATSG gelten aber auch für die Unfallversicherung: Rechtsverzögerung (Art. 56 Abs. 2 ATSG) und Kostenlosigkeit des kantonalen Beschwerdeverfahrens (Art. 61 lit. a und fbis ATSG) bei Rechtsverzögerungsbeschwerden. Zur Publikation vorgesehen.",
+   "reasoning_fr": "Concerne l'assurance-invalidité, mais les considérants relatifs à la LPGA valent aussi pour l'assurance-accidents: retard injustifié (art. 56 al. 2 LPGA) et gratuité de la procédure de recours cantonale (art. 61 let. a et fbis LPGA) en cas de recours pour retard injustifié. Destiné à la publication."
   },
   "summaries": {
    "de": "Verzögerung des IV-Amtes beim Erlass eines Entscheids über ein von der Versicherten gestelltes Leistungsbegehren. Das Bundesgericht erinnert daran, dass die Verwaltung gemäss Art. 56 Abs. 2 ATSG innert angemessener Frist zu entscheiden hat und dass eine Beschwerde wegen Rechtsverweigerung oder Rechtsverzögerung zulässig ist, wenn sich das Verfahren ohne objektive Rechtfertigung verzögert; die Beurteilung hängt insbesondere von der Komplexität der Sache und dem Verhalten der Parteien ab (E. 3).\n\nIn verfahrensrechtlicher Hinsicht hält das Bundesgericht in Verbindung mit Art. 61 lit. a und fbis ATSG fest, dass Beschwerden wegen Rechtsverweigerung keine Streitigkeiten über Leistungen darstellen. Daraus folgt, dass sie auf kantonaler Ebene weder einem Kostenvorschuss noch Gerichtskosten unterworfen werden dürfen (E. 4.3.2).",
@@ -132,7 +138,8 @@
   "triage": {
    "score": 46,
    "label": "not_relevant",
-   "reasoning": "Die Suva ist Partei (Invalidenrente nach Radiusfraktur). Strittig ist ausschliesslich die Bemessung des Invalideneinkommens anhand der LSE-Tabellenlöhne im konkreten Einzelfall. Das Bundesgericht bestätigt die Vorinstanz ohne neue Grundsätze; geringer Präjudizwert, daher knapp unter der Relevanzschwelle."
+   "reasoning_de": "Die Suva ist Partei (Invalidenrente nach Radiusfraktur). Strittig ist ausschliesslich die Bemessung des Invalideneinkommens anhand der LSE-Tabellenlöhne im konkreten Einzelfall. Das Bundesgericht bestätigt die Vorinstanz ohne neue Grundsätze; geringer Präjudizwert, daher knapp unter der Relevanzschwelle.",
+   "reasoning_fr": "La Suva est partie (rente d'invalidité après une fracture du radius). Seul est litigieux le calcul du revenu d'invalide au moyen des salaires statistiques de l'ESS dans le cas d'espèce. Le Tribunal fédéral confirme l'instance inférieure sans poser de nouveaux principes; faible valeur de précédent, d'où un score juste en dessous du seuil de pertinence."
   },
   "summaries": {}
  },
@@ -149,7 +156,8 @@
   "triage": {
    "score": 34,
    "label": "not_relevant",
-   "reasoning": "Unfallversicherung mit der Suva als Partei (Adäquanz nach Schädel-Hirntrauma), aber im vereinfachten Verfahren nach Art. 109 Abs. 2 lit. a BGG mit summarischer Begründung als offensichtlich unbegründet abgewiesen. Keine neuen Rechtsfragen."
+   "reasoning_de": "Unfallversicherung mit der Suva als Partei (Adäquanz nach Schädel-Hirntrauma), aber im vereinfachten Verfahren nach Art. 109 Abs. 2 lit. a BGG mit summarischer Begründung als offensichtlich unbegründet abgewiesen. Keine neuen Rechtsfragen.",
+   "reasoning_fr": "Assurance-accidents, la Suva étant partie (causalité adéquate après un traumatisme crânio-cérébral), mais recours rejeté comme manifestement non fondé en procédure simplifiée selon l'art. 109 al. 2 let. a LTF, avec une motivation sommaire. Aucune nouvelle question juridique."
   },
   "summaries": {}
  },
@@ -166,7 +174,8 @@
   "triage": {
    "score": 15,
    "label": "not_relevant",
-   "reasoning": "Invalidenversicherung; Nichteintreten mangels Prozessvoraussetzung. Kein Bezug zur Unfallversicherung und keine materielle Beurteilung."
+   "reasoning_de": "Invalidenversicherung; Nichteintreten mangels Prozessvoraussetzung. Kein Bezug zur Unfallversicherung und keine materielle Beurteilung.",
+   "reasoning_fr": "Assurance-invalidité; irrecevabilité faute d'une condition de recevabilité. Aucun lien avec l'assurance-accidents et pas d'examen au fond."
   },
   "summaries": {}
  },
@@ -183,7 +192,8 @@
   "triage": {
    "score": 4,
    "label": "not_relevant",
-   "reasoning": "Öffentliche Abgabe (taxe d'équipement) aus dem kantonalen Recht. Kein Bezug zur Unfallversicherung."
+   "reasoning_de": "Öffentliche Abgabe (taxe d'équipement) aus dem kantonalen Recht. Kein Bezug zur Unfallversicherung.",
+   "reasoning_fr": "Contribution publique (taxe d'équipement) de droit cantonal. Aucun lien avec l'assurance-accidents."
   },
   "summaries": {}
  },
@@ -200,7 +210,8 @@
   "triage": {
    "score": 2,
    "label": "not_relevant",
-   "reasoning": "Öffentliches Baurecht (Strassenprojekt). Kein Bezug zur Unfallversicherung."
+   "reasoning_de": "Öffentliches Baurecht (Strassenprojekt). Kein Bezug zur Unfallversicherung.",
+   "reasoning_fr": "Droit public de la construction (projet routier). Aucun lien avec l'assurance-accidents."
   },
   "summaries": {}
  },
@@ -217,7 +228,8 @@
   "triage": {
    "score": 3,
    "label": "not_relevant",
-   "reasoning": "Verwaltungsrecht (Löschung aus einer öffentlichen Liste, Fristwiederherstellung). Kein Bezug zur Unfallversicherung."
+   "reasoning_de": "Verwaltungsrecht (Löschung aus einer öffentlichen Liste, Fristwiederherstellung). Kein Bezug zur Unfallversicherung.",
+   "reasoning_fr": "Droit administratif (radiation d'un registre public, restitution de délai). Aucun lien avec l'assurance-accidents."
   },
   "summaries": {}
  },
@@ -234,7 +246,8 @@
   "triage": {
    "score": 3,
    "label": "not_relevant",
-   "reasoning": "Mietrecht (Kündigung). Kein Bezug zur Unfallversicherung."
+   "reasoning_de": "Mietrecht (Kündigung). Kein Bezug zur Unfallversicherung.",
+   "reasoning_fr": "Droit du bail (résiliation). Aucun lien avec l'assurance-accidents."
   },
   "summaries": {}
  },
@@ -251,7 +264,8 @@
   "triage": {
    "score": 5,
    "label": "not_relevant",
-   "reasoning": "Strafrecht (Landesverweisung, Kosten). Kein Bezug zur Unfall- oder Sozialversicherung."
+   "reasoning_de": "Strafrecht (Landesverweisung, Kosten). Kein Bezug zur Unfall- oder Sozialversicherung.",
+   "reasoning_fr": "Droit pénal (expulsion, frais). Aucun lien avec l'assurance-accidents ni avec les assurances sociales."
   },
   "summaries": {}
  }

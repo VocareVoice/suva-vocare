@@ -1,6 +1,6 @@
 # Triage evaluation
 
-How well `src/suva/triage.py` (prompt version `v3`) ranks the rulings Suva considered relevant,
+How well `src/suva/triage.py` (prompt version `v4`) ranks the rulings Suva considered relevant,
 tuned on Q4 2025 and Q1 2026 (labels: `data/eval/relevant_q4_2025_q1_2026.json`, 59 Federal
 Court rulings) and then run over April-June 2026 (`data/results/triage_2026q2.jsonl`).
 
@@ -9,22 +9,37 @@ Court rulings) and then run over April-June 2026 (`data/results/triage_2026q2.js
 1. **Prior (deterministic).** Subject line of the ruling (accident or military insurance +45,
    invalidity insurance +25), division (8C +10, 9C +5), Suva/CNA/INSAI in the rubrum (+15) or
    elsewhere (+10), UVG/UVV citations (up to +15), ATSG citations (+5). Rulings below 20 are
-   labelled not relevant without an LLM call and get a German explanation listing the hints that
-   were found. A second, ranking-only adjustment rewards substance: +10 for a ruling of 12,000
-   characters or more, +5 if the appeal is (partly) upheld, -15 for the simplified procedure,
-   -20 for inadmissibility or a struck-off case. These signals come from section 9 of
+   labelled not relevant without an LLM call and get an explanation in German and in French
+   listing the hints that were found. A second, ranking-only adjustment rewards substance: +10
+   for a ruling of 12,000 characters or more, +10 for a five-judge panel (Art. 20 Abs. 2 BGG,
+   questions of principle), +5 if the appeal is (partly) upheld, -15 for the simplified
+   procedure, -20 for inadmissibility or a struck-off case. These signals come from section 9 of
    `docs/style_guide.md`.
 2. **Apertus (`apertus-v1-5-70b`).** The prompt holds the relevance criteria, the base rates
    learned from the labelled period, the topics of Suva's example summaries (few-shot pool only;
-   the hold-out and the ruling's own example are never shown), the lawyers' feedback from the
-   `feedback` table, the prior's hints and an excerpt of the ruling (rubrum, facts, reasons and
-   operative part, up to 30,000 characters). It answers with JSON: a German explanation, key
-   factors and a relevance level from 0 to 9.
-3. **Score.** The level is read from the token logprobs as an expected value (for example 7.4
+   the hold-out and the ruling's own example are never shown), the German = French pairs of the
+   glossary statutes and terms that occur in the ruling (`data/eval/glossary.json`), the prior's
+   hints and an excerpt of the ruling (rubrum, facts, reasons and operative part, up to 30,000
+   characters). It answers with JSON: an explanation in German and one in French (two sentences
+   each, each written in its own legal language rather than translated), key factors and a
+   relevance level from 0 to 9. Lawyer feedback is not part of the prompt: that feature is
+   deferred, the `feedback` table and its endpoint stay for later.
+3. **Checks on the explanations.** Each explanation must be written in its language (counted
+   function words). A wrong one gets one rewrite request; if it is still wrong, the ruling fails
+   and the next `suva triage` run retries it. Statute abbreviations of the other language, or
+   Italian ones from an Italian ruling, are replaced by their glossary counterpart ("Art. 73
+   lit. b OLAA" becomes "Art. 73 lit. b UVV" in German), because the model keeps them even when
+   asked to rewrite. A relevance level the model writes into the text ("Stufe 7.") is dropped.
+4. **Score.** The level is read from the token logprobs as an expected value (for example 7.4
    instead of 7), which breaks the ties that a generated number produces: the first prompt
    asked for a 0-100 score, and the model gave 85 to almost every accident insurance ruling.
    Final score = 70 % level + 30 % prior (with the substance adjustment). Score 50 or more is
    labelled relevant.
+
+v4 fixes a bug in step 4: the full-width digit "９" among the alternative tokens overwrote the
+probability of "9", so a confident level 9 could count as about 2. Fixing it changed 78 of the
+306 levels of the v4a run (23 by more than one step); in the v4c run it had put two listed
+rulings that the model rated 9 at about 2. The v3 numbers below were measured with the bug.
 
 ## Results on the labelled period
 
@@ -37,47 +52,143 @@ has 28 or 31 relevant rulings among about 2,000.
 | | Q1 2026 | 0.40 | 0.33 | 0.32 | 0.74 |
 | Prior only, no LLM | Q4 2025 | 0.80 | 0.63 | 0.68 | 0.82 |
 | | Q1 2026 | 0.50 | 0.63 | 0.61 | 0.74 |
-| v3: LLM level only | Q4 2025 | 0.70 | 0.67 | 0.71 | 0.89 |
-| | Q1 2026 | 0.70 | 0.47 | 0.45 | 0.77 |
-| **v3: LLM level + prior (shipped)** | **Q4 2025** | **0.80** | **0.70** | **0.75** | **0.86** |
-| | **Q1 2026** | **0.70** | **0.57** | **0.55** | **0.77** |
+| v3: LLM level + prior (previous) | Q4 2025 | 0.80 | 0.70 | 0.75 | 0.86 |
+| | Q1 2026 | 0.70 | 0.57 | 0.55 | 0.77 |
+| **v4: LLM level + prior (shipped)** | **Q4 2025** | **0.90** | **0.67** | **0.71** | **0.89** |
+| | **Q1 2026** | **0.60** | **0.60** | **0.58** | **0.74** |
+
+v3 and v4 both use `apertus-v1-5-70b`. Every v4 metric is within one ruling of v3: in Q4 one
+more listed ruling in the top 10 and in the top 60, one fewer in the top 30; in Q1 one more in
+the top 30, one fewer in the top 10 and in the top 60. The tuning below did not find a change
+that improves a held-out quarter, so v4 is about as good as v3 at ranking and adds the French
+explanation, the checks on both texts and the fixed level.
 
 `python -m suva.eval.score_triage` over both quarters together (59 relevant rulings, 3,934
 scored):
 
-| metric | value |
-|---|---|
-| coverage | 1.00 |
-| precision@10 | 0.90 |
-| precision@30 | 0.70 |
-| recall@30 | 0.36 |
-| recall@60 | 0.64 |
-| rulings with score >= 50 | 117 |
-| recall at score >= 50 | 0.85 |
-| precision at score >= 50 | 0.43 |
+| metric | v3 | v4 |
+|---|---|---|
+| coverage | 1.00 | 1.00 |
+| precision@10 | 0.90 | 0.70 |
+| precision@30 | 0.70 | 0.67 |
+| recall@30 | 0.36 | 0.34 |
+| recall@60 | 0.64 | 0.66 |
+| rulings with score >= 50 | 117 | 124 |
+| recall at score >= 50 | 0.85 | 0.83 |
+| precision at score >= 50 | 0.43 | 0.40 |
+
+Pooled over both quarters, the top 10 holds more thorough accident insurance rulings that Suva
+did not list: with the fixed level, Apertus rates them 9 and they score 96-99.
 
 - The pre-filter is recall-safe: 306 of 3,934 rulings reach the LLM, and all 59 relevant
   rulings are among them. The lowest relevant ruling has a prior of 35, against a cutoff of 20.
-- Prior weights from 0.25 to 0.4 change P@30 by at most 0.03; 0.3 is the shipped value.
-- What the ranking misses is mostly invalidity insurance: Suva lists 16 of the 198 IV rulings,
-  and they read like the IV rulings it did not list. Over both quarters, the 21 relevant rulings
-  outside the top 60 are all 16 IV rulings plus 5 accident insurance rulings ranked 65-74. False positives in the top 30 are thorough accident insurance rulings
-  that Suva did not list (for example 8C_221/2025, 8C_201/2025, 8C_361/2025).
+- What the ranking misses is mostly invalidity insurance (next sections).
+
+## Tuning, checked across quarters
+
+Each change was judged on both quarters and kept only if it did not make either one worse. All
+numbers are with the fixed level and a prior weight of 0.3. The tuning runs (v4a to v4d) used
+`apertus-v1-5-70b-thinking`, the model configured in the team's `.env` at the time; the shipped
+v4 was then run with `apertus-v1-5-70b` like v3. The final prompt scores about the same on both
+models.
+
+| Run | Change | Q4 P@10 / P@30 / R@30 / R@60 | Q1 P@10 / P@30 / R@30 / R@60 | Decision |
+|---|---|---|---|---|
+| v4a | v3 criteria, explanation in German and French, no feedback | 0.80 / 0.67 / 0.71 / 0.89 | 0.60 / 0.60 / 0.58 / 0.77 | baseline |
+| v4b | Explicit rule for invalidity insurance (transferable rulings on level 5-6, five-judge panel 7-8), base rates removed, weight boosters (five judges, publication, change of case law) | 0.90 / 0.67 / 0.71 / 0.86 | 0.60 / 0.57 / 0.55 / 0.74 | rejected |
+| v4c | Base rates replaced by a qualitative criterion ("for IV it does not matter whether Suva is a party"), five-judge panel as an example of level 9 | 1.00 / 0.67 / 0.71 / 0.93 | 0.70 / 0.57 / 0.55 / 0.65 | rejected |
+| v4d | v4a plus five-judge panel in the prior, both abbreviation lists in the prompt, no level in the explanation | 0.70 / 0.67 / 0.71 / 0.89 | 0.60 / 0.63 / 0.61 / 0.77 | kept |
+| v4 | v4d with `apertus-v1-5-70b` | 0.90 / 0.67 / 0.71 / 0.89 | 0.60 / 0.60 / 0.58 / 0.74 | shipped |
+
+- v4b and v4c raised many invalidity insurance rulings to level 7-8 and pushed listed accident
+  insurance rulings down. v4c improved Q4 but cost Q1 four listed rulings in the top 60. The
+  prompt therefore keeps v3's criteria, including the base-rate paragraph: v4c replaced it
+  together with two other changes and lost recall in Q1.
+- Prior weight 0.2 to 0.5 and five-judge boost 0 to 20, choosing by P@30 + R@60 on the rounded
+  scores that the database stores: on v4's levels, tuning on Q4 picks weight 0.5 and tuning on
+  Q1 picks 0.5 with boost 15, and neither changes the held-out quarter. On the v4a and v4d
+  levels the winners are 0.2, 0.3, 0.4 and 0.5. Weight 0.4 looked better before rounding and
+  worse after it. No weight change transfers, so 0.3 stays.
+- The five-judge boost changes no P@30 or R@60 in any run (v4: Q4 P@10 0.80 without it, 0.90
+  with it). It stays because it is a general legal signal (Art. 20 Abs. 2 BGG, style guide
+  section 9.4), not a fitted one.
+- The scores cluster, so thresholds from 45 to 60 change the number labelled relevant by at
+  most three per quarter. At 50: Q4 49 (recall 0.86), Q1 75 (recall 0.81). The threshold stays
+  at 50.
+- The differences between versions are one to three rulings per quarter, while a rewording of
+  the prompt moves single levels by several steps. Treat the per-quarter numbers as accurate to
+  about ±0.05.
+
+## Invalidity insurance: listed and not listed
+
+Suva lists 16 of the 200 invalidity insurance (IV) rulings of the labelled period. Features of
+the 8C/9C rulings with an IV subject, from `triage.prior` and the corpus:
+
+| Feature | Listed (16) | Not listed (184) | Listed among rulings with the feature |
+|---|---|---|---|
+| Five-judge panel | 3 | 3 | 3 of 6 |
+| Appeal (partly) upheld | 7 | 26 | 7 of 33 |
+| Simplified procedure | 0 | 65 | 0 of 65 |
+| Inadmissible or struck off | 0 | 27 | 0 of 27 |
+| 12,000 characters or more | 12 | 100 | 12 of 112 |
+| ATSG/LPGA cited | 16 | 123 | 16 of 139 |
+| UVG cited or accident insurance mentioned | 2 | 31 | 2 of 33 |
+| Suva named | 0 | 17 | 0 of 17 |
+| Division 8C (rest 9C) | 10 | 117 | 10 of 127 |
+| French | 2 | 55 | 2 of 57 |
+
+The usable signals (five judges, appeal upheld, simplified procedure, inadmissibility) are in
+the prior; a link to accident insurance or to Suva does not separate the two groups. Suva's
+example summaries of IV rulings state a rule on a topic that accident insurance shares:
+revision (8C_313/2024), helplessness (8C_185/2025, 8C_314/2025, 8C_531/2025), the weight of
+expert opinions (8C_450/2025), employability on the labour market (8C_535/2024), Soziallohn
+(9C_382/2025), delay and costs under the ATSG (9C_65/2025). The unlisted IV rulings cover the
+same topics. Apertus decides almost all-or-nothing for IV: the same topic gets level 7 in one
+ruling and 2-3 in the next, with explanations such as "Suva is not a party". Making the rule
+explicit (v4b, v4c) did not separate listed from unlisted rulings; it raised all of them.
+
+## Misses and false positives (v4)
+
+Listed rulings outside the top 60:
+
+| Quarter | Rank | Docket | Score | Subject |
+|---|---|---|---|---|
+| Q4 2025 | 68 | 8C_185/2025 | 35 | Invalidenversicherung (Hilflosenentschädigung) |
+| Q4 2025 | 82 | 8C_531/2025 | 31 | Invalidenversicherung (Hilflosenentschädigung) |
+| Q4 2025 | 108 | 9C_699/2024 | 14 | Invalidenversicherung (Invalidenrente) |
+| Q1 2026 | 71 | 8C_314/2025 | 62 | Assurance-invalidité (allocation pour impotent) |
+| Q1 2026 | 73 | 9C_311/2025 | 58 | Invalidenversicherung |
+| Q1 2026 | 78 | 8C_149/2025 | 41 | Invalidenversicherung (Invalidenrente) |
+| Q1 2026 | 91 | 8C_272/2025 | 36 | Invalidenversicherung (Invalidenrente) |
+| Q1 2026 | 99 | 9C_145/2025 | 35 | Invalidenversicherung |
+| Q1 2026 | 100 | 8C_450/2025 | 34 | Invalidenversicherung (Invalidenrente; berufliche Massnahmen) |
+| Q1 2026 | 104 | 9C_65/2025 | 31 | Assicurazione per l'invalidità (diniego di giustizia e ritardata giustizia; spese giudiziarie in procedura cantonale) |
+| Q1 2026 | 108 | 8C_368/2025 | 27 | Assurance-accidents (procédure de première instance; condition de recevabilité) |
+
+Not listed, in the top 30: Q4 2025 8C_221/2025, 8C_679/2024, 8C_29/2025, 8C_151/2025,
+8C_512/2025, 8C_696/2025 (accident insurance) and 9C_64/2025, 8C_397/2025, 9C_420/2025,
+8C_400/2025 (invalidity insurance); Q1 2026 8C_201/2025, 8C_361/2025, 8C_56/2025, 8C_308/2025,
+8C_157/2025, 8C_384/2025, 8C_564/2025, 8C_322/2025, 8C_186/2025, 8C_382/2025, 8C_246/2025
+(accident insurance) and 9C_43/2025 (invalidity insurance). Most are full accident insurance
+judgments that read like the listed ones.
 
 ## Model choice
 
 The gateway offers `apertus-v1-5-70b`, `apertus-v1-5-70b-thinking`, `apertus-v1-5-8b` and
-`apertus-v1-5-8b-thinking`. A triage call to the 70B model takes about 5 seconds; the shared
-gateway handled 10 to 60 calls per minute with 8-12 parallel workers, so a quarter (about 190
-LLM calls after the pre-filter) takes 5-20 minutes. That is fast enough, so the 70B model is
+`apertus-v1-5-8b-thinking`. A triage call to the 70B model takes 5 to 10 seconds; the shared
+gateway handled 5 to 60 calls per minute with 8-12 parallel workers, so a quarter (about 190
+LLM calls after the pre-filter) takes 5-40 minutes. That is fast enough, so the 70B model is
 used. The thinking variant returned no separate reasoning on this task and gave the same kind
 of answer, so it adds nothing here.
 
 ## April-June 2026
 
 `data/results/triage_2026q2.jsonl` holds 2,096 rulings decided 2026-04-01 to 2026-06-30: 1,908
-ruled out by the pre-filter, 188 rated by Apertus, 68 labelled relevant. All are prompt version
-`v3`. Load it with `make load` (or `uv run suva import-triage data/results/triage_2026q2.jsonl`).
+ruled out by the pre-filter, 188 rated by `apertus-v1-5-70b`, 70 labelled relevant (v3: 68).
+All are prompt version `v4`, with the explanation in German and in French. 29 of the top 30 are
+accident insurance rulings (the 30th, 8C_526/2025, is invalidity insurance); 23 of them were
+also in v3's top 30. Load the file with
+`make load` (or `uv run suva import-triage data/results/triage_2026q2.jsonl`).
 
 ## Reproduce
 
@@ -90,17 +201,15 @@ uv run suva triage --from 2026-04-01 --to 2026-06-30
 uv run suva export-triage data/results/triage_2026q2.jsonl --from 2026-04-01 --to 2026-06-30
 ```
 
-Calls use temperature 0 and are cached under `data/cache/llm/`. A rerun with the same model,
-prompt version and feedback reuses the cache. New lawyer feedback changes the prompt and
-triggers fresh calls.
+Calls use temperature 0 and are cached under `data/cache/llm/`. A rerun with the same model and
+prompt version reuses the cache.
 
 ## Limitations
 
 - The labels describe Suva's choices in one half-year. Base rates and examples in the prompt
   come from that same period, so the numbers above are optimistic for a new quarter. The
   example summary of the ruling being scored is never shown to the model.
-- Explanations are asked for in German, but on French rulings the model sometimes answers in
-  French (1 of 188 in April-June 2026, 8C_344/2025). They are also often longer than the
-  requested 2-3 sentences (median 4).
+- Explanations have a median of 42 words in German and 48 in French; 12 of the 494 German ones
+  (3 French) run to four sentences instead of two or three.
 - Decisions that are not Federal Court rulings, such as the Basel-Landschaft cantonal decision
   on Suva's list, are outside the corpus and cannot be found.
