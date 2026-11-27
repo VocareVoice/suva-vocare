@@ -140,16 +140,17 @@ def run_all(
     return results
 
 
-def record_run(out: Path, task: str, model: str, started: float, results: dict, **extra) -> None:
+def record_run(args: argparse.Namespace, task: str, started: float, results: dict, **extra) -> None:
     run = {
         "task": task,
-        "model": model,
+        "model": args.model,
+        "reasoning_effort": args.reasoning_effort,
         **extra,
         "rulings": len(results),
         "failed": sorted(d for d, r in results.items() if isinstance(r, Exception)),
         "wall_seconds": round(time.monotonic() - started, 1),
     }
-    with (out / "runs.jsonl").open("a", encoding="utf-8") as f:
+    with (args.out / "runs.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps(run) + "\n")
     print(json.dumps(run))
 
@@ -206,9 +207,7 @@ def run_triage(args: argparse.Namespace, llm: MeteredClient) -> None:
     report = triage_report(scores, quarters, relevant, f"`{args.model}`, {args.scoring} level")
     (args.out / f"{name}.md").write_text(report, encoding="utf-8")
     print(report)
-    record_run(
-        args.out, "triage", args.model, started, results, scoring=args.scoring, llm=llm_calls
-    )
+    record_run(args, "triage", started, results, scoring=args.scoring, llm=llm_calls)
 
 
 def run_summaries(args: argparse.Namespace, llm: MeteredClient) -> None:
@@ -236,7 +235,7 @@ def run_summaries(args: argparse.Namespace, llm: MeteredClient) -> None:
     report = score_summaries.render_report(rows, missing, [], str(path))
     (args.out / f"summaries_{args.model}.md").write_text(report, encoding="utf-8")
     print(report)
-    record_run(args.out, "summaries", args.model, started, results)
+    record_run(args, "summaries", started, results)
 
 
 def run_classify(args: argparse.Namespace, llm: MeteredClient) -> None:
@@ -278,7 +277,7 @@ def run_classify(args: argparse.Namespace, llm: MeteredClient) -> None:
     )
     (args.out / f"classification_{args.model}.md").write_text(report + "\n", encoding="utf-8")
     print(report)
-    record_run(args.out, "classify", args.model, started, results)
+    record_run(args, "classify", started, results)
 
 
 def write_blind(args: argparse.Namespace) -> None:
