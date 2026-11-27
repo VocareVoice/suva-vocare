@@ -78,12 +78,15 @@ rulings with hand-written demo triage and Suva's reference summaries (marked as 
 
 Triage (`triage.py`, results and metrics in `docs/eval_triage.md`) runs in two stages: a
 keyword prior from subject, statutes and parties drops rulings without an accident-insurance
-link, then Apertus rates the rest and explains each rating in German and in French.
+link, and a gate drops decisions that do not rule on the merits (inadmissible, struck off,
+single judge; sections from `segment.py`); then Apertus rates the rest and explains each rating
+in German and in French.
 `uv run suva triage --from 2026-04-01 --to 2026-06-30` scores
 a period (resumable, responses cached), `uv run suva export-triage PATH --from ... --to ...`
 writes the results as JSONL and `uv run suva import-triage PATH` loads them.
-`data/results/triage_2026q2.jsonl` holds the April-June 2026 triage, so the UI works without
-calling Apertus.
+`data/results/triage_2026q2.jsonl` holds the April-June 2026 triage and
+`data/results/triage_2025q4_2026q1.jsonl` the labelled Q4 2025 / Q1 2026 period, so the UI works
+without calling Apertus.
 
 Classification (`classify.py`, results in `docs/eval_classification.md`) sorts every ruling into a
 closed two-level taxonomy, shown in the UI as badges and filters in German and French: the
@@ -105,15 +108,15 @@ caches raw downloads under `data/raw/` and replaces the corpus records in that d
 With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
 database and corpus directory. Load the corpus with `docker compose run --rm api suva load`
 the triage results with
-`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl` and the
-classification with `docker compose run --rm api suva import-classification
+`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl` (likewise for
+`triage_2025q4_2026q1.jsonl`), the classification with `docker compose run --rm api suva import-classification
 data/results/classification_2026q2.jsonl` (likewise for `classification_2025q4_2026q1.jsonl`)
 and the summaries with `docker compose run --rm api suva import-summaries
 data/results/summaries_2026q2.jsonl`.
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),
-`triage.py`, `classify.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend), `fetch/`
+`triage.py`, `classify.py` and `summarize.py` (LLM steps), `segment.py` (parts of a ruling), `api.py` (FastAPI), `web/` (frontend), `fetch/`
 (ruling crawler).
 
 Evaluation: `docs/style_guide.md` is the house style for the DE/FR summaries and the relevance

@@ -8,7 +8,7 @@ signature. Shapes:
 - order: "Vu : ... considérant : que ..." / "in Erwägung, dass ...", unnumbered paragraphs
 - unsegmented: no reasons heading found
 
-Coverage on the corpus and the failure shapes it handles: docs/eval_triage.md.
+Coverage on the corpus: docs/eval_triage.md.
 """
 
 import re
