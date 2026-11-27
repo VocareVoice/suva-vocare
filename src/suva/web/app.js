@@ -3,7 +3,7 @@
 // lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js.
 
 import { initAgent, paintAgent } from "./agent.js";
-import { classify, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
+import { ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
 import { renderRelevant } from "./relevant.js";
 
 // ---------------------------------------------------------------- i18n
@@ -14,11 +14,6 @@ const I18N = {
     "rel.title": "Wissensbasis",
     "rel.register": "Register",
     "rel.all": "Alle Rechtsfragen",
-    "rel.search": "Wissensbasis durchsuchen, z. B. «Integritätsentschädigung» oder 8C_78/2025",
-    "rel.sort": "Sortierung",
-    "rel.view": "Darstellung",
-    "rel.view.groups": "Nach Rechtsfrage",
-    "rel.view.flat": "Als Liste",
     "rel.sum.yes": "Zusammenfassung DE und FR vorhanden",
     "rel.sum.no": "Noch keine Zusammenfassung",
     "rel.sum.open": "Offen",
@@ -32,8 +27,6 @@ const I18N = {
     "agent.context": (d) => `Kontext: ${d}`,
     "kb.empty": "Keine Urteile in der Wissensbasis",
     "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
-    "kb.sort.score": "Nach Relevanz",
-    "kb.sort.date": "Neueste zuerst",
     "brand.sub": "Rechtsprechung Unfallversicherung",
     "nav.rulings": "Urteile",
     "list.title": "Bundesgerichtsurteile",
@@ -138,11 +131,6 @@ const I18N = {
     "rel.title": "Base de connaissances",
     "rel.register": "Registre",
     "rel.all": "Toutes les questions",
-    "rel.search": "Rechercher dans la base de connaissances, p. ex. « intégrité » ou 8C_78/2025",
-    "rel.sort": "Tri",
-    "rel.view": "Affichage",
-    "rel.view.groups": "Par question",
-    "rel.view.flat": "En liste",
     "rel.sum.yes": "Résumé DE et FR disponible",
     "rel.sum.no": "Pas encore de résumé",
     "rel.sum.open": "Ouvert",
@@ -156,8 +144,6 @@ const I18N = {
     "agent.context": (d) => `Contexte : ${d}`,
     "kb.empty": "Aucun arrêt dans la base de connaissances",
     "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
-    "kb.sort.score": "Par pertinence",
-    "kb.sort.date": "Plus récents",
     "brand.sub": "Jurisprudence assurance-accidents",
     "nav.rulings": "Arrêts",
     "list.title": "Arrêts du Tribunal fédéral",
@@ -870,7 +856,15 @@ function relevanceCard(r) {
   </section>`;
 }
 
-function classificationCard(c) {
+// One-line headline of what the court decided, shown under the ruling number. Reads
+// `headline_de` / `headline_fr` (or `headline`) once the backend provides them; until then the
+// classification's one-sentence explanation stands in (German only).
+function headlineOf(r) {
+  return r[`headline_${uiLang}`] || r.headline || r.classification?.rationale || "";
+}
+const headlineIsRationale = (r) => !r[`headline_${uiLang}`] && !r.headline && !!r.classification?.rationale;
+
+function classificationCard(c, hideRationale = false) {
   if (!c) return "";
   const rows = [
     [t("f.branch"), taxLabel("branches", c.branch)],
@@ -883,7 +877,7 @@ function classificationCard(c) {
     <div class="card__body" style="display:grid;gap:12px">
       <dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${c.flags.length ? `<div class="statutes">${c.flags.map((f) => `<span class="chip chip--accent">${esc(taxLabel("flags", f))}</span>`).join("")}</div>` : ""}
-      ${c.rationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
+      ${c.rationale && !hideRationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
     </div>
   </section>`;
 }
@@ -933,15 +927,18 @@ function originalCard(r, terms) {
   </section>`;
 }
 
+// Round back button left of the ruling number; returns to the last list view.
+const backBtn = () => `<a class="dback" href="${esc(state.lastListHash)}" title="${esc(t("back"))}" aria-label="${esc(t("back"))}">${ICONS.back}</a>`;
+
 async function renderDetail(docket, params) {
   resetListeners();
-  app.innerHTML = `<div class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></div>
+  app.innerHTML = `<header class="dhead"><div class="dhead__id">${backBtn()}<h1><span class="dhead__docket">${esc(docket)}</span></h1></div></header>
     <div class="card card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(6)}</div>`;
   let r;
   try {
     [r] = await Promise.all([API.detail(docket), ensureTaxonomy()]);
   } catch (e) {
-    app.innerHTML = `<div class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></div>
+    app.innerHTML = `<header class="dhead"><div class="dhead__id">${backBtn()}<h1><span class="dhead__docket">${esc(docket)}</span></h1></div></header>
       <div class="card empty"><h2>${esc(e.status === 404 ? t("notfound") : t("err.load"))}</h2><p>${esc(docket)} · ${esc(e.message)}</p></div>`;
     return;
   }
@@ -949,31 +946,17 @@ async function renderDetail(docket, params) {
   paintDetail(r, terms);
 }
 
-// "Unfallversicherung / Natürliche Kausalität", each part linking to the knowledge-base filter.
-function classPath(r) {
-  if (!r.classification) return "";
-  const { branch, category } = classify(r);
-  const b = encodeURIComponent(branch);
-  return `<a class="classpath" data-branch="${esc(branch)}" href="#/?branch=${b}" title="${esc(taxLabel("branches", branch))}"><span class="register__swatch" aria-hidden="true"></span>${esc(taxLabel("branches", branch, true))}</a>
-    <span class="classpath__sep" aria-hidden="true">/</span>
-    <a class="classpath" href="#/?branch=${b}&cat=${encodeURIComponent(category)}" title="${esc(taxLabel("categories", category))}">${esc(taxLabel("categories", category, true))}</a>`;
-}
-
 function paintDetail(r, terms) {
   document.title = `${r.docket} – BGer-Monitor`;
   const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningOf(r.triage), r.text);
-  const div = divisionCode(r.docket);
-  const tr = r.triage;
   app.innerHTML = `
-    <nav class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></nav>
     <header class="dhead">
-      <div>
-        <div class="dhead__kicker">
-          ${classPath(r)}
+      <div class="dhead__id">
+        ${backBtn()}
+        <div class="dhead__text">
+          <h1><span class="dhead__docket">${esc(r.docket)}</span>${r.title ? `<span class="dhead__name">${esc(r.title)}</span>` : ""}</h1>
+          ${headlineOf(r) ? `<p class="dhead__headline">${esc(headlineOf(r))}</p>` : ""}
         </div>
-        <h1>${esc(suvaTitle(r))}</h1>
-        ${r.title ? `<p class="dhead__title">${esc(r.title)}</p>` : ""}
-        <p class="dhead__meta"><span>${esc(div)} ${esc(rulingDivision(r))}</span><span>${esc(fmtDate(r.decision_date, "long"))}</span>${r.language ? `<span>${esc(t(`lang.${r.language}`))}</span>` : ""}</p>
       </div>
       <div class="dhead__actions">
         ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
@@ -987,9 +970,9 @@ function paintDetail(r, terms) {
       </div>
       <aside class="daside">
         ${relevanceCard(r)}
-        ${classificationCard(r.classification)}
-        ${statutesCard(statutes)}
         ${metaCard(r)}
+        ${classificationCard(r.classification, headlineIsRationale(r))}
+        ${statutesCard(statutes)}
       </aside>
     </div>`;
   bindDetail(r, terms);
