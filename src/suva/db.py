@@ -337,12 +337,40 @@ def get_ruling_detail(conn: sqlite3.Connection, docket: str) -> dict[str, Any] |
     }
 
 
-def untriaged_dockets(conn: sqlite3.Connection) -> list[str]:
+def untriaged_dockets(
+    conn: sqlite3.Connection,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    prompt_version: str | None = None,
+) -> list[str]:
+    """Dockets in the date range without a triage result (of `prompt_version`, if given)."""
+    where, params = ["NOT EXISTS (SELECT 1 FROM triage t WHERE t.docket = r.docket"], []
+    if prompt_version is not None:
+        where[0] += " AND t.prompt_version = ?"
+        params.append(prompt_version)
+    where[0] += ")"
+    date = "COALESCE(r.publication_date, r.decision_date)"
+    if date_from:
+        where.append(f"{date} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{date} <= ?")
+        params.append(date_to)
     rows = conn.execute(
-        "SELECT docket FROM rulings r WHERE NOT EXISTS "
-        "(SELECT 1 FROM triage t WHERE t.docket = r.docket) ORDER BY docket"
+        f"SELECT docket FROM rulings r WHERE {' AND '.join(where)} ORDER BY docket", params
     )
     return [row["docket"] for row in rows]
+
+
+def latest_feedback(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """The newest feedback per ruling, with the ruling's title and text."""
+    rows = conn.execute(
+        "SELECT f.docket, r.title, r.text, f.verdict, f.corrected_score, f.comment "
+        "FROM feedback f JOIN rulings r ON r.docket = f.docket "
+        "WHERE f.id = (SELECT MAX(id) FROM feedback WHERE docket = f.docket) ORDER BY f.id"
+    )
+    return [dict(row) for row in rows]
 
 
 def save_triage(
@@ -361,6 +389,60 @@ def save_triage(
             "VALUES (?, ?, ?, ?, ?, ?)",
             (docket, score, label, reasoning, model, prompt_version),
         )
+
+
+TRIAGE_FIELDS = ("docket", "score", "label", "reasoning", "model", "prompt_version", "created_at")
+
+
+def export_triage(
+    conn: sqlite3.Connection,
+    path: Path | str,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> int:
+    """Write the latest triage result per ruling in the date range as JSONL, best first."""
+    where, params = [], []
+    date = "COALESCE(r.publication_date, r.decision_date)"
+    if date_from:
+        where.append(f"{date} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{date} <= ?")
+        params.append(date_to)
+    rows = conn.execute(
+        f"SELECT {', '.join('t.' + f for f in TRIAGE_FIELDS)} "
+        f"FROM rulings r JOIN triage t ON {_LATEST_TRIAGE} "
+        f"{'WHERE ' + ' AND '.join(where) if where else ''} ORDER BY t.score DESC, t.docket",
+        params,
+    ).fetchall()
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(dict(row), ensure_ascii=False) + "\n")
+    return len(rows)
+
+
+def import_triage(conn: sqlite3.Connection, path: Path | str) -> int:
+    """Load results written by `export_triage`. Rows for unknown rulings, or rulings that
+    already have a result of the same prompt version, are skipped."""
+    count = 0
+    with conn, open(path, encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            row = {field: json.loads(line).get(field) for field in TRIAGE_FIELDS}
+            cursor = conn.execute(
+                f"INSERT INTO triage ({', '.join(TRIAGE_FIELDS)}) "
+                "SELECT :docket, :score, :label, :reasoning, :model, :prompt_version, "
+                "COALESCE(:created_at, datetime('now')) "
+                "WHERE EXISTS (SELECT 1 FROM rulings WHERE docket = :docket) "
+                "AND NOT EXISTS (SELECT 1 FROM triage WHERE docket = :docket "
+                "AND prompt_version IS :prompt_version)",
+                row,
+            )
+            count += cursor.rowcount
+    return count
 
 
 def save_summary(

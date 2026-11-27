@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     db_path: Path = Path("data/suva.db")
     corpus_path: Path = Path("data/corpus/rulings.jsonl.gz")
     llm_cache_dir: Path = Path("data/cache/llm")
+    examples_path: Path = Path("data/eval/examples.jsonl")
 
 
 @lru_cache
