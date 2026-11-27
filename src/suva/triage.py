@@ -1,10 +1,12 @@
 """Relevance triage of a ruling for Suva.
 
 Stage 1 is a deterministic prior from the docket and the text (subject, division, statutes,
-Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call.
-Stage 2 asks Apertus for a relevance level and an explanation in German and in French, with the
-topics of Suva's example summaries as context. The score blends the level, weighted by its token
-probabilities, with the prior. Results and metrics: docs/eval_triage.md.
+Suva as a party). Rulings below `PRIOR_CUTOFF` are labelled not relevant without an LLM call, and
+so are decisions that do not rule on the merits (the gate: inadmissible, struck off, single
+judge, no substantive consideration). Stage 2 asks Apertus for a relevance level and an
+explanation in German and in French, with the topics of Suva's example summaries as context. The
+score blends the level, weighted by its token probabilities, with the prior. Results and metrics:
+docs/eval_triage.md.
 """
 
 import json
@@ -17,12 +19,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from suva import db
+from suva import classify, db
 from suva.eval.metrics import contains_term, foreign_statutes, term_forms
 from suva.llm import LLMClient, Message, TokenLogprob, parse_json
+from suva.segment import clean, segment
 
-PROMPT_VERSION = "v4"
+PROMPT_VERSION = "v5"
+MODEL = "apertus-v1-5-70b"
 PREFILTER_MODEL = "prefilter"
+GATE_MODEL = "gate"
 RELEVANCE_THRESHOLD = 50
 PRIOR_CUTOFF = 20
 EXCERPT_CHARS = 30_000
@@ -92,11 +97,6 @@ INVALIDITY_INSURANCE = _pattern(
 
 DIVISION_PRIOR = {"8C": 10, "9C": 5}
 
-_FACTS = re.compile(r"^\s*(?:Sachverhalt|Faits|Fatti)\s*:", re.MULTILINE)
-_REASONS = re.compile(
-    r"^\s*(?:Erwägungen?|Considérant en droit|Considérants?|Diritto|Considerando in diritto)\s*:",
-    re.MULTILINE,
-)
 _INADMISSIBLE = _pattern(
     r"nicht eingetreten",
     r"abgeschrieben",
@@ -115,7 +115,6 @@ _SIMPLIFIED = _pattern(
     r"(?:la Présidente|le Président) prononce",
     r"(?:la|il) President[ea] pronuncia",
 )
-_UPHELD = _pattern(r"gutgeheissen", r"\badmis\b", r"\baccolto\b")
 _PANEL = re.compile(
     r"^(?:Besetzung|Composition|Composizione)\s*\n(.+?)(?:Gerichtsschreiber|Greffi|Cancellier|"
     r"\n\s*(?:Verfahrensbeteiligte|Participants|Parti)\b)",
@@ -131,17 +130,21 @@ _ROLE = re.compile(
 )
 LONG_RULING_CHARS = 12_000
 FIVE_JUDGES = 10
+# An invalidity insurance appeal by the IV office, the federal office (BSV) or a pension fund.
+# Insured persons appear anonymised ("A.________"), so a named appellant is an institution.
+INSURER_APPEAL = 15
+_APPELLANT = re.compile(
+    r"^(?:Verfahrensbeteiligte|Participants à la procédure|Parti)\s*\n(.+?)\n"
+    r"(?:gegen|contre|contro)\s*$",
+    re.MULTILINE | re.DOTALL,
+)
+_COUNSEL = re.compile(r"vertreten durch|représentée? par|patrocinat|rappresentat", re.IGNORECASE)
 
-_OPERATIVE = re.compile(r"^\s*(?:Demnach erkennt|Par ces motifs|Per questi motivi)", re.MULTILINE)
 _SUBJECT = re.compile(
     r"^\s*(?:Gegenstand|Objet|Oggetto)\s*\n(.+?)(?:\n\s*(?:Beschwerde|Recours|Ricorso|Revisionsgesuch|"
     r"Demande|Domanda)|\Z)",
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
 )
-
-
-def _clean(text: str) -> str:
-    return re.sub(r"[ \t\xa0]*\n[\s\xa0]*", "\n", text).strip()
 
 
 @dataclass
@@ -154,23 +157,14 @@ class Sections:
 
 def split_sections(text: str) -> Sections:
     """Split a ruling into rubrum (parties, subject), facts, reasons and operative part."""
-    text = _clean(text)
-    operative = _OPERATIVE.search(text)
-    end = operative.start() if operative else len(text)
-    reasons = _REASONS.search(text, 0, end)
-    facts = _FACTS.search(text, 0, reasons.start() if reasons else end)
-    rubrum_end = min(m.start() for m in (facts, reasons) if m) if (facts or reasons) else 0
-    return Sections(
-        rubrum=text[:rubrum_end],
-        facts=text[facts.start() : reasons.start() if reasons else end] if facts else "",
-        reasons=text[reasons.start() : end] if reasons else text[rubrum_end:end],
-        operative=text[end:],
-    )
+    s = segment(text)
+    operative = "\n".join(part for part in (s.dispositive, s.signature) if part)
+    return Sections(rubrum=s.rubrum, facts=s.facts, reasons=s.reasons, operative=operative)
 
 
 def subject(text: str) -> str:
     """The "Gegenstand" line of the rubrum, e.g. "Unfallversicherung (Kausalzusammenhang)"."""
-    match = _SUBJECT.search(_clean(text)[:6000])
+    match = _SUBJECT.search(clean(text)[:6000])
     return " ".join(match.group(1).split()).rstrip(",") if match else ""
 
 
@@ -181,6 +175,12 @@ def panel_size(rubrum: str) -> int | None:
         return None
     names = re.split(r",|\n|\bund\b|\bet\b|\be\b|\.", _ROLE.sub(" ", match.group(1)))
     return sum(bool(re.search(r"\w{2}", name)) for name in names)
+
+
+def insurer_appealed(rubrum: str) -> bool:
+    """The appellant of the party block is a named institution, not an anonymised person."""
+    match = _APPELLANT.search(rubrum)
+    return bool(match) and "____" not in _COUNSEL.split(match.group(1))[0]
 
 
 def prior(ruling: dict[str, Any]) -> Prior:
@@ -202,23 +202,28 @@ def prior(ruling: dict[str, Any]) -> Prior:
         factors.append(factor)
         factors_fr.append(factor_fr)
 
-    if ACCIDENT_INSURANCE.search(subj) or MVG.search(subj):
+    accident = bool(ACCIDENT_INSURANCE.search(subj) or MVG.search(subj))
+    invalidity = not accident and bool(INVALIDITY_INSURANCE.search(subj))
+    if accident:
         add(45, f"Gegenstand: {subj}", f"Objet: {subj}")
-    elif INVALIDITY_INSURANCE.search(subj):
+    elif invalidity:
         add(25, f"Gegenstand: {subj}", f"Objet: {subj}")
     division = (ruling.get("docket") or "")[:2]
     if points := DIVISION_PRIOR.get(division):
         add(points, f"Abteilung {division}", f"cour {division}")
-    if SUVA.search(sections.rubrum):
-        add(15, "Suva ist Partei", "la Suva est partie")
-    elif SUVA.search(text):
-        add(10, "Suva erwähnt", "Suva mentionnée")
-    if uvg := len(UVG.findall(text)):
-        add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)", f"LAA/OLAA citées ({uvg} fois)")
-    if MVG.search(text) and not MVG.search(subj):
-        add(10, "Militärversicherung erwähnt", "assurance militaire mentionnée")
-    if ACCIDENT_INSURANCE.search(text) and not ACCIDENT_INSURANCE.search(subj):
-        add(5, "Unfallversicherung erwähnt", "assurance-accidents mentionnée")
+    # Suva or accident insurance in the facts of an invalidity insurance ruling does not make it
+    # relevant: none of the 17 such rulings of Q4 2025 and Q1 2026 that name Suva is listed.
+    if not invalidity:
+        if SUVA.search(sections.rubrum):
+            add(15, "Suva ist Partei", "la Suva est partie")
+        elif SUVA.search(text):
+            add(10, "Suva erwähnt", "Suva mentionnée")
+        if uvg := len(UVG.findall(text)):
+            add(min(15, 3 + uvg), f"UVG/UVV zitiert ({uvg}x)", f"LAA/OLAA citées ({uvg} fois)")
+        if MVG.search(text) and not MVG.search(subj):
+            add(10, "Militärversicherung erwähnt", "assurance militaire mentionnée")
+        if ACCIDENT_INSURANCE.search(text) and not ACCIDENT_INSURANCE.search(subj):
+            add(5, "Unfallversicherung erwähnt", "assurance-accidents mentionnée")
     if ATSG.search(text):
         add(5, "ATSG zitiert", "LPGA citée")
 
@@ -226,18 +231,24 @@ def prior(ruling: dict[str, Any]) -> Prior:
         weigh(-20, "Nichteintreten oder Abschreibung", "irrecevabilité ou radiation du rôle")
     elif _SIMPLIFIED.search(text):
         weigh(-15, "vereinfachtes Verfahren", "procédure simplifiée")
-    elif _UPHELD.search(sections.operative[:600]):
+    elif classify.outcome(text) in ("upheld", "partly_upheld", "remanded"):
         weigh(5, "Beschwerde (teilweise) gutgeheissen", "recours (partiellement) admis")
-    if len(_clean(text)) >= LONG_RULING_CHARS:
+    if len(clean(text)) >= LONG_RULING_CHARS:
         weigh(10, "ausführlich begründet", "motivation détaillée")
     if panel_size(sections.rubrum) == 5:
         weigh(FIVE_JUDGES, "Fünferbesetzung", "composition à cinq juges")
+    if invalidity and insurer_appealed(sections.rubrum):
+        weigh(
+            INSURER_APPEAL,
+            "Beschwerde der IV-Stelle, des BSV oder einer Vorsorgeeinrichtung",
+            "recours de l'office AI, de l'OFAS ou d'une institution de prévoyance",
+        )
     return Prior(score=min(score, 100), substance=substance, factors=factors, factors_fr=factors_fr)
 
 
 def excerpt(text: str, limit: int = EXCERPT_CHARS) -> str:
     """The parts of a ruling that matter for triage, within `limit` characters."""
-    text = _clean(text)
+    text = clean(text)
     if len(text) <= limit:
         return text
     s = split_sections(text)
@@ -276,7 +287,10 @@ Nicht relevant sind:
 IV-Fälle ohne Bedeutung für die UV usw.).
 - Nichteintretensentscheide, Abschreibungen und Urteile im vereinfachten Verfahren \
 (Art. 108/109 BGG), unentgeltliche Rechtspflege, reine Kosten- und Fristfragen ohne \
-Grundsatzcharakter.
+Grundsatzcharakter. Gemeint sind Nichteintretensentscheide des Bundesgerichts selbst. Prüft \
+das Bundesgericht, ob der Versicherer auf eine Einsprache oder das kantonale Gericht auf eine \
+Beschwerde eintreten musste (Begründung der Einsprache, Fristen, rechtliches Gehör), ist das \
+eine Verfahrensfrage nach ATSG und wie ein materielles Urteil zu bewerten.
 - Urteile, die nur den konkreten Sachverhalt würdigen, ohne für die Praxis der Suva etwas \
 Neues oder Bestätigenswertes zu sagen.
 
@@ -524,6 +538,42 @@ def prefiltered(prior_: Prior) -> TriageResult:
     )
 
 
+def gate(text: str) -> tuple[str, str] | None:
+    """Why a ruling does not decide on the merits (German, French), or None if it does.
+
+    Suva never lists such decisions: none of the 82 candidates of Q4 2025 and Q1 2026 is listed.
+    """
+    outcome = classify.outcome(text)
+    if outcome == "not_entertained":
+        return "Nichteintretensentscheid", "décision d'irrecevabilité"
+    if outcome == "struck_off":
+        return "Abschreibung", "radiation du rôle"
+    if classify.panel_size(text) in (1, 2):
+        return "Entscheid des Einzelrichters", "décision du juge unique"
+    if not segment(text).substantive:
+        return "keine materielle Erwägung", "aucun considérant sur le fond"
+    return None
+
+
+def gated(prior_: Prior, reason: tuple[str, str]) -> TriageResult:
+    de, fr = reason
+    return TriageResult(
+        score=prior_.score // 4,
+        label="not_relevant",
+        reasoning_de=(
+            f"Ohne Bewertung durch das Sprachmodell ausgeschieden ({de}): Das Bundesgericht "
+            "entscheidet nicht in der Sache, und solche Entscheide nimmt die Suva nicht in ihre "
+            "Rechtsprechungsübersicht auf."
+        ),
+        reasoning_fr=(
+            f"Écarté sans évaluation par le modèle de langage ({fr}): le Tribunal fédéral ne "
+            "statue pas sur le fond, et la Suva ne reprend pas de telles décisions dans sa revue "
+            "de jurisprudence."
+        ),
+        model=GATE_MODEL,
+    )
+
+
 def triage_ruling(
     ruling: dict[str, Any],
     llm: LLMClient,
@@ -533,6 +583,8 @@ def triage_ruling(
     prior_ = prior(ruling)
     if prior_.score < PRIOR_CUTOFF:
         return prefiltered(prior_)
+    if reason := gate(ruling.get("text") or ""):
+        return gated(prior_, reason)
     messages = build_messages(ruling, prior_, examples, glossary)
     completion = llm.complete(messages, max_tokens=900, logprobs=True, top_logprobs=10)
     result = parse_result(

@@ -107,7 +107,7 @@ def main() -> None:
     elif args.command == "load":
         print(f"Loaded {db.load_corpus(conn, args.path)} rulings into {settings.db_path}")
     elif args.command == "triage":
-        llm = LLMClient(settings)
+        llm = LLMClient(settings, model=triage.MODEL)
         dockets = db.untriaged_dockets(
             conn,
             date_from=args.date_from,
