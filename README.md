@@ -54,7 +54,7 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` t
 
 ```sh
 make install   # uv sync
-make load      # ingest data/corpus/rulings.jsonl into data/suva.db
+make load      # ingest data/corpus/rulings.jsonl.gz into data/suva.db
 make triage    # score every ruling not triaged yet (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make test      # pytest
@@ -63,12 +63,18 @@ make lint      # ruff
 
 `uv run suva summarize 8C_129/2025` summarises a single ruling in German and French.
 
+`data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
+2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
+Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which
+caches raw downloads under `data/raw/` and replaces the corpus records in that date range.
+
 With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
 database and corpus directory. Load the corpus with `docker compose run --rm api suva load`.
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),
-`triage.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend).
+`triage.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend), `fetch/`
+(ruling crawler).
 
 ## 📦 Submission Requirements & Deliverables
 

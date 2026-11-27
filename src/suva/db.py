@@ -1,5 +1,7 @@
 """SQLite knowledge base: rulings with FTS5 search, triage results, summaries and feedback."""
 
+import gzip
+import io
 import json
 import sqlite3
 from pathlib import Path
@@ -115,10 +117,18 @@ def upsert_ruling(conn: sqlite3.Connection, ruling: dict[str, Any]) -> None:
     )
 
 
+def open_corpus(path: Path | str, mode: str = "r") -> io.TextIOBase:
+    """Open a JSONL corpus as text, gzip-compressed when the name ends in `.gz`."""
+    if str(path).endswith(".gz"):
+        # mtime=0 keeps the compressed bytes stable when the content is unchanged.
+        return io.TextIOWrapper(gzip.GzipFile(path, mode + "b", mtime=0), encoding="utf-8")
+    return open(path, mode, encoding="utf-8")
+
+
 def load_corpus(conn: sqlite3.Connection, path: Path | str) -> int:
     """Upsert every ruling from a JSONL corpus file; returns the number of rulings read."""
     count = 0
-    with conn, open(path, encoding="utf-8") as f:
+    with conn, open_corpus(path) as f:
         for line in f:
             if line.strip():
                 upsert_ruling(conn, json.loads(line))

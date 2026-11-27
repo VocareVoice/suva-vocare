@@ -13,6 +13,16 @@ def test_load_corpus_is_idempotent(conn):
     assert db.get_ruling(conn, "8C_135/2025")["language"] == "fr"
 
 
+def test_load_gzipped_corpus(tmp_path):
+    gz = tmp_path / "rulings.jsonl.gz"
+    with db.open_corpus(gz, "w") as f:
+        f.write(CORPUS.read_text(encoding="utf-8"))
+    conn = db.connect(tmp_path / "gz.db")
+    assert db.load_corpus(conn, gz) == 3
+    assert db.get_ruling(conn, "8C_135/2025")["language"] == "fr"
+    conn.close()
+
+
 def test_full_text_search(conn):
     _, items = db.list_rulings(conn, q="Kausalzusammenhang")
     assert dockets(items) == ["8C_129/2025"]

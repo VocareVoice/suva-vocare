@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     llm_max_retries: int = 5
 
     db_path: Path = Path("data/suva.db")
-    corpus_path: Path = Path("data/corpus/rulings.jsonl")
+    corpus_path: Path = Path("data/corpus/rulings.jsonl.gz")
     llm_cache_dir: Path = Path("data/cache/llm")
 
 
