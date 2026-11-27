@@ -10,7 +10,7 @@ const I18N = {
     "list.sub": "Relevanzbewertung und Zusammenfassungen für die Unfallversicherung",
     "stat.total": "Urteile im Zeitraum",
     "stat.relevant": "Als relevant bewertet",
-    "stat.summaries": "Mit Zusammenfassung",
+    "stat.summaries": "Relevant, mit Zusammenfassung",
     "stat.open": "Relevant, ohne Zusammenfassung",
     "search.ph": "Volltextsuche in Urteilen – z. B. «Kausalzusammenhang», «Art. 6 UVG», 8C_129/2025",
     "f.period": "Zeitraum",
@@ -30,7 +30,9 @@ const I18N = {
     "f.summary.yes": "Vorhanden",
     "f.summary.no": "Fehlt",
     "f.reset": "Filter zurücksetzen",
-    "results": (n, t) => (n === t ? `${n} Urteile` : `${n} von ${t} Urteilen`),
+    "results": (n, t) => (n === t ? `${n.toLocaleString("de-CH")} Urteile` : `${n.toLocaleString("de-CH")} von ${t.toLocaleString("de-CH")} Urteilen`),
+    "more": "Weitere anzeigen",
+    "loading": "Lädt …",
     "col.score": "Score",
     "col.docket": "Urteil",
     "col.date": "Datum",
@@ -120,7 +122,7 @@ const I18N = {
     "list.sub": "Évaluation de la pertinence et résumés pour l'assurance-accidents",
     "stat.total": "Arrêts de la période",
     "stat.relevant": "Jugés pertinents",
-    "stat.summaries": "Avec résumé",
+    "stat.summaries": "Pertinents, avec résumé",
     "stat.open": "Pertinents, sans résumé",
     "search.ph": "Recherche plein texte – p. ex. « causalité adéquate », « art. 6 LAA », 8C_129/2025",
     "f.period": "Période",
@@ -140,7 +142,9 @@ const I18N = {
     "f.summary.yes": "Disponible",
     "f.summary.no": "Manquant",
     "f.reset": "Réinitialiser",
-    "results": (n, t) => (n === t ? `${n} arrêts` : `${n} sur ${t} arrêts`),
+    "results": (n, t) => (n === t ? `${n.toLocaleString("fr-CH")} arrêts` : `${n.toLocaleString("fr-CH")} sur ${t.toLocaleString("fr-CH")} arrêts`),
+    "more": "Afficher plus",
+    "loading": "Chargement …",
     "col.score": "Score",
     "col.docket": "Arrêt",
     "col.date": "Date",
@@ -274,13 +278,20 @@ function suvaTitle(r) {
   return `BGer-Urteil ${r.docket}` + (d ? ` vom ${d.getDate()}. ${MONTHS_DE[d.getMonth()]} ${d.getFullYear()}` : "");
 }
 
-const DIVISIONS = {
-  "1C": "I. öffentlich-rechtliche Abteilung", "2C": "II. öffentlich-rechtliche Abteilung",
-  "8C": "IV. öffentlich-rechtliche Abteilung", "9C": "III. öffentlich-rechtliche Abteilung",
-  "4A": "I. zivilrechtliche Abteilung", "5A": "II. zivilrechtliche Abteilung",
-  "6B": "I. strafrechtliche Abteilung", "7B": "II. strafrechtliche Abteilung",
-  "1B": "I. öffentlich-rechtliche Abteilung", "2D": "II. öffentlich-rechtliche Abteilung",
+// Court division from the docket prefix (8C_129/2025 -> "8C"); the digit names the Abteilung,
+// the letter the procedure (C/A/B = ordinary appeal, D = subsidiary constitutional appeal, F = revision).
+const ABTEILUNG = {
+  1: "I. öffentlich-rechtliche Abteilung", 2: "II. öffentlich-rechtliche Abteilung",
+  9: "III. öffentlich-rechtliche Abteilung", 8: "IV. öffentlich-rechtliche Abteilung",
+  4: "I. zivilrechtliche Abteilung", 5: "II. zivilrechtliche Abteilung",
+  6: "I. strafrechtliche Abteilung", 7: "II. strafrechtliche Abteilung",
 };
+const COMMON_DIVISIONS = ["8C", "9C", "1C", "2C", "4A", "5A", "6B", "7B"];
+function divisionName(code) { return ABTEILUNG[(code || "")[0]] || ""; }
+function rulingDivision(r) {
+  const code = divisionCode(r.docket);
+  return r.division && r.division.length > 3 ? r.division : divisionName(code) || r.division || code;
+}
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
 function band(score) {
@@ -414,16 +425,25 @@ function highlight(text, terms = []) {
   return html;
 }
 
+const HEADING_RE = /(Sachverhalt|Erwägung|Faits|Considérant|Fatti|Diritto|Ritenuto|erkennt|Par ces motifs|Per questi motivi|prononce|pronuncia)/i;
+const LABEL_RE = /^(?:\d{1,2}|[A-Z])(?:\.(?:\d{1,2}|[a-z]))*\.$/; // "A.", "A.a.", "3.", "3.2."
+const LEAD_RE = /^((?:\d{1,2}|[A-Z])(?:\.(?:\d{1,2}|[a-z]))*\.)\s+(\D[\s\S]*)$/;
+
 function paragraphs(text, terms) {
-  const parts = String(text || "").split(/\n\s*\n|\r?\n(?=\s*\d+(?:\.\d+)*\.?\s)/).map((p) => p.trim()).filter(Boolean);
-  const blocks = parts.length > 1 ? parts : String(text || "").split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
-  return blocks.map((p) => {
-    const isHeading = p.length < 60 && /^(Sachverhalt|Erwägungen|Faits|Considérant|En droit|Fatti|Diritto|Demnach erkennt|Par ces motifs|Per questi motivi)/i.test(p);
-    const erw = /^(\d{1,2}(?:\.\d{1,2})*\.?)\s+(\D.*)$/s.exec(p);
-    if (isHeading) return `<p class="is-heading">${esc(p)}</p>`;
-    if (erw && erw[1].length < 10) return `<p class="is-erw"><span class="erw">${esc(erw[1])}</span>${highlight(erw[2], terms)}</p>`;
-    return `<p>${highlight(p, terms)}</p>`;
-  }).join("");
+  const blocks = String(text || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const out = [];
+  let label = "";
+  for (const p of blocks) {
+    if (LABEL_RE.test(p)) { label += (label ? " " : "") + p; continue; }
+    const tag = label ? `<span class="erw">${esc(label)}</span>` : "";
+    label = "";
+    if (p.length < 90 && /:\s*$/.test(p) && HEADING_RE.test(p)) { out.push(`<p class="is-heading">${tag}${esc(p)}</p>`); continue; }
+    const lead = LEAD_RE.exec(p);
+    if (lead && !tag) out.push(`<p><span class="erw">${esc(lead[1])}</span>${highlight(lead[2], terms)}</p>`);
+    else out.push(`<p>${tag}${highlight(p, terms)}</p>`);
+  }
+  if (label) out.push(`<p><span class="erw">${esc(label)}</span></p>`);
+  return out.join("");
 }
 
 // ---------------------------------------------------------------- router
@@ -432,7 +452,7 @@ const state = {
   q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
   sort: "score", dir: "desc",
   // cache of last list response
-  items: [], total: 0,
+  items: [], total: 0, sig: "", loaded: false, shown: 0, stats: null, statsSig: "",
   lastListHash: "#/",
 };
 
@@ -481,17 +501,55 @@ function periodRange() {
   return { from: p.from, to: p.to };
 }
 
-async function fetchList() {
+const PAGE = 500;      // API maximum per request
+const SHOW_STEP = 200; // rows rendered per "show more"
+
+function serverParams() {
   const { from, to } = periodRange();
-  const params = { sort: state.sort === "date" ? "date" : "score", limit: 500 };
+  const params = { sort: state.sort === "date" ? "date" : "score" };
   if (state.q.trim()) params.q = state.q.trim();
   if (from) params.from = from;
   if (to) params.to = to;
   if (state.label) params.label = state.label;
   if (state.min) params.min_score = state.min;
-  const res = await API.list(params);
-  state.items = res.items || [];
-  state.total = res.total ?? state.items.length;
+  return params;
+}
+// Division, language and summary filters and the other column sorts run in the browser,
+// so they need every matching ruling, not only the first page.
+function needsAll() {
+  return Boolean(state.div || state.lang || state.sum) || !(["score", "date"].includes(state.sort) && state.dir === "desc");
+}
+
+async function ensureItems() {
+  const params = serverParams();
+  const sig = JSON.stringify(params);
+  if (sig !== state.sig) { state.sig = sig; state.items = []; state.total = 0; state.loaded = false; }
+  const want = needsAll() ? Infinity : state.shown;
+  while (!state.loaded && state.items.length < want) {
+    const res = await API.list({ ...params, limit: PAGE, offset: state.items.length });
+    if (state.sig !== sig) return; // a newer request took over
+    state.items.push(...(res.items || []));
+    state.total = res.total ?? state.items.length;
+    if (!res.items?.length || state.items.length >= state.total) state.loaded = true;
+  }
+}
+
+// Stats describe the period and search, independent of the triage/score filters.
+async function ensureStats() {
+  const { from, to } = periodRange();
+  const base = {};
+  if (state.q.trim()) base.q = state.q.trim();
+  if (from) base.from = from;
+  if (to) base.to = to;
+  const sig = JSON.stringify(base);
+  if (sig === state.statsSig && state.stats) return;
+  const [all, rel] = await Promise.all([
+    API.list({ ...base, limit: 1 }),
+    API.list({ ...base, label: "relevant", limit: PAGE }),
+  ]);
+  const withSum = (rel.items || []).filter((r) => r.has_summary).length;
+  state.stats = { total: all.total, relevant: rel.total, withSum, open: rel.total - withSum };
+  state.statsSig = sig;
 }
 
 function filteredItems() {
@@ -570,21 +628,19 @@ function listShell() {
 }
 
 function renderStats() {
-  const all = state.items;
-  const rel = all.filter((r) => r.label === "relevant");
-  const withSum = all.filter((r) => r.has_summary);
-  const open = rel.filter((r) => !r.has_summary);
-  $("#stats").innerHTML = [
-    [t("stat.total"), state.total],
-    [t("stat.relevant"), rel.length, all.length ? `${Math.round((rel.length / all.length) * 100)} %` : ""],
-    [t("stat.summaries"), withSum.length],
-    [t("stat.open"), open.length],
-  ].map(([l, v, s]) => `<div class="card stat"><div class="stat__label">${esc(l)}</div><div class="stat__value">${v}${s ? `<small>${esc(s)}</small>` : ""}</div></div>`).join("");
-
-  const divs = [...new Set(all.map((r) => divisionCode(r.docket)).filter(Boolean))].sort();
+  const st = state.stats;
+  if (st) {
+    $("#stats").innerHTML = [
+      [t("stat.total"), st.total],
+      [t("stat.relevant"), st.relevant, st.total ? `${Math.round((st.relevant / st.total) * 100)} %` : ""],
+      [t("stat.summaries"), st.withSum],
+      [t("stat.open"), st.open],
+    ].map(([l, v, x]) => `<div class="card stat"><div class="stat__label">${esc(l)}</div><div class="stat__value">${v.toLocaleString("de-CH")}${x ? `<small>${esc(x)}</small>` : ""}</div></div>`).join("");
+  }
+  const divs = [...new Set([...COMMON_DIVISIONS, ...state.items.map((r) => divisionCode(r.docket)).filter(Boolean)])].sort();
   if (state.div && !divs.includes(state.div)) divs.push(state.div);
   $("#divSel").innerHTML = `<select data-f="div"><option value="">${esc(t("f.division.all"))}</option>${divs
-    .map((d) => `<option value="${d}"${d === state.div ? " selected" : ""}>${d}${DIVISIONS[d] ? " – " + esc(DIVISIONS[d]) : ""}</option>`).join("")}</select>`;
+    .map((d) => `<option value="${d}"${d === state.div ? " selected" : ""}>${d}${divisionName(d) ? " – " + esc(divisionName(d)) : ""}</option>`).join("")}</select>`;
 }
 
 function renderTable() {
@@ -593,7 +649,7 @@ function renderTable() {
   const filtered = state.q || state.label || state.min || state.div || state.lang || state.sum || state.period !== "all";
   if (!items.length) {
     wrap.innerHTML = `<div class="empty"><h2>${esc(t("empty.title"))}</h2>${
-      !state.items.length && !filtered ? `<p>${esc(t("empty.db"))} <code>make load</code></p>` : `<p>${esc(t("empty.filtered"))}</p>`}</div>`;
+      !filtered ? `<p>${esc(t("empty.db"))} <code>make load</code></p>` : `<p>${esc(t("empty.filtered"))}</p>`}</div>`;
     return;
   }
   const th = (key, label, cls) => {
@@ -602,13 +658,13 @@ function renderTable() {
       <button type="button" data-sort="${key}">${esc(label)} <span class="arrow">${active && state.dir === "asc" ? "▲" : "▼"}</span></button></th>`;
   };
   const terms = state.q.trim() ? state.q.trim().split(/\s+/) : [];
-  const rows = items.map((r) => {
+  const rows = items.slice(0, state.shown).map((r) => {
     const reason = r.reasoning || r.reason || "";
     const div = divisionCode(r.docket);
     return `<tr data-docket="${esc(r.docket)}" class="${band(r.score) === "low" ? "is-low" : ""}">
       <td class="c-score">${scoreBadge(r.score)}</td>
       <td class="c-docket"><a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
-        <span class="subdocket" title="${esc(r.division || DIVISIONS[div] || "")}">${esc(div)}${r.score == null ? " · " + esc(t("untriaged")) : ""}</span></td>
+        <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " · " + esc(t("untriaged")) : ""}</span></td>
       <td class="c-date num">${fmtDate(r.decision_date)}</td>
       <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>
         ${reason ? `<div class="ruling-reason">${esc(reason)}</div>` : ""}</td>
@@ -623,7 +679,10 @@ function renderTable() {
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="summary__foot"><span class="resultcount">${esc(t("results", items.length, state.total))}</span></div>`;
+  <div class="summary__foot">
+    <span class="resultcount" id="resultcount">${esc(t("results", Math.min(state.shown, items.length), needsAll() ? items.length : state.total))}</span>
+    ${state.shown < (needsAll() ? items.length : state.total) ? `<button type="button" class="btn btn--sm" id="more">${esc(t("more"))}</button>` : ""}
+  </div>`;
 }
 
 let searchTimer;
@@ -640,16 +699,22 @@ async function renderList() {
   app.innerHTML = listShell();
   $("#tableWrap").innerHTML = `<div class="card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(8)}</div>`;
 
-  const reload = async (refetch = true) => {
+  let loadingTimer;
+  const reload = async (resetShown = true) => {
     history.replaceState(null, "", listHash());
     state.lastListHash = listHash();
-    if (refetch) {
-      try { await fetchList(); } catch (e) {
-        $("#tableWrap").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
-        return;
-      }
-      renderStats();
+    if (resetShown) state.shown = SHOW_STEP;
+    clearTimeout(loadingTimer);
+    loadingTimer = setTimeout(() => { const c = $("#resultcount"); if (c) c.textContent = t("loading"); }, 300);
+    try {
+      await Promise.all([ensureItems(), ensureStats().then(renderStats)]);
+    } catch (e) {
+      clearTimeout(loadingTimer);
+      $("#tableWrap").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
+      return;
     }
+    clearTimeout(loadingTimer);
+    renderStats();
     renderTable();
   };
 
@@ -669,7 +734,7 @@ async function renderList() {
     if (!f || f === "min") return;
     state[f] = e.target.value;
     if (f === "period") $("#customRange").hidden = state.period !== "custom";
-    reload(["period", "from", "to"].includes(f));
+    reload();
   }, opts);
   app.addEventListener("click", (e) => {
     const lbl = e.target.closest("[data-label]");
@@ -684,6 +749,11 @@ async function renderList() {
       const key = s.dataset.sort;
       if (state.sort === key) state.dir = state.dir === "asc" ? "desc" : "asc";
       else { state.sort = key; state.dir = ["docket", "title", "lang"].includes(key) ? "asc" : "desc"; }
+      reload();
+      return;
+    }
+    if (e.target.id === "more") {
+      state.shown += SHOW_STEP;
       reload(false);
       return;
     }
@@ -842,8 +912,8 @@ function metaCard(r) {
   const rows = [
     [t("m.docket"), r.docket],
     [t("m.decision"), fmtDate(r.decision_date, "long")],
-    [t("m.published"), fmtDate(r.publication_date, "long")],
-    [t("m.division"), r.division || DIVISIONS[div] || div],
+    ...(r.publication_date ? [[t("m.published"), fmtDate(r.publication_date, "long")]] : []),
+    [t("m.division"), `${div} · ${rulingDivision(r)}`],
     [t("m.language"), r.language ? t(`lang.${r.language}`) : "—"],
     [t("m.source"), r.source || "bger.ch"],
   ];
@@ -900,7 +970,7 @@ function paintDetail(r, terms) {
       <div>
         <div class="dhead__kicker">
           ${tr ? `<span class="chip ${tr.label === "relevant" ? "chip--accent" : ""}"><span class="dot"></span>${esc(tr.label === "relevant" ? t("r.rel") : t("r.not"))} · ${tr.score}</span>` : ""}
-          <span class="chip" title="${esc(r.division || DIVISIONS[div] || "")}">${esc(div)} · ${esc(r.division || DIVISIONS[div] || "")}</span>
+          <span class="chip">${esc(div)} · ${esc(rulingDivision(r))}</span>
           <span class="chip">${esc(fmtDate(r.decision_date, "long"))}</span>
         </div>
         <h1>${esc(suvaTitle(r))}</h1>

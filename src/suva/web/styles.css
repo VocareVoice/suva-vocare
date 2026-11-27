@@ -340,9 +340,8 @@ table.rulings { width: 100%; border-collapse: separate; border-spacing: 0; font-
   font: 16.5px/1.72 var(--font-read); color: var(--ink); max-width: 74ch; margin: 0 auto;
   hyphens: auto; text-wrap: pretty;
 }
-.original__text p { margin: 0 0 1em; }
+.original__text p { margin: 0 0 1em; white-space: pre-line; }
 .original__text p.is-heading { font-family: var(--font-ui); font-weight: 650; font-size: 13.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-top: 1.8em; }
-.original__text p.is-erw { padding-left: 0; }
 .original__text .erw { font-family: var(--font-ui); font-weight: 650; font-size: .82em; color: var(--accent); margin-right: .35em; }
 .original__collapsed { max-height: 620px; overflow: hidden; position: relative; }
 .original__collapsed::after {
