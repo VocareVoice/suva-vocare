@@ -136,6 +136,13 @@ uv run python -m suva.eval.score_triage triage.jsonl [--threshold 0.5] # vs. rel
 uv run python -m suva.eval.score_classification       # vs. topic labels of the 55 examples
 ```
 
+Feedback loop: the experts' score corrections and edited summaries feed a human-supervised
+review, not the prompts directly. `uv run suva feedback-export --out feedback.json` writes them
+as JSON (no LLM), the `feedback-review` skill (`.claude/skills/feedback-review/SKILL.md`) has a
+coding agent draft a report with suggested prompt changes, and a developer applies and
+evaluates the ones the team picks. Workflow and diagram: `docs/feedback_loop.md`; example
+report (synthetic corrections): `docs/examples/feedback_review_example.md`.
+
 ## 📦 Submission Requirements & Deliverables
 
 The submission must:

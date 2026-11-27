@@ -982,6 +982,7 @@ def list_adjustments(conn: sqlite3.Connection) -> list[dict[str, Any]]:
                {_HEADLINE.format(lang="de")}, {_HEADLINE.format(lang="fr")},
                e.score AS expert_score, e.label AS expert_label, e.created_at AS adjusted_at,
                m.score AS model_score, m.label AS model_label,
+               m.model AS model_name, m.prompt_version AS model_prompt_version,
                m.reasoning_de AS model_reasoning_de, m.reasoning_fr AS model_reasoning_fr,
                (SELECT comment FROM feedback f WHERE f.docket = r.docket
                 ORDER BY f.id DESC LIMIT 1) AS comment,
@@ -994,6 +995,40 @@ def list_adjustments(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         ORDER BY e.id DESC
         """
     ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_edited_summaries(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every summary a user edited or applied from an agent proposal, oldest first. `edited_by`
+    is "manual" (the editor) or "agent" (a proposal); the generated text it replaced is gone
+    from the database (`save_summary` keeps no history)."""
+    rows = conn.execute(
+        f"""
+        SELECT s.docket, s.lang, s.text, s.model AS edited_by, s.created_at AS edited_at,
+               r.decision_date, r.language, r.title, t.score, c.branch, c.primary_category
+        FROM summaries s JOIN rulings r ON r.docket = s.docket
+        LEFT JOIN triage t ON {_LATEST_TRIAGE}
+        LEFT JOIN classification c ON {_LATEST_CLASSIFICATION}
+        WHERE s.prompt_version = ?
+        ORDER BY s.created_at, s.docket, s.lang
+        """,
+        (EDITED_VERSION,),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_feedback(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id, docket, verdict, corrected_score, comment, created_at FROM feedback ORDER BY id"
+    )
+    return [dict(row) for row in rows]
+
+
+def list_adjustment_summaries(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT lang, text, adjustment_count, model, created_at FROM adjustment_summaries "
+        "ORDER BY id"
+    )
     return [dict(row) for row in rows]
 
 
