@@ -1,7 +1,8 @@
 import argparse
+from dataclasses import asdict
 from pathlib import Path
 
-from suva import db, summarize, triage
+from suva import classify, db, summarize, triage
 from suva.config import get_settings
 from suva.llm import LLMClient
 
@@ -34,6 +35,27 @@ def main() -> None:
 
     imp = commands.add_parser("import-triage", help="load triage results from export-triage")
     imp.add_argument("path", type=Path)
+
+    cls = commands.add_parser(
+        "classify",
+        help="classify every ruling without a result of the current prompt version: Apertus "
+        "for rulings that pass the triage pre-filter, the subject line for the rest",
+    )
+    cls.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
+    cls.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
+    cls.add_argument("--workers", type=int, default=8, help="parallel LLM calls")
+
+    export_cls = commands.add_parser(
+        "export-classification", help="write the latest classifications as JSONL"
+    )
+    export_cls.add_argument("path", type=Path)
+    export_cls.add_argument("--from", dest="date_from")
+    export_cls.add_argument("--to", dest="date_to")
+
+    imp_cls = commands.add_parser(
+        "import-classification", help="load classifications from export-classification"
+    )
+    imp_cls.add_argument("path", type=Path)
 
     summ = commands.add_parser("summarize", help="summarise one ruling in German and French")
     summ.add_argument("docket")
@@ -84,6 +106,39 @@ def main() -> None:
         print(f"Wrote {count} triage results to {args.path}")
     elif args.command == "import-triage":
         print(f"Loaded {db.import_triage(conn, args.path)} triage results from {args.path}")
+    elif args.command == "classify":
+        llm = LLMClient(settings)
+        dockets = db.unclassified_dockets(
+            conn,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            prompt_version=classify.PROMPT_VERSION,
+        )
+        print(f"Classifying {len(dockets)} rulings with {llm.model}")
+        failed = 0
+        for docket, result in classify.classify_batch(conn, dockets, llm, workers=args.workers):
+            if isinstance(result, Exception):
+                failed += 1
+                print(f"{docket}: failed ({result!r})")
+                continue
+            db.save_classification(
+                conn,
+                docket,
+                **asdict(result),
+                prompt_version=classify.PROMPT_VERSION,
+            )
+            labels = " ".join([result.branch, result.primary, *result.secondary])
+            print(f"{docket}: {labels} ({result.method})")
+        if failed:
+            raise SystemExit(f"{failed} rulings failed; run classify again to retry them")
+    elif args.command == "export-classification":
+        count = db.export_classification(
+            conn, args.path, date_from=args.date_from, date_to=args.date_to
+        )
+        print(f"Wrote {count} classifications to {args.path}")
+    elif args.command == "import-classification":
+        count = db.import_classification(conn, args.path)
+        print(f"Loaded {count} classifications from {args.path}")
     elif args.command == "summarize":
         llm = LLMClient(settings)
         for lang, text in summarize.summarize(conn, args.docket, llm).items():

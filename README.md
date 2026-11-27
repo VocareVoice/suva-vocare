@@ -54,8 +54,9 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Copy `.env.example` t
 
 ```sh
 make install   # uv sync
-make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage results
+make load      # ingest data/corpus/rulings.jsonl.gz and the committed triage and classification results
 make triage    # score every ruling not triaged with the current prompt yet (Apertus)
+make classify  # classify every ruling not classified with the current prompt yet (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
 make test      # pytest
 make lint      # ruff
@@ -74,6 +75,17 @@ writes the results as JSONL and `uv run suva import-triage PATH` loads them.
 `data/results/triage_2026q2.jsonl` holds the April-June 2026 triage, so the UI works without
 calling Apertus.
 
+Classification (`classify.py`, results in `docs/eval_classification.md`) sorts every ruling into a
+closed two-level taxonomy, shown in the UI as badges and filters in German and French: the
+insurance branch (UVG, IVG, MVG, ATSG, or outside social insurance) and a legal category (one
+primary, up to two secondary, e.g. adequate causality or degree of invalidity). Statutes cited,
+the outcome and flags (five-judge panel, public deliberation, cited as intended for publication)
+are read from the text without an LLM. Rulings that pass the triage pre-filter are classified by
+Apertus with enum-constrained JSON; the rest get their labels from the subject line.
+`uv run suva classify --from ... --to ...` classifies a period (resumable, parallel),
+`export-classification` / `import-classification` work like their triage counterparts, and
+`data/results/classification_*.jsonl` hold the results for October 2025 to June 2026.
+
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
 2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which
@@ -81,22 +93,26 @@ caches raw downloads under `data/raw/` and replaces the corpus records in that d
 
 With Docker: `docker compose up --build` serves on port 8000, with `./data` mounted as the
 database and corpus directory. Load the corpus with `docker compose run --rm api suva load`
-and the triage results with
-`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl`.
+the triage results with
+`docker compose run --rm api suva import-triage data/results/triage_2026q2.jsonl` and the
+classification with `docker compose run --rm api suva import-classification
+data/results/classification_2026q2.jsonl` (likewise for `classification_2025q4_2026q1.jsonl`).
 
 Code lives in `src/suva/`: `config.py` (settings from env / `.env`), `llm.py` (OpenAI-compatible
 Apertus client with an on-disk response cache), `db.py` (SQLite + FTS5 knowledge base),
-`triage.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend), `fetch/`
+`triage.py`, `classify.py` and `summarize.py` (LLM steps), `api.py` (FastAPI), `web/` (frontend), `fetch/`
 (ruling crawler).
 
 Evaluation: `docs/style_guide.md` is the house style for the DE/FR summaries and the relevance
 signals, derived from Suva's examples in `judgements/`. `data/eval/` holds the parsed examples,
-the labelled Q4 2025 / Q1 2026 relevance list, the hold-out split and the DE/FR glossary.
+the labelled Q4 2025 / Q1 2026 relevance list, the hold-out split, the DE/FR glossary and the full
+text of the 55 example rulings (`example_rulings.jsonl.gz`, 23 of them predate the corpus).
 
 ```sh
 uv run python -m suva.eval.examples          # re-parse judgements/ into data/eval/
 uv run python -m suva.eval.score_summaries generated.jsonl [--judge]   # vs. hold-out summaries
 uv run python -m suva.eval.score_triage triage.jsonl [--threshold 0.5] # vs. relevance list
+uv run python -m suva.eval.score_classification       # vs. topic labels of the 55 examples
 ```
 
 ## 📦 Submission Requirements & Deliverables
