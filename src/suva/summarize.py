@@ -507,13 +507,14 @@ def headline(
         task += f"\n\nTerminology (German - French), use the {LANGUAGE_NAMES[lang]} form:\n{terms}"
     # The outcome spelled out: from "a remand is superfluous" in the holdings the model
     # wrote a remand headline for a dismissed appeal (8C_344/2025).
-    outcome = f"appeal {case.result or 'decided as in the operative part'}; " + (
-        "the case is remitted" if remanded(case.operative) else "no remand"
+    outcome = (
+        f"the appeal by {APPELLANTS[case.appellant][0]} was "
+        f"{case.result or 'decided as in the operative part'}; "
+        + ("the case is remitted" if remanded(case.operative) else "no remand")
     )
     context = (
-        f"Subject: {subject or 'unknown'}\nAppeal lodged by: {APPELLANTS[case.appellant][0]}\n"
-        f"Operative part: «{case.operative}»\nOutcome: {outcome}\n\nThe Court's conclusions, "
-        f"consideration by consideration:\n{case.holdings}"
+        f"Subject: {subject or 'unknown'}\nOperative part: «{case.operative}»\nOutcome: "
+        f"{outcome}\n\nThe Court's conclusions, consideration by consideration:\n{case.holdings}"
     )
     request = f"{context}\n\n---\n{task}"
     for attempt in range(3):
@@ -544,7 +545,12 @@ def clean_headline(text: str, lang: str) -> str:
         line,
         flags=re.I,
     )
-    line = re.sub(r" (?:Abs|al)\. \d+\b", "", line)
+    # One paragraph number goes; with several ("Art. 10 Abs. 1 und Abs. 5") the rest would
+    # read as a list of articles.
+    if len(re.findall(r" (?:Abs|al)\. \d+\b", line)) == 1:
+        line = re.sub(r" (?:Abs|al)\. \d+\b", "", line)
+    # "Zurückweisung" is a rejection; a remand is a "Rückweisung".
+    line = re.sub(r"^Zurückweisung zur\b", "Rückweisung zur", line)
     line = _HEADLINE_DATE.sub("", line)
     line = line[:1].upper() + line[1:]
     return line.strip(" \t\"'«»“”„").rstrip(".").strip()
