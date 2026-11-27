@@ -172,6 +172,29 @@ Not listed, in the top 30: Q4 2025 8C_221/2025, 8C_679/2024, 8C_29/2025, 8C_151/
 (accident insurance) and 9C_43/2025 (invalidity insurance). Most are full accident insurance
 judgments that read like the listed ones.
 
+## Checked against the labels, not changed
+
+Under Art. 1 UVG the ATSG applies to accident insurance, so an IV ruling that interprets a
+shared ATSG concept can matter to Suva. Three rules that follow from this were checked against
+the labelled period (statutes from `data/results/classification_2025q4_2026q1.jsonl`, subjects
+from the corpus). None was adopted:
+
+| Candidate rule | Listed | Not listed | Listed share |
+|---|---|---|---|
+| All 8C/9C IV rulings (base rate) | 16 | 185 | 8 % |
+| IV ruling citing Art. 8 / 16 / 17 ATSG | 6 / 3 / 2 | 45 / 46 / 43 | 12 / 6 / 4 % |
+| IV ruling on helplessness (Art. 9 ATSG; Art. 26-27 UVG), from the subject | 3 | 4 | 43 % |
+| UV/IV ruling with a procedural subject, decided on the merits | 2 | 16 | 11 % |
+
+- **Shared ATSG articles** (invalidity, assessment of invalidity, revision) do not separate
+  listed from unlisted rulings any better than the base rate.
+- **Procedure.** Suva lists few rulings on ATSG procedure (cantonal procedure, admissibility,
+  costs, delay), so a rule raising them would add mostly false positives. The two listed ones
+  (8C_351/2025, 9C_65/2025) stay hard cases.
+- **Helplessness** separates (3 of 7), but the prompt already names helplessness among the IV
+  topics that carry over, and seven rulings are too few to tune on without fitting the same
+  period that is used for evaluation. Worth checking again once a later quarter is labelled.
+
 ## Model choice
 
 The gateway offers `apertus-v1-5-70b`, `apertus-v1-5-70b-thinking`, `apertus-v1-5-8b` and

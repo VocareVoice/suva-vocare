@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     llm_timeout: float = 120.0
     llm_max_retries: int = 5
 
+    # The side-panel agent runs on the instruct model; the pipelines use `llm_name`.
+    agent_model: str = "apertus-v1-5-70b"
+    agent_max_steps: int = 10  # tool calls per user message before the agent must answer
+
     db_path: Path = Path("data/suva.db")
     corpus_path: Path = Path("data/corpus/rulings.jsonl.gz")
     llm_cache_dir: Path = Path("data/cache/llm")

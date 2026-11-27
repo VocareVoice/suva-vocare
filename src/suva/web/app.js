@@ -1,17 +1,59 @@
 // BGer-Monitor UI — vanilla ES module, no build step, no external dependencies.
-// Talks to the FastAPI JSON API in src/suva/api.py.
+// Talks to the FastAPI JSON API in src/suva/api.py. The root view (relevant rulings by category)
+// lives in relevant.js, the branch/category taxonomy in categories.js, the agent panel in agent.js.
+
+import { initAgent, paintAgent } from "./agent.js";
+import { branchLaw, buildRegister, ensureTaxonomy, getTaxonomy, taxLabel } from "./categories.js";
+import { renderLaw } from "./law.js";
+import { loadKnowledgeBase, renderRelevant } from "./relevant.js";
 
 // ---------------------------------------------------------------- i18n
 const I18N = {
   de: {
+    "nav.rel": "Wissensbasis",
+    "nav.all": "Alle Urteile",
+    "nav.law": "Gesetze",
+    "law.inforce": (d) => `Stand ${d}`,
+    "law.filter": "Artikel oder Stichwort, z. B. 6 oder Heilbehandlung",
+    "law.none": "Kein Artikel gefunden.",
+    "rel.title": "Wissensbasis",
+    "rel.register": "Register",
+    "rel.all": "Alle Rechtsfragen",
+    "rel.sum.yes": "Zusammenfassung DE und FR vorhanden",
+    "rel.sum.no": "Noch keine Zusammenfassung",
+    "rel.sum.open": "Offen",
+    "agent.tab": "Agent",
+    "agent.title": "Agent",
+    "agent.close": "Agent schliessen",
+    "agent.intro": "Schildern Sie einen Fall oder stellen Sie eine Frage. Ich suche die einschlägigen UVG-Artikel und Bundesgerichtsurteile aus der Wissensbasis und verlinke sie. Auf Wunsch schlage ich auch eine überarbeitete Zusammenfassung eines Urteils vor.",
+    "agent.ph": "Fall schildern oder Frage stellen …",
+    "agent.send": "Senden",
+    "agent.new": "Neuer Chat",
+    "agent.new.title": "Diesen Chat löschen und neu beginnen",
+    "agent.thinking": "Der Agent recherchiert …",
+    "agent.busy": "Der Agent beantwortet noch die vorige Nachricht.",
+    "agent.error": (e) => `Fehler: ${e}`,
+    "agent.context": (d) => `Kontext: ${d}`,
+    "agent.step.read_uvg_article": (a) => `Art. ${a.art ?? ""} UVG gelesen`,
+    "agent.step.read_article": (a) => `Art. ${a.art ?? ""} ${({ LAA: "UVG", LPGA: "ATSG", OLAA: "UVV" })[(a.law || "UVG").toUpperCase()] || (a.law || "UVG").toUpperCase()} gelesen`,
+    "agent.step.list_rulings": (a) => a.category ? `Wissensbasis durchsucht (Kategorie ${a.category})` : a.query ? `Wissensbasis durchsucht: «${a.query}»` : "Wissensbasis durchgesehen",
+    "agent.step.search_rulings": (a) => `Volltextsuche: «${a.query ?? ""}»`,
+    "agent.step.read_ruling": (a) => `Urteil ${a.docket ?? ""} gelesen${a.offset ? " (Fortsetzung)" : ""}`,
+    "agent.step.propose_summary": (a) => `Zusammenfassung ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) entworfen`,
+    "agent.step.other": (name) => `Werkzeug ${name}`,
+    "agent.prop.title": (d, l) => `Vorschlag: neue Zusammenfassung ${l} für`,
+    "agent.prop.apply": "Übernehmen",
+    "agent.prop.discard": "Verwerfen",
+    "agent.prop.applied": "Übernommen – die bisherige Zusammenfassung wurde ersetzt.",
+    "agent.prop.discarded": "Verworfen.",
+    "agent.prop.current": "Bisherige Zusammenfassung",
+    "agent.prop.none": "Noch keine Zusammenfassung.",
+    "kb.empty": "Keine Urteile in der Wissensbasis",
+    "kb.empty.sub": "Sobald die Triage Urteile als relevant bewertet, erscheinen sie hier.",
     "brand.sub": "Rechtsprechung Unfallversicherung",
     "nav.rulings": "Urteile",
     "list.title": "Bundesgerichtsurteile",
-    "list.sub": "Relevanzbewertung und Zusammenfassungen für die Unfallversicherung",
-    "stat.total": "Urteile im Zeitraum",
-    "stat.relevant": "Als relevant bewertet",
-    "stat.summaries": "Relevant, mit Zusammenfassung",
-    "stat.open": "Relevant, ohne Zusammenfassung",
+    "list.sub": "Alle publizierten Urteile mit Relevanzbewertung für die Suva",
     "search.ph": "Volltextsuche in Urteilen – z. B. «Kausalzusammenhang», «Art. 6 UVG», 8C_129/2025",
     "f.period": "Zeitraum",
     "f.period.all": "Alle",
@@ -36,17 +78,17 @@ const I18N = {
     "col.score": "Score",
     "col.docket": "Urteil",
     "col.date": "Datum",
-    "col.subject": "Gegenstand · Begründung",
+    "col.subject": "Gegenstand und Begründung",
     "col.lang": "Spr.",
     "col.summary": "Zusammenf.",
-    "sum.yes": "DE · FR",
+    "sum.yes": "DE FR",
     "sum.no": "—",
     "untriaged": "nicht bewertet",
     "empty.title": "Keine Urteile gefunden",
     "empty.filtered": "Passen Sie Suche oder Filter an.",
     "empty.db": "Die Datenbank ist leer. Laden Sie Urteile mit",
     "err.load": "Daten konnten nicht geladen werden",
-    "back": "Alle Urteile",
+    "back": "Zurück zur Übersicht",
     "d.original": "Original auf bger.ch",
     "d.copy": "Kopieren",
     "d.copyAll": "DE + FR kopieren",
@@ -69,7 +111,7 @@ const I18N = {
     "gen.s2": "Kernaussagen und Normen extrahieren",
     "gen.s3": "Deutsche Fassung verfassen",
     "gen.s4": "Französische Fassung verfassen",
-    "gen.elapsed": (s) => `Laufzeit ${s} s · dauert in der Regel 30–90 s`,
+    "gen.elapsed": (s) => `Laufzeit ${s} s, dauert in der Regel 30–90 s`,
     "gen.err": "Die Zusammenfassung konnte nicht erstellt werden",
     "gen.notimpl": "Der Zusammenfassungs-Dienst ist noch nicht verfügbar.",
     "gen.done": "Zusammenfassung erstellt",
@@ -84,31 +126,16 @@ const I18N = {
     "r.hint": "Score 0–100 für die Bedeutung für die Unfallversicherung",
     "r.none": "Dieses Urteil wurde noch nicht bewertet.",
     "r.reason": "Begründung",
-    "fb.title": "Feedback",
-    "fb.q": "Ist diese Einschätzung korrekt?",
-    "fb.agree": "Zutreffend",
-    "fb.disagree": "Nicht zutreffend",
-    "fb.is": "Das Urteil ist",
-    "fb.verdict.rel": "relevant",
-    "fb.verdict.not": "nicht relevant",
-    "fb.score": "Korrigierter Score (optional)",
-    "fb.comment": "Kommentar (optional)",
-    "fb.comment.ph": "Warum? Diese Rückmeldung fliesst in die künftige Bewertung ein.",
-    "fb.send": "Feedback senden",
-    "fb.cancel": "Abbrechen",
-    "fb.thanks": "Danke – Feedback gespeichert",
-    "fb.history": "Bisheriges Feedback",
-    "fb.err": "Feedback konnte nicht gespeichert werden",
     "st.title": "Zitierte Normen",
     "st.none": "Keine Normen erkannt.",
     "m.title": "Angaben",
     "m.docket": "Urteil",
+    "m.subject": "Gegenstand",
     "m.decision": "Entscheid",
     "m.published": "Publiziert",
     "m.division": "Abteilung",
     "m.language": "Sprache",
     "m.source": "Quelle",
-    "m.model": "Modell",
     "copied": "In die Zwischenablage kopiert",
     "lang.de": "Deutsch",
     "lang.fr": "Französisch",
@@ -121,19 +148,52 @@ const I18N = {
     "c.title": "Rechtsgebiet",
     "c.secondary": "Weitere Fragen",
     "c.outcome": "Ausgang",
-    "c.method.llm": "Apertus",
-    "c.method.subject": "aus dem Gegenstand",
-    "c.method.rule": "Regel",
   },
   fr: {
+    "nav.rel": "Base de connaissances",
+    "nav.all": "Tous les arrêts",
+    "nav.law": "Lois",
+    "law.inforce": (d) => `État le ${d}`,
+    "law.filter": "Article ou mot-clé, p. ex. 6 ou traitement",
+    "law.none": "Aucun article trouvé.",
+    "rel.title": "Base de connaissances",
+    "rel.register": "Registre",
+    "rel.all": "Toutes les questions",
+    "rel.sum.yes": "Résumé DE et FR disponible",
+    "rel.sum.no": "Pas encore de résumé",
+    "rel.sum.open": "Ouvert",
+    "agent.tab": "Agent",
+    "agent.title": "Agent",
+    "agent.close": "Fermer l'agent",
+    "agent.intro": "Décrivez un cas ou posez une question. Je cherche les articles pertinents de la LAA et les arrêts du Tribunal fédéral de la base de connaissances, avec des liens. Sur demande, je propose aussi un résumé révisé d'un arrêt.",
+    "agent.ph": "Décrire un cas ou poser une question …",
+    "agent.send": "Envoyer",
+    "agent.new": "Nouveau chat",
+    "agent.new.title": "Supprimer ce chat et recommencer",
+    "agent.thinking": "L'agent fait ses recherches …",
+    "agent.busy": "L'agent répond encore au message précédent.",
+    "agent.error": (e) => `Erreur : ${e}`,
+    "agent.context": (d) => `Contexte : ${d}`,
+    "agent.step.read_uvg_article": (a) => `Art. ${a.art ?? ""} LAA lu`,
+    "agent.step.read_article": (a) => `Art. ${a.art ?? ""} ${({ UVG: "LAA", ATSG: "LPGA", UVV: "OLAA" })[(a.law || "UVG").toUpperCase()] || (a.law || "UVG").toUpperCase()} lu`,
+    "agent.step.list_rulings": (a) => a.category ? `Base de connaissances parcourue (catégorie ${a.category})` : a.query ? `Base de connaissances : « ${a.query} »` : "Base de connaissances parcourue",
+    "agent.step.search_rulings": (a) => `Recherche plein texte : « ${a.query ?? ""} »`,
+    "agent.step.read_ruling": (a) => `Arrêt ${a.docket ?? ""} lu${a.offset ? " (suite)" : ""}`,
+    "agent.step.propose_summary": (a) => `Résumé ${a.docket ?? ""} (${(a.lang || "").toUpperCase()}) rédigé`,
+    "agent.step.other": (name) => `Outil ${name}`,
+    "agent.prop.title": (d, l) => `Proposition : nouveau résumé ${l} pour`,
+    "agent.prop.apply": "Appliquer",
+    "agent.prop.discard": "Rejeter",
+    "agent.prop.applied": "Appliqué – l'ancien résumé a été remplacé.",
+    "agent.prop.discarded": "Rejeté.",
+    "agent.prop.current": "Résumé actuel",
+    "agent.prop.none": "Pas encore de résumé.",
+    "kb.empty": "Aucun arrêt dans la base de connaissances",
+    "kb.empty.sub": "Les arrêts apparaissent ici dès que le triage les juge pertinents.",
     "brand.sub": "Jurisprudence assurance-accidents",
     "nav.rulings": "Arrêts",
     "list.title": "Arrêts du Tribunal fédéral",
-    "list.sub": "Évaluation de la pertinence et résumés pour l'assurance-accidents",
-    "stat.total": "Arrêts de la période",
-    "stat.relevant": "Jugés pertinents",
-    "stat.summaries": "Pertinents, avec résumé",
-    "stat.open": "Pertinents, sans résumé",
+    "list.sub": "Tous les arrêts publiés avec leur évaluation de pertinence pour la Suva",
     "search.ph": "Recherche plein texte – p. ex. « causalité adéquate », « art. 6 LAA », 8C_129/2025",
     "f.period": "Période",
     "f.period.all": "Toutes",
@@ -158,17 +218,17 @@ const I18N = {
     "col.score": "Score",
     "col.docket": "Arrêt",
     "col.date": "Date",
-    "col.subject": "Objet · Motivation",
+    "col.subject": "Objet et motivation",
     "col.lang": "Lang.",
     "col.summary": "Résumé",
-    "sum.yes": "DE · FR",
+    "sum.yes": "DE FR",
     "sum.no": "—",
     "untriaged": "non évalué",
     "empty.title": "Aucun arrêt trouvé",
     "empty.filtered": "Modifiez la recherche ou les filtres.",
     "empty.db": "La base de données est vide. Chargez des arrêts avec",
     "err.load": "Impossible de charger les données",
-    "back": "Tous les arrêts",
+    "back": "Retour à la vue d'ensemble",
     "d.original": "Original sur bger.ch",
     "d.copy": "Copier",
     "d.copyAll": "Copier DE + FR",
@@ -191,7 +251,7 @@ const I18N = {
     "gen.s2": "Extraire les considérants et les normes",
     "gen.s3": "Rédiger la version allemande",
     "gen.s4": "Rédiger la version française",
-    "gen.elapsed": (s) => `Durée ${s} s · prend en général 30–90 s`,
+    "gen.elapsed": (s) => `Durée ${s} s, prend en général 30–90 s`,
     "gen.err": "Le résumé n'a pas pu être généré",
     "gen.notimpl": "Le service de résumé n'est pas encore disponible.",
     "gen.done": "Résumé généré",
@@ -206,31 +266,16 @@ const I18N = {
     "r.hint": "Score 0–100 pour l'importance en assurance-accidents",
     "r.none": "Cet arrêt n'a pas encore été évalué.",
     "r.reason": "Motivation",
-    "fb.title": "Feedback",
-    "fb.q": "Cette évaluation est-elle correcte ?",
-    "fb.agree": "Correcte",
-    "fb.disagree": "Incorrecte",
-    "fb.is": "L'arrêt est",
-    "fb.verdict.rel": "pertinent",
-    "fb.verdict.not": "non pertinent",
-    "fb.score": "Score corrigé (facultatif)",
-    "fb.comment": "Commentaire (facultatif)",
-    "fb.comment.ph": "Pourquoi ? Ce retour sera pris en compte pour les évaluations futures.",
-    "fb.send": "Envoyer",
-    "fb.cancel": "Annuler",
-    "fb.thanks": "Merci – feedback enregistré",
-    "fb.history": "Feedback précédent",
-    "fb.err": "Le feedback n'a pas pu être enregistré",
     "st.title": "Normes citées",
     "st.none": "Aucune norme détectée.",
     "m.title": "Informations",
     "m.docket": "Arrêt",
+    "m.subject": "Objet",
     "m.decision": "Décision",
     "m.published": "Publication",
     "m.division": "Cour",
     "m.language": "Langue",
     "m.source": "Source",
-    "m.model": "Modèle",
     "copied": "Copié dans le presse-papiers",
     "lang.de": "Allemand",
     "lang.fr": "Français",
@@ -243,24 +288,21 @@ const I18N = {
     "c.title": "Domaine juridique",
     "c.secondary": "Autres questions",
     "c.outcome": "Issue",
-    "c.method.llm": "Apertus",
-    "c.method.subject": "d'après l'objet",
-    "c.method.rule": "règle",
   },
 };
 
-let uiLang = localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
-function t(key, ...args) {
+export let uiLang = localStorage.getItem("uiLang") === "fr" ? "fr" : "de";
+export function t(key, ...args) {
   const v = I18N[uiLang][key] ?? I18N.de[key] ?? key;
   return typeof v === "function" ? v(...args) : v;
 }
 
 // ---------------------------------------------------------------- helpers
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+export const $ = (sel, root = document) => root.querySelector(sel);
+export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const app = $("#app");
 
-function esc(s) {
+export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -271,19 +313,13 @@ function parseDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
-function fmtDate(iso, style = "short") {
+export function fmtDate(iso, style = "short") {
   const d = parseDate(iso);
   if (!d) return "—";
   const loc = uiLang === "fr" ? "fr-CH" : "de-CH";
   return style === "long"
     ? d.toLocaleDateString(loc, { day: "numeric", month: "long", year: "numeric" })
     : d.toLocaleDateString(loc, { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-function fmtDateTime(s) {
-  if (!s) return "";
-  const d = new Date(s.replace(" ", "T") + (/[zZ+]/.test(s) ? "" : "Z"));
-  if (isNaN(d)) return s;
-  return d.toLocaleString(uiLang === "fr" ? "fr-CH" : "de-CH", { dateStyle: "medium", timeStyle: "short" });
 }
 // Suva's title convention follows the language of the ruling:
 //   de "BGer-Urteil 8C_313/2024 vom 13. November 2025"
@@ -314,14 +350,15 @@ function rulingDivision(r) {
 }
 const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || "";
 
-// Triage explanation in the UI language; older results only have the German one.
-const reasoningText = (x) => (uiLang === "fr" && x?.reasoning_fr) || x?.reasoning_de || "";
+// Triage explanation in the UI language (reasoning_de / reasoning_fr); older results only have
+// the German one or the single `reasoning` field.
+export const reasoningOf = (o) => (o && (o[`reasoning_${uiLang}`] || o.reasoning_de || o.reasoning || o.reason)) || "";
 
-function band(score) {
+export function band(score) {
   if (score == null) return "none";
   return score >= 70 ? "high" : score >= 40 ? "mid" : "low";
 }
-function scoreBadge(score) {
+export function scoreBadge(score) {
   const b = band(score);
   return `<span class="score score--${b}" title="${score == null ? esc(t("untriaged")) : `Score ${score}/100`}">
     <span class="score__num">${score == null ? "–" : score}</span>
@@ -336,7 +373,7 @@ function scoreRing(score) {
   </div>`;
 }
 
-const ICONS = {
+export const ICONS = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
   copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
@@ -345,6 +382,7 @@ const ICONS = {
   up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.3 6A2 2 0 0 1 17.7 20H7"/></svg>',
   downv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V4h3v10zM17 14l-4 7a2 2 0 0 1-3-2l1-5H5a2 2 0 0 1-2-2.3l1.3-6A2 2 0 0 1 6.3 4H17"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
 };
 
@@ -394,26 +432,14 @@ async function api(path, opts = {}) {
 }
 // Dockets contain a slash (8C_129/2025); the API accepts it as a path segment.
 const docketPath = (docket) => docket.split("/").map(encodeURIComponent).join("/");
-const API = {
+export const API = {
   list: (params) => api(`/api/rulings?${new URLSearchParams(params)}`),
   detail: (docket) => api(`/api/rulings/${docketPath(docket)}`),
   summarize: (docket) => api(`/api/rulings/${docketPath(docket)}/summarize`, { method: "POST" }),
-  feedback: (docket, body) => api(`/api/rulings/${docketPath(docket)}/feedback`, { method: "POST", body: JSON.stringify(body) }),
-  facets: () => api("/api/facets"),
 };
 
 // ---------------------------------------------------------------- classification
 // Closed label lists (branch, category, outcome, flag) with DE/FR labels, from /api/facets.
-let taxonomy = null;
-async function ensureTaxonomy() {
-  if (!taxonomy) taxonomy = (await API.facets()).classification;
-  return taxonomy;
-}
-function taxLabel(kind, slug, short = false) {
-  const item = taxonomy?.[kind]?.find((x) => x.value === slug);
-  const label = item ? item[uiLang] || item.de : slug;
-  return short ? label.replace(/\s*\(.*\)$/, "") : label;
-}
 function classChips(c, size = "chip--sm") {
   if (!c) return "";
   return `<span class="chip ${size}" title="${esc(taxLabel("branches", c.branch))}">${esc(taxLabel("branches", c.branch, true))}</span>` +
@@ -454,7 +480,7 @@ function extractStatutes(...texts) {
 }
 
 // Escape text, then mark statute citations and search terms.
-function highlight(text, terms = []) {
+export function highlight(text, terms = []) {
   let html = esc(text);
   html = html.replace(new RegExp(CITE_RE.source.replace("des\\s+|de\\s+la\\s+|du\\s+|de\\s+l')", "des\\s+|de\\s+la\\s+|du\\s+|de\\s+l&#39;)"), "g"),
     (m, art, _sub, law) => `<span class="cite" data-cite="${esc((LAW_PAIRS[law] || law) + " " + art.replace(/\s+/g, ""))}">${m}</span>`);
@@ -489,17 +515,17 @@ function paragraphs(text, terms) {
 }
 
 // ---------------------------------------------------------------- router
-const state = {
+export const state = {
   // list filters (mirrored in the URL hash)
   q: "", period: "all", from: "", to: "", label: "", min: 0, div: "", lang: "", sum: "",
   branch: "", cat: "",
   sort: "score", dir: "desc",
   // cache of last list response
-  items: [], total: 0, sig: "", loaded: false, shown: 0, stats: null, statsSig: "",
+  items: [], total: 0, sig: "", loaded: false, shown: 0,
   lastListHash: "#/",
 };
 
-const PERIODS = [
+export const PERIODS = [
   { id: "all", label: () => t("f.period.all"), from: "", to: "" },
   { id: "2026q2", label: () => "Q2 2026", from: "2026-04-01", to: "2026-06-30" },
   { id: "2026q1", label: () => "Q1 2026", from: "2026-01-01", to: "2026-03-31" },
@@ -519,15 +545,59 @@ function listHash() {
   if (state.min) p.set("min", state.min);
   if (state.sort !== "score" || state.dir !== "desc") { p.set("sort", state.sort); p.set("dir", state.dir); }
   const s = p.toString();
-  return "#/" + (s ? "?" + s : "");
+  return "#/all" + (s ? "?" + s : "");
+}
+
+// ---------------------------------------------------------------- side navigation
+// Knowledge base with its insurance branches (no categories), all rulings, the law. On a ruling
+// page the section it was opened from stays marked.
+async function paintNav() {
+  const ul = $("#navKb");
+  if (!ul.children.length) ul.innerHTML = '<li><div class="skel"></div></li><li><div class="skel" style="width:70%"></div></li>';
+  let items;
+  try {
+    [items] = await Promise.all([loadKnowledgeBase(), ensureTaxonomy()]);
+  } catch {
+    ul.innerHTML = "";
+    return;
+  }
+  $("#kbCount").textContent = items.length || "";
+  ul.innerHTML = buildRegister(items).map((b) => `<li data-branch="${esc(b.branch)}">
+    <a href="#/?branch=${encodeURIComponent(b.branch)}" data-navbranch="${esc(b.branch)}" title="${esc(taxLabel("branches", b.branch))}">
+      <span class="navsub__swatch" aria-hidden="true"></span>
+      <span class="navsub__name">${esc(taxLabel("branches", b.branch, true))}${branchLaw(b.branch) ? `<span class="navsub__law">${esc(branchLaw(b.branch))}</span>` : ""}</span>
+      <span class="navlink__n">${b.count}</span></a></li>`).join("");
+  markNav();
+}
+
+function markNav() {
+  const { path, params } = readHash();
+  const onDetail = path.startsWith("/r/");
+  const [refPath, refQuery = ""] = (onDetail ? state.lastListHash.slice(1) : `${path}?${params}`).split("?");
+  const section = refPath.startsWith("/all") ? "all" : refPath.startsWith("/law") ? "law" : "kb";
+  const branch = section === "kb" ? new URLSearchParams(refQuery).get("branch") || "" : "";
+  $$("[data-nav]").forEach((a) => {
+    const on = a.dataset.nav === section && !(section === "kb" && branch) && !onDetail;
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  $$("[data-navbranch]").forEach((a) => {
+    if (a.dataset.navbranch === branch) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+  });
 }
 
 async function route() {
   const { path, params } = readHash();
   const m = /^\/r\/(.+)$/.exec(path);
   window.scrollTo(0, 0);
+  markNav();
   if (m) {
     await renderDetail(decodeURIComponent(m[1]), params);
+  } else if (path.startsWith("/law")) {
+    state.lastListHash = location.hash;
+    await renderLaw(path.split("/")[2] || "uvg", params, resetListeners());
+  } else if (!path.startsWith("/all")) {
+    if (path !== "/" && path !== "") { location.replace("#/"); return; } // old #/c/<topic> links
+    await renderRelevant(params, resetListeners());
   } else {
     for (const k of ["q", "period", "from", "to", "label", "div", "lang", "sum", "branch", "cat"]) state[k] = params.get(k) || (k === "period" ? "all" : "");
     state.min = +params.get("min") || 0;
@@ -577,34 +647,15 @@ async function ensureItems() {
 }
 
 // Stats describe the period and search, independent of the triage/score filters.
-async function ensureStats() {
-  const { from, to } = periodRange();
-  const base = {};
-  if (state.q.trim()) base.q = state.q.trim();
-  if (from) base.from = from;
-  if (to) base.to = to;
-  const sig = JSON.stringify(base);
-  if (sig === state.statsSig && state.stats) return;
-  const { stats } = await API.list({ ...base, limit: 1 });
-  state.stats = {
-    total: stats.total, relevant: stats.relevant,
-    withSum: stats.relevant - stats.relevant_without_summary, open: stats.relevant_without_summary,
-  };
-  state.statsSig = sig;
-}
-
 function listShell() {
   const sel = (name, opts, val) =>
     `<select data-f="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === val ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   return `
-  <div class="pagehead">
-    <div>
-      <h1>${esc(t("list.title"))}</h1>
-      <p>${esc(t("list.sub"))}</p>
-    </div>
-  </div>
-  <section class="stats" id="stats"></section>
-  <section class="card toolbar">
+  <header class="pagehead">
+    <h1>${esc(t("list.title"))}</h1>
+    <p class="pagehead__lede" id="stats">${esc(t("list.sub"))}</p>
+  </header>
+  <section class="toolbar">
     <div class="toolbar__row">
       <label class="search">
         <span class="sr-only">${esc(t("search.ph"))}</span>
@@ -643,21 +694,12 @@ function listShell() {
       <button type="button" class="btn btn--ghost btn--sm" id="reset">${esc(t("f.reset"))}</button>
     </div>
   </section>
-  <section class="card">
+  <section class="tablebox">
     <div class="table-wrap" id="tableWrap"></div>
   </section>`;
 }
 
 function renderStats() {
-  const st = state.stats;
-  if (st) {
-    $("#stats").innerHTML = [
-      [t("stat.total"), st.total],
-      [t("stat.relevant"), st.relevant, st.total ? `${Math.round((st.relevant / st.total) * 100)} %` : ""],
-      [t("stat.summaries"), st.withSum],
-      [t("stat.open"), st.open],
-    ].map(([l, v, x]) => `<div class="card stat"><div class="stat__label">${esc(l)}</div><div class="stat__value">${v.toLocaleString("de-CH")}${x ? `<small>${esc(x)}</small>` : ""}</div></div>`).join("");
-  }
   const divs = [...new Set([...COMMON_DIVISIONS, ...state.items.map((r) => divisionCode(r.docket)).filter(Boolean)])].sort();
   if (state.div && !divs.includes(state.div)) divs.push(state.div);
   $("#divSel").innerHTML = `<select data-f="div"><option value="">${esc(t("f.division.all"))}</option>${divs
@@ -667,6 +709,7 @@ function renderStats() {
 
 // Branch first; the category list then shows the categories that branch allows, with counts.
 function renderClassFilters() {
+  const taxonomy = getTaxonomy();
   if (!taxonomy) return;
   const opt = (v, l, n, on) => `<option value="${esc(v)}"${on ? " selected" : ""}>${esc(l)}${n != null ? ` (${n.toLocaleString("de-CH")})` : ""}</option>`;
   $("#branchSel").innerHTML = `<select data-f="branch">${opt("", t("f.branch.all"), null, !state.branch)}${taxonomy.branches
@@ -694,17 +737,17 @@ function renderTable() {
   };
   const terms = state.q.trim() ? state.q.trim().split(/\s+/) : [];
   const rows = items.slice(0, state.shown).map((r) => {
-    const reason = reasoningText(r);
+    const reason = reasoningOf(r);
     const div = divisionCode(r.docket);
     return `<tr data-docket="${esc(r.docket)}" class="${band(r.score) === "low" ? "is-low" : ""}">
       <td class="c-score">${scoreBadge(r.score)}</td>
       <td class="c-docket"><a class="docket" href="#/r/${encodeURIComponent(r.docket)}">${esc(r.docket)}</a>
-        <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " · " + esc(t("untriaged")) : ""}</span></td>
+        <span class="subdocket" title="${esc(rulingDivision(r))}">${esc(div)}${r.score == null ? " " + esc(t("untriaged")) : ""}</span></td>
       <td class="c-date num">${fmtDate(r.decision_date)}</td>
       <td><div class="ruling-title">${terms.length ? highlight(r.title || "—", terms) : esc(r.title || "—")}</div>${r.classification ? `<div class="ruling-tags">${classChips(r.classification)}</div>` : ""}
         ${reason ? `<div class="ruling-reason">${esc(reason)}</div>` : ""}</td>
       <td class="c-lang">${r.language ? `<span class="lang">${esc(r.language)}</span>` : ""}</td>
-      <td class="c-sum">${r.has_summary ? `<span class="chip chip--ok"><span class="dot"></span>${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
+      <td class="c-sum">${r.has_summary ? `<span class="sumflag is-yes">${ICONS.check}${esc(t("sum.yes"))}</span>` : `<span class="muted">${t("sum.no")}</span>`}</td>
     </tr>`;
   }).join("");
   wrap.innerHTML = `<table class="rulings">
@@ -729,10 +772,10 @@ function resetListeners() {
 }
 
 async function renderList() {
-  document.title = `${t("list.title")} · BGer-Monitor`;
+  document.title = `${t("list.title")} – BGer-Monitor`;
   const opts = resetListeners();
   app.innerHTML = listShell();
-  $("#tableWrap").innerHTML = `<div class="card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(8)}</div>`;
+  $("#tableWrap").innerHTML = `<div class="skelblock">${'<div class="skel"></div>'.repeat(8)}</div>`;
 
   let loadingTimer;
   const reload = async (resetShown = true) => {
@@ -742,7 +785,7 @@ async function renderList() {
     clearTimeout(loadingTimer);
     loadingTimer = setTimeout(() => { const c = $("#resultcount"); if (c) c.textContent = t("loading"); }, 300);
     try {
-      await Promise.all([ensureItems(), ensureStats().then(renderStats), ensureTaxonomy().then(renderClassFilters)]);
+      await Promise.all([ensureItems().then(renderStats), ensureTaxonomy().then(renderClassFilters)]);
     } catch (e) {
       clearTimeout(loadingTimer);
       $("#tableWrap").innerHTML = `<div class="empty"><h2>${esc(t("err.load"))}</h2><p>${esc(e.message)}</p></div>`;
@@ -769,7 +812,7 @@ async function renderList() {
     if (!f || f === "min") return;
     state[f] = e.target.value;
     if (f === "period") $("#customRange").hidden = state.period !== "custom";
-    if (f === "branch" && state.branch && !taxonomy?.categories.find((c) => c.value === state.cat)?.branches.includes(state.branch)) state.cat = "";
+    if (f === "branch" && state.branch && !getTaxonomy()?.categories.find((c) => c.value === state.cat)?.branches.includes(state.branch)) state.cat = "";
     reload();
   }, opts);
   app.addEventListener("click", (e) => {
@@ -816,7 +859,7 @@ function suvaExport(r) {
   return `<!DOCTYPE html><html lang="${esc(r.language || "de")}"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body><hr>` +
     `<h1>${esc(title)}</h1><h2>Text DE</h2>${p(de)}<h2>Text FR</h2>${p(fr)}` +
     `<h2>Link zum Urteil</h2><p><a href="${esc(r.url || "")}">${esc(r.docket)} ${esc(fmtDate(r.decision_date))} - Schweizerisches Bundesgericht</a></p>` +
-    `<h2>Autor</h2><p>${esc(t("d.ai"))} (${esc(r.summaries?.de?.model || r.summaries?.fr?.model || "Apertus")})</p></body></html>`;
+    `<h2>Autor</h2><p>${esc(t("d.ai"))}</p></body></html>`;
 }
 function plainExport(r) {
   return `${suvaTitle(r)}\n\nText DE\n${r.summaries?.de?.text || ""}\n\nText FR\n${r.summaries?.fr?.text || ""}\n\nLink zum Urteil\n${r.url || ""}`;
@@ -847,8 +890,7 @@ function summaryBlock(r) {
       ${sum
         ? `<div class="summary__text">${sum.text.split(/\n\s*\n/).map((p) => `<p>${highlight(p.trim())}</p>`).join("")}</div>
            <div class="summary__meta"><span class="chip chip--accent">${ICONS.spark.replace("<svg", '<svg width="13" height="13"')}${esc(t("d.ai"))}</span>
-             <span>${esc(sum.model || "")}${sum.prompt_version ? ` · ${esc(sum.prompt_version)}` : ""}</span>
-             <span>· ${esc(fmtDateTime(sum.created_at))}</span><span>· ${esc(t("d.words", wordCount(sum.text)))}</span></div>`
+             <span>${esc(t("d.words", wordCount(sum.text)))}</span></div>`
         : `<p class="summary--missing">${esc(t("d.missing.lang"))}</p>`}
     </article>`;
   };
@@ -892,50 +934,22 @@ function relevanceCard(r) {
       </div>
       <div>
         <h3 class="card__title" style="margin-bottom:6px">${esc(t("r.reason"))}</h3>
-        <p class="reasoning">${highlight(reasoningText(tr))}</p>
+        <p class="reasoning">${highlight(reasoningOf(tr))}</p>
       </div>
-      <div class="metaline">${tr.model ? `<span>${esc(t("m.model"))}: ${esc(tr.model)}</span>` : ""}${tr.prompt_version ? `<span>Prompt ${esc(tr.prompt_version)}</span>` : ""}${tr.created_at ? `<span>${esc(fmtDateTime(tr.created_at))}</span>` : ""}</div>
     </div>
   </section>`;
 }
 
-// Not rendered for now: lawyer feedback does not feed into the triage yet.
-function feedbackCard(r) {
-  const hist = r.feedback || [];
-  return `<section class="card feedback" id="feedbackCard">
-    <div class="card__head"><h2 class="card__title">${esc(t("fb.title"))}</h2></div>
-    <div class="card__body">
-      <p class="feedback__q">${esc(t("fb.q"))}</p>
-      <div class="feedback__btns">
-        <button type="button" class="btn" data-fb="agree">${ICONS.up}${esc(t("fb.agree"))}</button>
-        <button type="button" class="btn" data-fb="disagree">${ICONS.downv}${esc(t("fb.disagree"))}</button>
-      </div>
-      <form class="feedback__form" id="fbForm" hidden>
-        <label>${esc(t("fb.is"))}
-          <span class="seg" role="group">
-            <button type="button" data-verdict="relevant">${esc(t("fb.verdict.rel"))}</button>
-            <button type="button" data-verdict="not_relevant">${esc(t("fb.verdict.not"))}</button>
-          </span>
-        </label>
-        <label>${esc(t("fb.score"))}
-          <span class="range-row"><input type="range" min="0" max="100" step="5" id="fbScore"><output id="fbScoreOut">–</output></span>
-        </label>
-        <label>${esc(t("fb.comment"))}
-          <textarea id="fbComment" placeholder="${esc(t("fb.comment.ph"))}"></textarea>
-        </label>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button type="button" class="btn btn--ghost btn--sm" id="fbCancel">${esc(t("fb.cancel"))}</button>
-          <button type="submit" class="btn btn--primary btn--sm">${esc(t("fb.send"))}</button>
-        </div>
-      </form>
-      ${hist.length ? `<ul class="history"><li class="card__title" style="list-style:none">${esc(t("fb.history"))}</li>${hist.map((f) => `
-        <li><span class="chip ${f.verdict === "relevant" ? "chip--accent" : ""}">${esc(f.verdict === "relevant" ? t("fb.verdict.rel") : t("fb.verdict.not"))}${f.corrected_score != null ? ` · ${f.corrected_score}` : ""}</span>
-          <span class="when">${esc(fmtDateTime(f.created_at))}</span>${f.comment ? `<p>${esc(f.comment)}</p>` : ""}</li>`).join("")}</ul>` : ""}
-    </div>
-  </section>`;
+// One-line headline of what the court decided (`headline_de` / `headline_fr`, written by Apertus;
+// null until generated, see lucas-firstmate on agent-comms). It is the ruling's heading next to
+// the docket. Without one, the court's subject line is the heading and the classification's
+// one-sentence explanation (German only) stands in below it.
+export function headlineOf(r) {
+  return r[`headline_${uiLang}`] || r[`headline_${uiLang === "fr" ? "de" : "fr"}`] || "";
 }
+const headlineIsRationale = (r) => !headlineOf(r) && !!r.classification?.rationale;
 
-function classificationCard(c) {
+function classificationCard(c, hideRationale = false) {
   if (!c) return "";
   const rows = [
     [t("f.branch"), taxLabel("branches", c.branch)],
@@ -948,8 +962,7 @@ function classificationCard(c) {
     <div class="card__body" style="display:grid;gap:12px">
       <dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       ${c.flags.length ? `<div class="statutes">${c.flags.map((f) => `<span class="chip chip--accent">${esc(taxLabel("flags", f))}</span>`).join("")}</div>` : ""}
-      ${c.rationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
-      <div class="metaline"><span>${esc(t(`c.method.${c.method}`))}${c.model ? ` · ${esc(c.model)}` : ""}</span>${c.prompt_version ? `<span>Prompt ${esc(c.prompt_version)}</span>` : ""}</div>
+      ${c.rationale && !hideRationale ? `<p class="reasoning">${esc(c.rationale)}</p>` : ""}
     </div>
   </section>`;
 }
@@ -958,7 +971,7 @@ function statutesCard(statutes) {
   return `<section class="card">
     <div class="card__head"><h2 class="card__title">${esc(t("st.title"))}</h2></div>
     <div class="card__body">${statutes.length
-      ? `<div class="statutes">${statutes.map((s) => `<button type="button" class="chip chip--mono" data-goto="${esc(s.law + " " + s.art.replace(/\s+/g, ""))}" title="${esc([...s.forms].join(" · "))}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`).join("")}</div>`
+      ? `<div class="statutes">${statutes.map((s) => `<button type="button" class="chip" data-goto="${esc(s.law + " " + s.art.replace(/\s+/g, ""))}" title="${esc([...s.forms].join(", "))}">Art. ${esc(s.art)} ${esc(s.law)}${s.count > 1 ? ` <span class="muted">×${s.count}</span>` : ""}</button>`).join("")}</div>`
       : `<p class="muted" style="margin:0">${esc(t("st.none"))}</p>`}</div>
   </section>`;
 }
@@ -967,9 +980,10 @@ function metaCard(r) {
   const div = divisionCode(r.docket);
   const rows = [
     [t("m.docket"), r.docket],
+    ...(r.title ? [[t("m.subject"), r.title]] : []),
     [t("m.decision"), fmtDate(r.decision_date, "long")],
     ...(r.publication_date ? [[t("m.published"), fmtDate(r.publication_date, "long")]] : []),
-    [t("m.division"), `${div} · ${rulingDivision(r)}`],
+    [t("m.division"), `${div} ${rulingDivision(r)}`],
     [t("m.language"), r.language ? t(`lang.${r.language}`) : "—"],
     [t("m.source"), r.source || "bger.ch"],
   ];
@@ -999,15 +1013,18 @@ function originalCard(r, terms) {
   </section>`;
 }
 
+// Round back button left of the ruling number; returns to the last list view.
+const backBtn = () => `<a class="dback" href="${esc(state.lastListHash)}" title="${esc(t("back"))}" aria-label="${esc(t("back"))}">${ICONS.back}</a>`;
+
 async function renderDetail(docket, params) {
   resetListeners();
-  app.innerHTML = `<div class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></div>
+  app.innerHTML = `<header class="dhead"><div class="dhead__id">${backBtn()}<h1><span class="dhead__docket">${esc(docket)}</span></h1></div></header>
     <div class="card card__body" style="display:grid;gap:14px">${'<div class="skel"></div>'.repeat(6)}</div>`;
   let r;
   try {
     [r] = await Promise.all([API.detail(docket), ensureTaxonomy()]);
   } catch (e) {
-    app.innerHTML = `<div class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></div>
+    app.innerHTML = `<header class="dhead"><div class="dhead__id">${backBtn()}<h1><span class="dhead__docket">${esc(docket)}</span></h1></div></header>
       <div class="card empty"><h2>${esc(e.status === 404 ? t("notfound") : t("err.load"))}</h2><p>${esc(docket)} · ${esc(e.message)}</p></div>`;
     return;
   }
@@ -1015,27 +1032,21 @@ async function renderDetail(docket, params) {
   paintDetail(r, terms);
 }
 
+// The relevance score and its reasoning matter when screening every ruling ("Alle Urteile");
+// in the knowledge base every ruling is relevant already, so the box is left out there.
+const fromAllRulings = () => state.lastListHash.startsWith("#/all");
+
 function paintDetail(r, terms) {
-  document.title = `${r.docket} · BGer-Monitor`;
-  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningText(r.triage), r.text);
-  const div = divisionCode(r.docket);
-  const tr = r.triage;
+  document.title = `${r.docket} – BGer-Monitor`;
+  const statutes = extractStatutes(r.summaries?.de?.text, r.summaries?.fr?.text, reasoningOf(r.triage), r.text);
   app.innerHTML = `
-    <nav class="crumbs"><a href="${esc(state.lastListHash)}">${ICONS.back} ${esc(t("back"))}</a></nav>
     <header class="dhead">
-      <div>
-        <div class="dhead__kicker">
-          ${tr ? `<span class="chip ${tr.label === "relevant" ? "chip--accent" : ""}"><span class="dot"></span>${esc(tr.label === "relevant" ? t("r.rel") : t("r.not"))} · ${tr.score}</span>` : ""}
-          <span class="chip">${esc(div)} · ${esc(rulingDivision(r))}</span>
-          <span class="chip">${esc(fmtDate(r.decision_date, "long"))}</span>
-          ${classChips(r.classification, "")}
+      <div class="dhead__id">
+        ${backBtn()}
+        <div class="dhead__text">
+          <h1><span class="dhead__docket">${esc(r.docket)}</span>${headlineOf(r) || r.title ? `<span class="dhead__name">${esc(headlineOf(r) || r.title)}</span>` : ""}</h1>
+          ${headlineIsRationale(r) ? `<p class="dhead__headline">${esc(r.classification.rationale)}</p>` : ""}
         </div>
-        <h1>${esc(suvaTitle(r))}</h1>
-        ${r.title ? `<p class="dhead__title">${esc(r.title)}</p>` : ""}
-      </div>
-      <div class="dhead__actions">
-        ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
-        <button type="button" class="btn btn--ghost" id="printBtn">${ICONS.print}${esc(t("d.print"))}</button>
       </div>
     </header>
     <div class="dgrid">
@@ -1044,10 +1055,14 @@ function paintDetail(r, terms) {
         ${originalCard(r, terms)}
       </div>
       <aside class="daside">
-        ${relevanceCard(r)}
-        ${classificationCard(r.classification)}
-        ${statutesCard(statutes)}
+        <div class="dactions">
+          ${r.url ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">${ICONS.ext}${esc(t("d.original"))}</a>` : ""}
+          <button type="button" class="btn" id="printBtn">${ICONS.print}${esc(t("d.print"))}</button>
+        </div>
+        ${fromAllRulings() ? relevanceCard(r) : ""}
         ${metaCard(r)}
+        ${classificationCard(r.classification, headlineIsRationale(r))}
+        ${statutesCard(statutes)}
       </aside>
     </div>`;
   bindDetail(r, terms);
@@ -1132,51 +1147,6 @@ function bindDetail(r, terms) {
     target.scrollIntoView({ behavior: "smooth", block: "center" });
     target.classList.remove("is-flash"); void target.offsetWidth; target.classList.add("is-flash");
   }));
-
-  // Feedback
-  const form = $("#fbForm");
-  if (!form) return;
-  let verdict = null;
-  const setVerdict = (v) => {
-    verdict = v;
-    $$("[data-verdict]", form).forEach((b) => b.setAttribute("aria-pressed", b.dataset.verdict === v));
-  };
-  const score = $("#fbScore");
-  const scoreOut = $("#fbScoreOut");
-  let scoreTouched = false;
-  score.value = r.triage?.score ?? 50;
-  score.addEventListener("input", () => { scoreTouched = true; scoreOut.textContent = score.value; });
-  $$("[data-verdict]", form).forEach((b) => b.addEventListener("click", () => setVerdict(b.dataset.verdict)));
-  $$("[data-fb]").forEach((b) => b.addEventListener("click", () => {
-    const agree = b.dataset.fb === "agree";
-    $$("[data-fb]").forEach((x) => x.classList.toggle("is-active", x === b));
-    b.classList.toggle("is-neg", !agree);
-    const current = r.triage?.label || "relevant";
-    setVerdict(agree ? current : current === "relevant" ? "not_relevant" : "relevant");
-    form.hidden = false;
-    if (!agree) $("#fbComment").focus();
-  }));
-  on("#fbCancel", () => { form.hidden = true; $$("[data-fb]").forEach((x) => x.classList.remove("is-active", "is-neg")); });
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!verdict) return;
-    const btn = form.querySelector("[type=submit]");
-    btn.disabled = true;
-    try {
-      const updated = await API.feedback(r.docket, {
-        verdict,
-        corrected_score: scoreTouched ? +score.value : null,
-        comment: $("#fbComment").value.trim() || null,
-      });
-      toast(t("fb.thanks"));
-      r.feedback = updated.feedback;
-      $("#feedbackCard").outerHTML = feedbackCard(updated);
-      bindDetail(updated, terms);
-    } catch (err) {
-      btn.disabled = false;
-      toast(`${t("fb.err")}: ${err.message}`);
-    }
-  });
 }
 
 // ---------------------------------------------------------------- boot
@@ -1184,12 +1154,14 @@ function applyLang() {
   document.documentElement.lang = uiLang;
   $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   $$(".langswitch button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === uiLang));
+  if ($("#agentTab")) paintAgent();
 }
 $$(".langswitch button").forEach((b) => b.addEventListener("click", () => {
   if (uiLang === b.dataset.lang) return;
   uiLang = b.dataset.lang;
   localStorage.setItem("uiLang", uiLang);
   applyLang();
+  paintNav();
   route();
 }));
 
@@ -1202,5 +1174,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("hashchange", route);
+initAgent();
 applyLang();
+paintNav();
 route();
