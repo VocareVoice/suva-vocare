@@ -3,6 +3,7 @@
 Reads OUT/clips/ (written by record.py) and writes to OUT:
 
 - Praecedens_demo_silent.mp4  the cut video with title card, captions and end card
+- Praecedens_demo_clean.mp4   the same cut without captions or audio, to speak over live
 - voice_synth.m4a              a placeholder voice-over (macOS `say`), each line at its shot
 - Praecedens_demo.mp4          the two muxed (assemble.sh)
 - voiceover_timing.md          per shot: start-end, the line to speak, the on-screen action
@@ -156,15 +157,16 @@ def encode(args: list[str], out: Path):
     )
 
 
-def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
+def build_segments(out: Path, work: Path, slots: list[float], captions: bool) -> list[Path]:
     clips = out / "clips"
+    suffix = "" if captions else "_clean"
     segs = []
     for s, slot in zip(SHOTS, slots, strict=True):
         n = s["n"]
         parts = s["parts"]
         title = s.get("title_card", 0.0)
         if title:
-            seg = work / f"seg_{n}_title.mp4"
+            seg = work / f"seg_{n}_title{suffix}.mp4"
             encode(
                 [
                     "-loop",
@@ -183,7 +185,7 @@ def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
         times = [rest] if len(parts) == 1 else [rest * s["split"], rest * (1 - s["split"])]
         for i, (part, t) in enumerate(zip(parts, times, strict=True)):
             clip = clips / f"{part}.mp4"
-            seg = work / f"seg_{part}.mp4"
+            seg = work / f"seg_{part}{suffix}.mp4"
             graph = f"[0:v]{fit_clip(clip, t)}[v];[v][1:v]overlay=0:0"
             inputs = [
                 "-i",
@@ -194,17 +196,22 @@ def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
                 f"{t:.3f}",
                 "-i",
                 str(
-                    work / ("blank.png" if part in s.get("uncaptioned", []) else f"caption_{n}.png")
+                    work
+                    / (
+                        f"caption_{n}.png"
+                        if captions and part not in s.get("uncaptioned", [])
+                        else "blank.png"
+                    )
                 ),
             ]
-            if i == 1 and s.get("cut_caption"):
+            if captions and i == 1 and s.get("cut_caption"):
                 inputs += ["-loop", "1", "-t", "1.8", "-i", str(work / f"cut_{n}.png")]
                 graph += "[c];[c][2:v]overlay=0:0:eof_action=pass"
             if title and i == 0:
                 graph += ",fade=t=in:d=0.4"
             encode([*inputs, "-filter_complex", graph, "-t", f"{t:.3f}"], seg)
             segs.append(seg)
-    seg = work / "seg_end.mp4"
+    seg = work / f"seg_end{suffix}.mp4"
     encode(
         [
             "-loop",
@@ -242,7 +249,7 @@ def main():
     slots = fit_slots(lengths)
     starts = [sum(slots[:i]) for i in range(len(slots))]
 
-    segs = build_segments(out, work, slots)
+    segs = build_segments(out, work, slots, captions=True)
     (work / "segments.txt").write_text("".join(f"file '{p.resolve()}'\n" for p in segs))
     silent = out / "Praecedens_demo_silent.mp4"
     run(
@@ -268,6 +275,22 @@ def main():
         "-movflags",
         "+faststart",
         str(silent),
+    )
+    clean = build_segments(out, work, slots, captions=False)
+    (work / "segments_clean.txt").write_text("".join(f"file '{p.resolve()}'\n" for p in clean))
+    run(
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(work / "segments_clean.txt"),
+        "-c:v",
+        "copy",
+        "-an",
+        "-movflags",
+        "+faststart",
+        str(out / "Praecedens_demo_clean.mp4"),
     )
 
     inputs, labels = [], []

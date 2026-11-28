@@ -22,6 +22,7 @@ Needs ffmpeg, macOS `say` and Playwright's Chromium (`uv run --with playwright p
    ```
 
    This writes `Praecedens_demo.mp4` (placeholder voice from `say`), `Praecedens_demo_silent.mp4`,
+   `Praecedens_demo_clean.mp4` (no captions, no audio: to speak over live),
    `voice_synth.m4a`, `voiceover_timing.md`, and copies `assemble.sh` and this README to `OUT`.
 
 ## Your own voice-over
