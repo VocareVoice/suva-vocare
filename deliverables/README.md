@@ -8,7 +8,6 @@ the rulings it labels relevant.
 |---|---|
 | `relevant_q2_2026.txt` | **The list to submit**: the 100 rulings decided 1 April - 30 June 2026 with a triage score of 28 or more, highest score first, on one comma-separated line (`8C_254/2025, 8C_256/2025, ...`) |
 | `relevant_q2_2026.csv` | The same rulings with `docket, decision_date, publication_date, score, headline_de` |
-| `relevant_q2_2026_by_publication.txt` / `.csv` | Variant: the 100 rulings bger.ch *published* 1 April - 30 June 2026 with a score of 28 or more |
 | `summaries_june_2026/` | The summaries to submit: one file per ruling and language (`8C_254_2025_de.md`, `8C_254_2025_fr.md`) for the 27 listed rulings decided in June 2026, 54 files, and `index.md` listing them by score |
 | `Vocare_Praecedens_vf.pptx` / `.pdf` | The final pitch deck, editable and as PDF |
 | `Praecedens_demo.mp4` | Demo video of the app, 1:53, without voice or captions, for live narration; not in the submission zip |
@@ -44,8 +43,6 @@ ordered by score, ties in docket order.
 ```sh
 make load
 uv run suva export-relevant deliverables/relevant_q2_2026 --from 2026-04-01 --to 2026-06-30
-uv run suva export-relevant deliverables/relevant_q2_2026_by_publication \
-    --from 2026-04-01 --to 2026-06-30 --by publication
 uv run python -m suva.eval.cutoff data/results/triage_2025q4_2026q1.jsonl   # table below
 ```
 
@@ -93,8 +90,8 @@ at 50 or more), against 73 and 95 in the labelled quarters.
 ## Decision date or publication date
 
 The deck asks for "rulings published in the second quarter of 2026"; the corpus and the app
-select rulings by decision date. Both variants are ready; the evidence favours the decision
-date.
+select rulings by decision date. The challenge admins confirmed that the decision date counts,
+and Suva's own labels agree.
 
 **Publication dates.** bger.ch lists the rulings it publishes each day ("Liste der am ...
 neu aufgenommenen Entscheide", marked * if intended for BGE), but serves the lists only behind
@@ -126,20 +123,6 @@ every crawl job. `python -m suva.fetch.published --until 2026-07-03` reads that 
 - The same cut-off with quarters by publication date scores against Suva's labels F2 0.579
   (recall 0.68) in Q4 2025 and 0.512 (recall 0.71) in Q1 2026, against 0.757 and 0.708 by
   decision date.
-
-**What the variants differ in.** They share 75 rulings. `relevant_q2_2026.txt` has 25
-rulings decided in Q2 and published from July on, 7 of them in its top 30 (8C_254/2025, ranked
-first, 8C_17/2026, 8C_343/2025, 8C_365/2025, 8C_607/2025, 8C_739/2025, 8C_63/2026).
-`relevant_q2_2026_by_publication.txt` has instead 25 rulings decided in March 2026 and published
-in April; 9 of them are on Suva's Q1 2026 list (8C_802/2023, 8C_605/2025, 8C_613/2025,
-8C_508/2025, 8C_525/2025, 8C_644/2025, 9C_311/2025, 8C_418/2025, 8C_149/2025). No ruling decided
-before October 2025 was published in Q2 2026 (the mirror's Q2 additions of older rulings are
-re-imports of rulings from 2000-2018), so the variant needs no ruling outside the corpus: the
-492 rulings decided in Q1 2026 and the 6 decided in Q4 2025 that were published in Q2 are
-triaged (v5) and classified like the rest.
-
-**Recommendation:** submit `relevant_q2_2026.txt`, unless the challenge admins confirm that
-their Q2 list is by publication date; then submit `relevant_q2_2026_by_publication.txt`.
 
 The app keeps selecting periods by decision date; the publication date is stored in the corpus
 and shown on a ruling's detail page.
