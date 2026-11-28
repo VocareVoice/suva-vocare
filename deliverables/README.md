@@ -11,7 +11,7 @@ the rulings it labels relevant.
 | `summaries_june_2026/` | The summaries to submit: one file per ruling and language (`8C_254_2025_de.md`, `8C_254_2025_fr.md`) for the 27 listed rulings decided in June 2026, 54 files, and `index.md` listing them by score |
 | `Vocare_Praecedens_vf.pptx` / `.pdf` | The final pitch deck, editable and as PDF |
 | `Praecedens_demo.mp4` | Demo video of the app, 1:53, without voice or captions, for live narration; not in the submission zip |
-| `Praecedens_demo_voiceover.mp4` | The same demo video with a synthetic English voice-over and captions; not in the submission zip |
+| `Praecedens_demo_voiceover.mp4` | The same demo video narrated by a Gemini text-to-speech voice, with captions (the product itself uses only Apertus); not in the submission zip |
 | `Vocare_Report.pdf` | The report, an exact copy of the root `Vocare_Report.pdf` (the template requires that one); `make report-pdf` copies it here |
 | `Vocare_Submission.zip` | Built by `make submission`: `Vocare_Report.pdf` and `Vocare_Praecedens_vf.pdf` from this folder (runs `make report-pdf` first, fails if either PDF is missing) |
 
