@@ -31,8 +31,11 @@ submission:
 	rm -f deliverables/Vocare_Submission.zip
 	zip -j deliverables/Vocare_Submission.zip Vocare_Report.pdf deliverables/Vocare_Praecedens_vf.pdf
 
+test:
+	uv run python -m suva.agent.selftest
+
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-.PHONY: install load triage classify summarize summary-files submission run lint
+.PHONY: install load triage classify summarize summary-files submission run test lint

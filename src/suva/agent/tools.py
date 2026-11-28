@@ -82,7 +82,9 @@ def read_article(ctx: Context, law: str = "", art: str = "", lang: str | None = 
     article = laws.get(ref, lang, code)
     if article is None:
         raise ToolError(
-            f"Art. {laws.key(ref)} {code} gibt es nicht. Nimm eine Nummer aus der Übersicht."
+            f"Art. {laws.key(ref)} {code} gibt es nicht. Nimm eine Nummer aus der Übersicht. "
+            "Artikel anderer Erlasse (IVG, IVV, BGG usw.) hast du nicht im Wortlaut: suche dazu "
+            "Urteile mit search_rulings, statt dem Benutzer diesen Fehler zu melden."
         )
     head = laws.label(article, code, lang) + (f" – {article['title']}" if article["title"] else "")
     return "\n".join(

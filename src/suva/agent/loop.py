@@ -4,8 +4,9 @@ Tools use the endpoint's native tool calling: they go in the `tools` parameter, 
 Apertus chat template declares to the model (without it, the template tells the model it has no
 tools), and calls come back as tool_calls, answered with "tool" messages. A call the endpoint's
 parser misses and leaves in the text ({"read_ruling": {...}}, Apertus's own call shape) is still
-recognised. Every step is stored, so the chat survives reloads; earlier turns are replayed as
-question and answer only, which keeps the context small (the model can look things up again).
+recognised and run; one that cannot be run never becomes the answer. Every step is stored, so
+the chat survives reloads; earlier turns are replayed as question and answer only, which keeps
+the context small (the model can look things up again).
 """
 
 import json
@@ -29,12 +30,65 @@ CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 TOOL_NAME = re.compile(r"\b(?:" + "|".join(map(re.escape, tools.TOOLS)) + r")\b")
 TOOL_RESULT_LIMIT = 60_000  # characters of one tool result sent to the model
 STORED_RESULT_LIMIT = 4_000  # characters of a tool result kept in the chat history
-# Shown when the model keeps writing tool calls as its answer.
+# Shown when the model keeps writing tool calls as its answer, with the sources it consulted.
 NO_ANSWER = {
     "de": "Ich konnte die Recherche nicht zu einer Antwort zusammenführen. Bitte stellen Sie "
     "die Frage noch einmal, gerne enger gefasst.",
     "fr": "Je n'ai pas pu conclure la recherche par une réponse. Veuillez reposer la question, "
     "de préférence de manière plus précise.",
+}
+CONSULTED = {
+    "de": ("Gelesene Artikel:", "Gefundene Urteile:"),
+    "fr": ("Articles lus :", "Arrêts trouvés :"),
+}
+LAW_NAMES_FR = {"UVG": "LAA", "ATSG": "LPGA", "UVV": "OLAA"}
+# Guard notes sent back to the model, in the user's language: a note in German pulls a French
+# answer towards German.
+NOTES = {
+    "de": {
+        "forced": "[System] Keine weiteren Tool-Aufrufe. Antworte jetzt mit dem, was du bisher "
+        "gefunden hast.",
+        "callshape": "[System] Deine Antwort ist ein als Text geschriebener Tool-Aufruf, keine "
+        "Antwort; es ist nichts geschehen.",
+        "callshape_forced": "Du kannst keine Tools mehr aufrufen. Antworte jetzt in ganzen "
+        "Sätzen auf Deutsch mit dem, was du bisher gefunden hast, ohne JSON.",
+        "callshape_tools": "Rufe das Tool als Tool-Aufruf auf, oder antworte in ganzen Sätzen.",
+        "notool": "[System] Du hast {tool} nur beschrieben, nicht aufgerufen; es ist nichts "
+        "geschehen. Rufe das Tool jetzt als Tool-Aufruf auf, nicht als Text.",
+        "unseen": "[System] Diese Geschäftsnummern stammen aus keinem Tool-Ergebnis: {dockets}. "
+        "Das heisst nicht, dass es sie nicht gibt: lies sie mit read_ruling oder lass sie weg. "
+        "Nenne nur Urteile, die du in Tool-Ergebnissen gesehen hast.",
+        "language": "[System] Der Benutzer schreibt Deutsch. Schreibe deine Antwort noch einmal, "
+        "vollständig auf Deutsch.",
+    },
+    "fr": {
+        "forced": "[Système] Plus d'appels d'outils. Réponds maintenant avec ce que tu as "
+        "trouvé jusqu'ici.",
+        "callshape": "[Système] Ta réponse est un appel d'outil écrit sous forme de texte, pas "
+        "une réponse ; rien ne s'est passé.",
+        "callshape_forced": "Tu ne peux plus appeler d'outils. Réponds maintenant en phrases "
+        "complètes, en français, avec ce que tu as trouvé jusqu'ici, sans JSON.",
+        "callshape_tools": "Appelle l'outil par un appel d'outil, ou réponds en phrases complètes.",
+        "notool": "[Système] Tu as seulement décrit {tool}, sans l'appeler ; rien ne s'est "
+        "passé. Appelle maintenant l'outil par un appel d'outil, pas sous forme de texte.",
+        "unseen": "[Système] Ces numéros de dossier ne proviennent d'aucun résultat d'outil : "
+        "{dockets}. Cela ne veut pas dire qu'ils n'existent pas : lis-les avec read_ruling ou "
+        "laisse-les de côté. Ne cite que des arrêts vus dans des résultats d'outils.",
+        "language": "[Système] L'utilisateur écrit en français. Réécris ta réponse, entièrement "
+        "en français.",
+    },
+}
+# Words that mark a language, none shared between them: Apertus sometimes slips into English
+# (mostly when it answers with the reasoning it writes next to its tool calls) or, for a French
+# user, into the German of the prompt.
+MARKERS = {
+    "en": re.compile(
+        r"\b(?:the|and|of|to|is|are|for|with|this|that|which|be|by|it|let|we)\b", re.I
+    ),
+    "de": re.compile(
+        r"\b(?:der|die|das|und|ist|nicht|mit|ein|eine|zu|den|von|für|auf|dass|sich|im)\b", re.I
+    ),
+    "fr": re.compile(r"\b(?:le|la|les|et|est|une|un|pour|que|dans|pas|au|qui|sur|en)\b", re.I),
 }
 
 
@@ -67,8 +121,10 @@ def _user_content(text: str, docket: str | None) -> str:
     return text
 
 
-def history(conn: sqlite3.Connection, chat_id: str) -> list[Message]:
-    """Earlier turns as plain question/answer pairs."""
+def history(conn: sqlite3.Connection, chat_id: str, lang: str = "de") -> list[Message]:
+    """Earlier turns as plain question/answer pairs. An answer that is a tool call written as
+    text (stored before the guard caught every shape) is replayed as the no-answer note: the
+    model would otherwise copy it into every following answer."""
     messages: list[Message] = []
     for message in db.chat_messages(conn, chat_id):
         if message["role"] == "user":
@@ -79,7 +135,10 @@ def history(conn: sqlite3.Connection, chat_id: str) -> list[Message]:
                 }
             )
         elif message["role"] == "assistant":
-            messages.append({"role": "assistant", "content": message["content"]})
+            content = message["content"]
+            if is_call_text(content):
+                content = NO_ANSWER.get(lang, NO_ANSWER["de"])
+            messages.append({"role": "assistant", "content": content})
     return messages
 
 
@@ -109,7 +168,14 @@ def _bare_args_call(reply: str) -> tuple[str, dict[str, Any]] | None:
     return None
 
 
-KV_ARG = re.compile(r"""(\w+)\s*[=:]\s*(?:"([^"]*)"|'([^']*)'|([\w./-]+))""")
+# key="value", key: value, or key "value" (`search_rulings with query "Sturz"`).
+KV_ARG = re.compile(
+    r"""(\w+)(?:\s*[=:]\s*(?:"([^"]*)"|'([^']*)'|([\w./-]+))|\s+(?:"([^"]*)"|'([^']*)'))"""
+)
+# A label Apertus puts before a call it writes out ("Tool call 6: search_rulings ...").
+CALL_LABEL = re.compile(
+    r"^(?:tool[ -]?call|tool-aufruf|aufruf|appel d'outil)[^:\n]{0,40}:\s*", re.I
+)
 
 
 def _kv_call(reply: str) -> tuple[str, dict[str, Any]] | None:
@@ -141,40 +207,46 @@ def _kv_call(reply: str) -> tuple[str, dict[str, Any]] | None:
 def looks_like_call(reply: str) -> bool:
     """The reply is a tool call written as text rather than an answer: it opens with a tool's
     name, or names one followed by arguments (`read_article with law="UVV"`, `read_ruling(`)."""
-    head = reply.lstrip(" \t\n`*>-[").split("\n", 1)[0]
+    head = CALL_LABEL.sub("", reply.lstrip(" \t\n`*>-[").split("\n", 1)[0])
     if TOOL_NAME.match(head):
         return True
     return any(
-        re.match(r"\s*(?:\(|\{|with\b|mit\b|avec\b|:)", reply[m.end() : m.end() + 12])
+        re.match(r"\s*(?:\(|\{|=|with\b|mit\b|avec\b|:)", reply[m.end() : m.end() + 12])
         and KV_ARG.search(reply[m.end() : m.end() + 200])
         for m in TOOL_NAME.finditer(reply)
     )
 
 
+CALL_KEYS = ("tool", "tool_call", "function", "name", "type")
+ARG_KEYS = ("args", "arguments", "parameters")
+
+
 def _as_call(obj: Any) -> tuple[str, dict[str, Any]] | None:
-    """`obj` as a tool call, in any of the shapes Apertus writes one in, or None:
-    {"tool"|"name": "<tool>", "args"|"arguments"|"parameters": {...}}, the same with the
-    arguments as the remaining keys, {"type": "<tool>", ...arguments} (it copies the "type"
-    of the template's tool declarations), {"type": "function", "function": {...}} and
-    {"<tool>": {...}}."""
+    """`obj` as a tool call, in any of the shapes Apertus writes one in, or None: the tool's
+    name under "tool", "tool_call", "function" or "name" and its arguments under "args",
+    "arguments" or "parameters" (an object or a JSON string) or as the remaining keys;
+    {"type": "<tool>", ...arguments} (it copies the "type" of the template's tool
+    declarations); a nested call ({"type": "function", "function": {...}}, {"tool_call":
+    {...}}) and {"<tool>": {...}}."""
     if not isinstance(obj, dict):
         return None
-    if isinstance(obj.get("function"), dict):
-        return _as_call(obj["function"])
-    for key in ("tool", "name", "type"):
+    for key in ("function", "tool_call", "tool"):
+        if isinstance(obj.get(key), dict):
+            return _as_call(obj[key])
+    for key in CALL_KEYS:
         name = obj.get(key)
-        # "tool" and "name" always mean a call (an unknown tool is reported back to the model);
-        # "type" only when it names one of our tools.
+        # A name under any key but "type" always means a call (an unknown tool is reported back
+        # to the model); "type" only when it names one of our tools.
         if not isinstance(name, str) or (key == "type" and name not in tools.TOOLS):
             continue
-        nested = next((obj[k] for k in ("args", "arguments", "parameters") if k in obj), None)
+        nested = next((obj[k] for k in ARG_KEYS if k in obj), None)
         if isinstance(nested, str):
             try:
                 nested = json.loads(nested or "{}", strict=False)
             except json.JSONDecodeError:
                 return None
         if nested is None:
-            nested = {k: v for k, v in obj.items() if k not in ("tool", "name", "type")}
+            nested = {k: v for k, v in obj.items() if k not in (*CALL_KEYS, "id")}
         return (name, nested) if isinstance(nested, dict) else None
     if len(obj) == 1:  # {"read_ruling": {...}}
         name, args = next(iter(obj.items()))
@@ -205,7 +277,85 @@ def parse_calls(reply: str) -> list[tuple[str, dict[str, Any]]]:
         calls.append(bare)
     if not calls and looks_like_call(reply) and (kv := _kv_call(reply)):
         calls.append(kv)
+    if not calls:
+        calls = _args_only_calls(reply)
     return calls
+
+
+# Tools a call may be inferred for from its arguments alone: the ones that only read.
+READ_ONLY = ("read_article", "list_rulings", "search_rulings", "read_ruling")
+
+
+def _json_objects(reply: str) -> Iterator[dict[str, Any]]:
+    """The top-level JSON objects in `reply`."""
+    decoder = json.JSONDecoder(strict=False)
+    brace = reply.find("{")
+    while brace != -1:
+        try:
+            obj, end = decoder.raw_decode(reply, brace)
+        except json.JSONDecodeError:
+            brace = reply.find("{", brace + 1)
+            continue
+        if isinstance(obj, dict):
+            yield obj
+        brace = reply.find("{", end)
+
+
+def _args_only_calls(reply: str) -> list[tuple[str, dict[str, Any]]]:
+    """Calls written as their arguments only, without the tool's name (`{"query": "Ungeschick
+    Arbeitsunfall", "limit": 10}`): the read-only tool those arguments fit, preferring the one
+    whose required arguments they fill (search_rulings over list_rulings for a query)."""
+    calls = []
+    for obj in _json_objects(reply):
+        fits = [
+            (len(tool.parameters.get("required", [])), tool.name)
+            for tool in map(tools.TOOLS.get, READ_ONLY)
+            if tool
+            and obj
+            and set(obj) <= set(tool.parameters.get("properties", {}))
+            and set(tool.parameters.get("required", [])) <= set(obj)
+        ]
+        fits.sort(reverse=True)
+        if fits and (len(fits) == 1 or fits[0][0] > fits[1][0]):
+            calls.append((fits[0][1], obj))
+    return calls
+
+
+def is_call_text(reply: str) -> bool:
+    """The reply holds a tool call written as text, or any JSON object, neither of which may be
+    shown as the answer."""
+    return (
+        bool(parse_calls(reply))
+        or looks_like_call(reply)
+        or "```json" in reply
+        or ("```" in reply and bool(TOOL_NAME.search(reply)))  # a tool's declaration, echoed
+        or any(_json_objects(reply))
+    )
+
+
+def wrong_language(reply: str, lang: str) -> bool:
+    """The reply is mostly in another language than the user's."""
+    counts = {code: len(words.findall(reply)) for code, words in MARKERS.items()}
+    own = counts.pop(lang)
+    return any(count >= 5 and count > own for count in counts.values())
+
+
+def consulted(lang: str, steps: list[tuple[str, dict[str, Any], list[str]]]) -> str:
+    """The articles read and rulings found this turn, as a fallback when no answer came."""
+    articles, dockets = [], []
+    for name, args, found in steps:
+        if name == "read_article" and args.get("law") and args.get("art"):
+            law, art = str(args["law"]).upper(), str(args["art"])
+            if lang == "fr":
+                law, art = LAW_NAMES_FR.get(law, law), art.replace("Abs.", "al.")
+            articles.append(f"[[{'art.' if lang == 'fr' else 'Art.'} {art} {law}]]")
+        dockets.extend(d for d in found if d not in dockets)
+    parts = []
+    lists = (list(dict.fromkeys(articles)), dockets[:8])
+    for label, items in zip(CONSULTED[lang], lists, strict=True):
+        if items:
+            parts.append(label + "\n" + "\n".join(f"- {item}" for item in items))
+    return "\n\n".join(parts)
 
 
 def known_dockets(conn: sqlite3.Connection, chat_id: str) -> set[str]:
@@ -263,7 +413,7 @@ def run_turn(
     linker = Linker(conn, lang)
     messages: list[Message] = [
         {"role": "system", "content": system_prompt(conn, lang, max_steps)},
-        *history(conn, chat_id),
+        *history(conn, chat_id, lang),
         {"role": "user", "content": _user_content(text, docket)},
     ]
     user_id = db.add_chat_message(conn, chat_id, "user", text, {"docket": docket, "lang": lang})
@@ -296,21 +446,17 @@ def run_turn(
 
     ctx = tools.Context(conn=conn, chat_id=chat_id, lang=lang)
     schemas = [tool.schema() for tool in tools.TOOLS.values()]
+    notes = NOTES[lang]
     seen: set[str] = set()
     called: set[str] = set()  # tools called this turn
+    steps: list[tuple[str, dict[str, Any], list[str]]] = []  # tool calls that ran, with dockets
     known = known_dockets(conn, chat_id) | ({docket} if docket else set())
-    calls, forced, checked, described, reply = 0, False, False, False, ""
+    calls, forced, checked, described, translated, reply = 0, False, False, False, False, ""
     callshaped = 0  # corrections of a tool call written as the answer
-    for _ in range(max_steps + 3):  # bound on model calls: tool steps plus a few corrections
+    for _ in range(max_steps + 4):  # bound on model calls: tool steps plus a few corrections
         if calls >= max_steps and not forced:
             forced = True
-            messages.append(
-                {
-                    "role": "user",
-                    "content": "[System] Keine weiteren Tool-Aufrufe. Antworte jetzt "
-                    "mit dem, was du bisher gefunden hast.",
-                }
-            )
+            messages.append({"role": "user", "content": notes["forced"]})
         step = llm.chat_tools(
             messages, None if forced else schemas, temperature=0.2, max_tokens=4000
         )
@@ -327,7 +473,7 @@ def run_turn(
                 reply = ""
 
         if not pending:
-            if looks_like_call(reply):
+            if is_call_text(reply):
                 # A call written as text that could not be run (tools are off, or its arguments
                 # did not parse) must not become the answer.
                 if callshaped < 2:
@@ -335,41 +481,26 @@ def run_turn(
                     yield correction(
                         "callshape",
                         reply,
-                        "[System] Deine Antwort ist ein als Text geschriebener Tool-Aufruf, keine "
-                        "Antwort; es ist nichts geschehen. "
-                        + (
-                            "Du kannst keine Tools mehr aufrufen. Antworte jetzt in ganzen Sätzen "
-                            "mit dem, was du bisher gefunden hast."
-                            if forced
-                            else "Rufe das Tool als Tool-Aufruf auf, oder antworte in ganzen "
-                            "Sätzen."
-                        ),
+                        notes["callshape"]
+                        + " "
+                        + notes["callshape_forced" if forced else "callshape_tools"],
                     )
                     continue
-                reply = NO_ANSWER.get(lang, NO_ANSWER["de"])
                 break
             named = next((m for m in TOOL_NAME.finditer(reply) if m.group(0) not in called), None)
             if named and not forced and not described:
                 described = True  # it wrote the call out as prose instead of making it, once
-                yield correction(
-                    "notool",
-                    reply,
-                    f"[System] Du hast {named.group(0)} nur beschrieben, nicht aufgerufen; es ist "
-                    "nichts geschehen. Rufe das Tool jetzt als Tool-Aufruf auf, nicht als Text.",
-                )
+                yield correction("notool", reply, notes["notool"].format(tool=named.group(0)))
                 continue
             unseen = sorted(set(re.findall(DOCKET, reply)) - known)
             if unseen and not checked:
                 checked = True  # cited rulings it never looked up: research or drop them, once
-                yield correction(
-                    "unseen",
-                    reply,
-                    f"[System] Diese Geschäftsnummern stammen aus keinem Tool-Ergebnis: "
-                    f"{', '.join(unseen)}. Das heisst nicht, dass es sie nicht gibt: lies sie "
-                    "mit read_ruling oder lass sie weg. Nenne nur Urteile, die du in "
-                    "Tool-Ergebnissen gesehen hast.",
-                )
+                yield correction("unseen", reply, notes["unseen"].format(dockets=", ".join(unseen)))
                 forced = False if calls < max_steps else forced
+                continue
+            if wrong_language(reply, lang) and not translated:
+                translated = True
+                yield correction("language", reply, notes["language"])
                 continue
             break
 
@@ -406,6 +537,8 @@ def run_turn(
             error = result.startswith("Fehler:")
             found = sorted(set(re.findall(DOCKET, result)))
             known.update(found)
+            if not error:
+                steps.append((name, args, found))
             db.add_chat_message(
                 conn,
                 chat_id,
@@ -424,11 +557,9 @@ def run_turn(
                 result = result[:TOOL_RESULT_LIMIT] + "\n[… gekürzt]"
             messages.append({"role": "tool", "tool_call_id": call_id, "content": result})
 
-    if looks_like_call(reply):  # the step bound ran out right after a correction
-        reply = NO_ANSWER.get(lang, NO_ANSWER["de"])
-    stored = db.add_chat_message(
-        conn, chat_id, "assistant", reply or "…", {"proposals": ctx.proposals}
-    )
+    if not reply or is_call_text(reply):  # no answer came, or only calls written as text
+        reply = "\n\n".join(filter(None, [NO_ANSWER[lang], consulted(lang, steps)]))
+    stored = db.add_chat_message(conn, chat_id, "assistant", reply, {"proposals": ctx.proposals})
     yield {
         "type": "answer",
         "message": public_message(linker, conn, db.get_chat_message(conn, stored)),
