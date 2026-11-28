@@ -210,7 +210,8 @@ def ruling_detail(docket: str, conn: Conn) -> dict[str, Any]:
     detail = db.get_ruling_detail(conn, docket)
     if detail is None:
         raise HTTPException(404, f"Unknown ruling {docket}")
-    return detail
+    # The UI's score editor shows "relevant" / "not relevant" live against this cut-off.
+    return {**detail, "relevance_threshold": triage.RELEVANCE_THRESHOLD}
 
 
 # ---------------------------------------------------------------- agent chat

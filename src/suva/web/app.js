@@ -549,9 +549,14 @@ const divisionCode = (docket) => (/^(\d[A-Z])_/.exec(docket || "") || [])[1] || 
 // the German one or the single `reasoning` field.
 export const reasoningOf = (o) => (o && (o[`reasoning_${uiLang}`] || o.reasoning_de || o.reasoning || o.reason)) || "";
 
+// Rulings at or above this score are relevant and appear in the knowledge base.
+// The server sends its cut-off (triage.RELEVANCE_THRESHOLD) with each ruling's detail;
+// this is only the fallback. Below it a score is "low" (grey ring, dimmed row).
+const RELEVANCE_THRESHOLD = 28;
+
 export function band(score) {
   if (score == null) return "none";
-  return score >= 70 ? "high" : score >= 40 ? "mid" : "low";
+  return score >= 70 ? "high" : score >= RELEVANCE_THRESHOLD ? "mid" : "low";
 }
 export function scoreBadge(score) {
   const b = band(score);
@@ -1249,10 +1254,6 @@ function summaryBlock(r, writeOwn = false) {
   </section>`;
 }
 
-// Rulings at or above this score are relevant and appear in the knowledge base
-// (triage.RELEVANCE_THRESHOLD on the server).
-const RELEVANCE_THRESHOLD = 50;
-
 function relevanceCard(r) {
   const tr = r.triage;
   const head = `<div class="card__head"><h2 class="card__title">${esc(t("r.title"))}</h2>
@@ -1288,7 +1289,8 @@ function editScore(r, terms) {
   const card = $("#relevanceCard");
   if (!card) return;
   const tr = r.triage;
-  const start = tr?.score ?? RELEVANCE_THRESHOLD;
+  const threshold = r.relevance_threshold ?? RELEVANCE_THRESHOLD;
+  const start = tr?.score ?? threshold;
   // The expert's own reason, not the model's that stands in when they gave none.
   const comment = tr?.model === "expert" && tr.reasoning_de !== r.model_triage?.reasoning_de ? tr.reasoning_de : "";
   $("#scoreEdit", card)?.remove();
@@ -1315,12 +1317,12 @@ function editScore(r, terms) {
   const range = $("[data-score-range]", card), num = $("[data-score-num]", card);
   const clamp = (v) => Math.max(0, Math.min(100, Math.round(+v || 0)));
   const show = (v) => {
-    const rel = v >= RELEVANCE_THRESHOLD;
+    const rel = v >= threshold;
     $("[data-ring]", card).innerHTML = scoreRing(v);
     const label = $("[data-score-label]", card);
     label.className = `relevance__label ${rel ? "is-rel" : "is-not"}`;
     label.textContent = t(rel ? "r.rel" : "r.not");
-    $("[data-score-kb]", card).textContent = t(v >= RELEVANCE_THRESHOLD ? "r.edit.kb" : "r.edit.nokb");
+    $("[data-score-kb]", card).textContent = t(rel ? "r.edit.kb" : "r.edit.nokb");
   };
   show(start);
   range.addEventListener("input", () => { num.value = range.value; show(+range.value); });
