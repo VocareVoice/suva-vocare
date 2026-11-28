@@ -2,7 +2,7 @@
 
 Reads OUT/clips/ (written by record.py) and writes to OUT:
 
-- Praecedens_demo_silent.mp4  the cut video with title card, captions and closing card
+- Praecedens_demo_silent.mp4  the cut video with title card and captions
 - voice_synth.m4a              a placeholder voice-over (macOS `say`), each line at its shot
 - Praecedens_demo.mp4          the two muxed (assemble.sh)
 - voiceover_timing.md          per shot: start-end, the line to speak, the on-screen action
@@ -51,41 +51,6 @@ TITLE_HTML = """<div style="position:absolute;inset:0;background:#fff;display:fl
     powered by <b style="color:#00a0b4">Apertus</b></div>
   <div style="position:absolute;bottom:64px;font-size:28px;color:#6b7280">Team Vocare</div></div>"""
 
-CLOSING_HTML = """<div style="position:absolute;inset:0;background:rgba(10,14,22,.80);display:flex;
-  align-items:center;justify-content:center;font-family:{font}">
-  <div style="width:1480px;color:#fff">
-    <div style="font-size:72px;font-weight:700;margin-bottom:42px">100 %
-      <span style="color:#3fd0e0">Apertus</span>
-      <span style="font-size:34px;font-weight:400;color:#cbd5e1;margin-left:14px">
-        apertus-v1-5-70b</span></div>
-    {blocks}
-    <div style="margin-top:46px;font-size:30px;color:#94a3b8">Praecedens &middot; Team Vocare</div>
-  </div></div>"""
-
-CLOSING_BLOCKS = [
-    (
-        "Open model",
-        "Open weights, OpenAI-compatible endpoint; runs on-premise, air-gapped or in a "
-        "Swiss cloud. No external CDNs, fonts or analytics in the UI.",
-    ),
-    (
-        "Relevance",
-        "Practice period with Suva's own labels: our top 60 of the quarter hold "
-        "<b>96 %</b> (Q4 2025) and <b>77 %</b> (Q1 2026) of the rulings Suva listed; <b>all</b> of "
-        "them score 28 or more, the relevance threshold.",
-    ),
-    (
-        "Summaries",
-        "10 hold-out rulings never shown to the model: outcome right in <b>20 of 20</b> "
-        "DE/FR summaries; no statute, figure or date the ruling does not contain.",
-    ),
-    (
-        "April-June 2026",
-        "<b>2,096</b> rulings, <b>131</b> rated by Apertus, <b>100</b> relevant, "
-        "top 30 summarised in DE and FR.",
-    ),
-]
-
 
 def run(*cmd: str):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *cmd], check=True)
@@ -105,17 +70,7 @@ def render_cards(work: Path):
     import base64
 
     logo = base64.b64encode(LOGO.read_bytes()).decode()
-    blocks = "".join(
-        f'<div style="display:flex;gap:36px;margin:0 0 26px;font-size:33px;line-height:1.4">'
-        f'<div style="flex:0 0 300px;color:#3fd0e0;font-weight:700">{k}</div>'
-        f'<div style="color:#e5e7eb">{v}</div></div>'
-        for k, v in CLOSING_BLOCKS
-    )
-    cards = {
-        "title": TITLE_HTML.format(font=FONT, logo=logo),
-        "closing": CLOSING_HTML.format(font=FONT, blocks=blocks),
-    }
-    cards["blank"] = ""
+    cards = {"title": TITLE_HTML.format(font=FONT, logo=logo), "blank": ""}
     for s in SHOTS:
         if s.get("caption"):
             cards[f"caption_{s['n']}"] = CAPTION_HTML.format(
@@ -193,30 +148,6 @@ def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
     segs = []
     for s, slot in zip(SHOTS, slots, strict=True):
         n = s["n"]
-        if s.get("closing_card"):
-            seg = work / f"seg_{n}.mp4"
-            encode(
-                [
-                    "-loop",
-                    "1",
-                    "-t",
-                    f"{slot:.3f}",
-                    "-i",
-                    str(clips / f"{n}.png"),
-                    "-loop",
-                    "1",
-                    "-t",
-                    f"{slot:.3f}",
-                    "-i",
-                    str(work / "closing.png"),
-                    "-filter_complex",
-                    "[0:v]boxblur=6:1[b];[b][1:v]overlay=0:0,fade=t=in:d=0.6,"
-                    f"fade=t=out:st={slot - 1:.3f}:d=1",
-                ],
-                seg,
-            )
-            segs.append(seg)
-            continue
         parts = s["parts"]
         title = s.get("title_card", 0.0)
         if title:

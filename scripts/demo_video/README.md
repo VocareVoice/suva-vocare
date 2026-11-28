@@ -4,16 +4,17 @@ Records and cuts the 2-minute demo of `docs/demo_video_script.md` from a running
 Needs ffmpeg, macOS `say` and Playwright's Chromium (`uv run --with playwright playwright install chromium`).
 
 1. Follow the script's preparation checklist: a freshly loaded database, the live summary of
-   9C_197/2026 pre-warmed, the agent checked. Then start the app, e.g.
+   9C_197/2026 and the add of 8C_700/2024 pre-warmed, the agent checked. Then start the app, e.g.
    `DB_PATH=/tmp/rec.db uv run suva serve --port 8090`.
-2. Record the clips (one per shot part; the waits for the live summary and the agent are cut):
+2. Record the clips (one per shot part; the waits for the live summary, the added ruling and the agent are cut):
 
    ```sh
    uv run --with playwright python scripts/demo_video/record.py --base-url http://127.0.0.1:8090 OUT
    ```
 
    It prints the agent's answer and saves it to `OUT/agent_answer.txt`: read it before using
-   the video. Recording 9C_197/2026 summarises it, so reload the database before recording again.
+   the video. Recording summarises 9C_197/2026, corrects its score and adds 8C_700/2024, so reload
+   the database before recording again.
 3. Cut the video:
 
    ```sh
