@@ -25,11 +25,14 @@ summary-files:
 	uv run suva export-summary-files --from 2026-06-01 --to 2026-06-30 \
 		--out deliverables/summaries_june_2026
 
-submission:
-	@test -f deliverables/Vocare_Praecedens_vf.pdf || { echo "deliverables/Vocare_Praecedens_vf.pdf is missing: export the pitch deck to PDF first" >&2; exit 1; }
+report-pdf:
 	@test -f Vocare_Report.pdf || { echo "Vocare_Report.pdf is missing" >&2; exit 1; }
+	cp Vocare_Report.pdf deliverables/Vocare_Report.pdf
+
+submission: report-pdf
+	@test -f deliverables/Vocare_Praecedens_vf.pdf || { echo "deliverables/Vocare_Praecedens_vf.pdf is missing: export the pitch deck to PDF first" >&2; exit 1; }
 	rm -f deliverables/Vocare_Submission.zip
-	zip -j deliverables/Vocare_Submission.zip Vocare_Report.pdf deliverables/Vocare_Praecedens_vf.pdf
+	zip -j deliverables/Vocare_Submission.zip deliverables/Vocare_Report.pdf deliverables/Vocare_Praecedens_vf.pdf
 
 test:
 	uv run python -m suva.agent.selftest
@@ -38,4 +41,4 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-.PHONY: install load triage classify summarize summary-files submission run test lint
+.PHONY: install load triage classify summarize summary-files report-pdf submission run test lint
