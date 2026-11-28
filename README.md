@@ -5,6 +5,8 @@
 ### Identification of relevant Federal Court judgements and preparation of a legal summary
 
 **Praecedens** - Team Vocare (Lucas Bernoulli, Thomas Frei)
+
+📊 Pitch deck: [Vocare_Praecedens_vf.pdf](deliverables/Vocare_Praecedens_vf.pdf)
 <br>
 <br>
 
@@ -35,6 +37,7 @@ Keep the files and directories as shown below — don't rename or move them.
 | `README.md` | The challenge description and submission requirements |
 | `technical_report.md` | The deeper write-up: architecture, evaluation, limitations |
 | `Vocare_Report.pdf` | The technical report as submitted: PDF of `technical_report.md`, A4, 6 pages plus references |
+| [`deliverables/Vocare_Praecedens_vf.pdf`](deliverables/Vocare_Praecedens_vf.pdf) | The pitch deck as PDF (editable `.pptx` next to it) |
 | `challenge_description.md` | Complete Challenge description incl. deliverables 
 | `LICENSE` | Apache-2.0 |
 | `src/` | Your code |
