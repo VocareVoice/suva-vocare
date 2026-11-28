@@ -135,20 +135,6 @@ through `src/suva/llm.py`, a thin client with retries and an on-disk response ca
 | Corrections summary | 1 per request in "Anpassungen" | temperature 0 |
 | Agent | up to 10 tool steps per question | temperature 0.2, native tool calls |
 
-**What we tried and dropped**, each kept only if neither labelled quarter got worse: triage per
-consideration (no better, 6.4 times the calls); cited statutes as a score; an explicit
-invalidity insurance rule (raised all IV rulings); a few-shot example chosen by similarity
-(the model copied its facts); Apertus as a judge of whole summaries (it found no errors).
-
-**Hackathon rule compliance: only Apertus generates text.** Every explanation, category,
-summary, headline and agent answer comes from Apertus. No summary in `data/results/` was
-written or corrected by hand or by another LLM. A lawyer's edit in the UI is marked `edited`,
-and none is in the submitted results. After Apertus, only rule-based code changes the text:
-it normalises abbreviations, citations and amounts from the glossary, fixes a closing sentence
-that contradicts the operative part, replaces a leftover anonymised name with the role, and
-as a last resort deletes the sentences Apertus ranked as least needed. Other models appear
-only in evaluation: Gemini in the baseline below, Claude sub-agents as blind readers.
-
 **Apertus against a frontier cloud model** (`docs/eval_baseline_gemini.md`). We ran the same
 code and prompts with Gemini 3.8 Flash. P@30 is the share of the top 30 that Suva listed;
 R@60 is the share of Suva's listed rulings in the top 60.
