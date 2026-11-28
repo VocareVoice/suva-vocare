@@ -2,13 +2,14 @@
 
 Reads OUT/clips/ (written by record.py) and writes to OUT:
 
-- Praecedens_demo_silent.mp4  the cut video with title card and captions
+- Praecedens_demo_silent.mp4  the cut video with title card, captions and end card
 - voice_synth.m4a              a placeholder voice-over (macOS `say`), each line at its shot
 - Praecedens_demo.mp4          the two muxed (assemble.sh)
 - voiceover_timing.md          per shot: start-end, the line to speak, the on-screen action
 
 Each shot gets the time of docs/demo_video_script.md, unless its voice line needs more; the
-extra comes out of the shots with time to spare, so the total stays at TOTAL seconds. A clip
+extra comes out of the shots with time to spare, so the total, end card included, stays at
+most TOTAL seconds. A clip
 longer than its slot is sped up, a shorter one holds its last frame.
 
     uv run --with playwright python scripts/demo_video/build.py OUT
@@ -28,6 +29,7 @@ HERE = Path(__file__).resolve().parent
 LOGO = HERE.parents[1] / "src" / "suva" / "web" / "suva-logo.svg"
 W, H, FPS = 1920, 1080, 30
 TOTAL = 119.5
+END_CARD = 1.0
 VOICE_LEAD = 0.4  # silence before each line
 VOICE_TAIL = 0.5  # silence after each line before the next shot
 
@@ -51,6 +53,12 @@ TITLE_HTML = """<div style="position:absolute;inset:0;background:#fff;display:fl
     powered by <b style="color:#00a0b4">Apertus</b></div>
   <div style="position:absolute;bottom:64px;font-size:28px;color:#6b7280">Team Vocare</div></div>"""
 
+END_HTML = """<div style="position:absolute;inset:0;background:#fff;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;font-family:{font};color:#111827">
+  <img src="data:image/svg+xml;base64,{logo}" style="height:96px;margin-bottom:46px">
+  <div style="font-size:112px;font-weight:700;letter-spacing:-.02em">Thanks for watching</div>
+  <div style="font-size:42px;color:#374151;margin-top:22px">Praecedens - Team Vocare</div></div>"""
+
 
 def run(*cmd: str):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *cmd], check=True)
@@ -70,7 +78,11 @@ def render_cards(work: Path):
     import base64
 
     logo = base64.b64encode(LOGO.read_bytes()).decode()
-    cards = {"title": TITLE_HTML.format(font=FONT, logo=logo), "blank": ""}
+    cards = {
+        "title": TITLE_HTML.format(font=FONT, logo=logo),
+        "end": END_HTML.format(font=FONT, logo=logo),
+        "blank": "",
+    }
     for s in SHOTS:
         if s.get("caption"):
             cards[f"caption_{s['n']}"] = CAPTION_HTML.format(
@@ -105,12 +117,13 @@ def fit_slots(lengths: list[float]) -> list[float]:
     script = [float(s["seconds"]) for s in SHOTS]
     need = [max(VOICE_LEAD + v + VOICE_TAIL, 0.0) for v in lengths]
     slots = [max(a, b) for a, b in zip(script, need, strict=True)]
-    over = sum(slots) - TOTAL
+    over = sum(slots) - (TOTAL - END_CARD)
     if over > 0:
         room = [sl - n for sl, n in zip(slots, need, strict=True)]
         if sum(room) < over:
             raise SystemExit(
-                f"voice-over needs {sum(need):.1f} s, more than {TOTAL:.0f} s: raise --rate"
+                f"voice-over needs {sum(need):.1f} s, more than {TOTAL - END_CARD:.1f} s: "
+                "raise --rate"
             )
         slots = [sl - over * r / sum(room) for sl, r in zip(slots, room, strict=True)]
     return slots
@@ -191,6 +204,21 @@ def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
                 graph += ",fade=t=in:d=0.4"
             encode([*inputs, "-filter_complex", graph, "-t", f"{t:.3f}"], seg)
             segs.append(seg)
+    seg = work / "seg_end.mp4"
+    encode(
+        [
+            "-loop",
+            "1",
+            "-t",
+            f"{END_CARD:.3f}",
+            "-i",
+            str(work / "end.png"),
+            "-vf",
+            "fade=t=in:d=0.25",
+        ],
+        seg,
+    )
+    segs.append(seg)
     return segs
 
 
@@ -201,7 +229,7 @@ def main():
     ap.add_argument("out", type=Path, help="the directory record.py wrote clips/ to")
     ap.add_argument("--voice", default="Daniel", help="macOS voice for the placeholder voice-over")
     ap.add_argument(
-        "--rate", type=int, default=182, help="words per minute of the placeholder voice"
+        "--rate", type=int, default=195, help="words per minute of the placeholder voice"
     )
     args = ap.parse_args()
     out: Path = args.out
@@ -248,7 +276,8 @@ def main():
         ms = int((start + VOICE_LEAD) * 1000)
         labels.append(f"[{i}:a]aresample=48000,adelay={ms}|{ms}[a{i}]")
     mix = ";".join(labels) + ";" + "".join(f"[a{i}]" for i in range(len(SHOTS)))
-    mix += f"amix=inputs={len(SHOTS)}:normalize=0,apad,atrim=duration={sum(slots):.3f}"
+    total = sum(slots) + END_CARD
+    mix += f"amix=inputs={len(SHOTS)}:normalize=0,apad,atrim=duration={total:.3f}"
     run(
         *inputs,
         "-filter_complex",
@@ -275,9 +304,9 @@ def main():
         )
     (out / "voiceover_timing.md").write_text(
         "# Voice-over timing - Praecedens demo\n\n"
-        f"Total {mmss(sum(slots))}. Record your voice against `Praecedens_demo_silent.mp4` "
-        "(play it and "
-        "speak each line when its shot starts), save the take as `voice.m4a` next to it and run "
+        f"Total {mmss(total)}, the last {END_CARD:.0f} s an end card. Record your voice against "
+        "`Praecedens_demo_silent.mp4` (play it and speak each line when its shot starts), save "
+        "the take as `voice.m4a` next to it and run "
         "`./assemble.sh voice.m4a`. The placeholder voice (`voice_synth.m4a`) starts each line "
         f"{VOICE_LEAD} s into its shot.\n\n" + "\n".join(rows)
     )
@@ -296,7 +325,7 @@ def main():
         )
     )
     print(
-        f"total {sum(slots):.1f} s; "
+        f"total {total:.1f} s; "
         + ", ".join(f"{s['n']}: {b:.1f}" for s, b in zip(SHOTS, slots, strict=True))
     )
 

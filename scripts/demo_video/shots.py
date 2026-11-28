@@ -9,9 +9,9 @@ hide the toast, e.g. "Zusammenfassung erstellt").
 SHOTS = [
     {
         "n": 1,
-        "seconds": 10,
+        "seconds": 8.5,
         "parts": ["1"],
-        "title_card": 3.0,
+        "title_card": 2.5,
         "caption": "Praecedens - Federal Supreme Court rulings for Suva, powered by Apertus",
         "voice": "Every quarter the Federal Supreme Court publishes about two thousand rulings. "
         "Suva's lawyers search bger.ch by hand for the few dozen that matter to accident "
@@ -20,7 +20,7 @@ SHOTS = [
     },
     {
         "n": 2,
-        "seconds": 11,
+        "seconds": 9,
         "parts": ["2"],
         "caption": "Knowledge base: relevant rulings by insurance branch and legal category",
         "voice": "Praecedens fetches every ruling and keeps the relevant ones in a knowledge base, "
@@ -30,7 +30,7 @@ SHOTS = [
     },
     {
         "n": 3,
-        "seconds": 14,
+        "seconds": 11.5,
         "parts": ["3"],
         "caption": "April-June 2026: 2,096 rulings, 131 rated by Apertus, 100 relevant",
         "voice": "Here are all rulings of April to June 2026, ranked by relevance. A deterministic "
@@ -40,7 +40,7 @@ SHOTS = [
     },
     {
         "n": 4,
-        "seconds": 14,
+        "seconds": 11.5,
         "parts": ["4"],
         "caption": "Score and reasoning - written by Apertus in German and in French",
         "voice": "Rank three: a ruling on the definition of an accident. The score comes with a "
@@ -51,7 +51,7 @@ SHOTS = [
     },
     {
         "n": 5,
-        "seconds": 18,
+        "seconds": 15,
         "parts": ["5"],
         "caption": "Two summaries in Suva's house style - written, not translated",
         "voice": "The summaries follow Suva's house style: facts, the cantonal decision, the "
@@ -63,7 +63,7 @@ SHOTS = [
     },
     {
         "n": 6,
-        "seconds": 14,
+        "seconds": 13,
         "parts": ["6a", "6b"],
         "split": 0.65,
         "uncaptioned": ["6b"],
@@ -78,7 +78,7 @@ SHOTS = [
     },
     {
         "n": 7,
-        "seconds": 11,
+        "seconds": 9.5,
         "parts": ["7"],
         "caption": "Experts correct the score - the model's own stays visible",
         "voice": "A lawyer who disagrees corrects the score. Above the threshold, the ruling "
@@ -89,10 +89,20 @@ SHOTS = [
     },
     {
         "n": 8,
-        "seconds": 11,
-        "parts": ["8a", "8b"],
+        "seconds": 6,
+        "parts": ["8"],
+        "caption": "Anpassungen: every expert correction next to the model's score",
+        "voice": "All corrections are listed under Anpassungen: the model's score, the expert's, "
+        "and the reason.",
+        "action": "Anpassungen in the sidebar; hover the row 9C_197/2026 (27 -> 46) and its "
+        "reason.",
+    },
+    {
+        "n": 9,
+        "seconds": 9,
+        "parts": ["9a", "9b"],
         "split": 0.6,
-        "uncaptioned": ["8b"],
+        "uncaptioned": ["9b"],
         "caption": "Add a ruling by its number",
         "cut_caption": "cut",
         "voice": "A ruling that is missing can be added by its number. Praecedens downloads it, "
@@ -101,9 +111,18 @@ SHOTS = [
         "cut; the new ruling with its score and reasoning.",
     },
     {
-        "n": 9,
-        "seconds": 16,
-        "parts": ["9a", "9b"],
+        "n": 10,
+        "seconds": 6,
+        "parts": ["10"],
+        "caption": "Gesetze: UVG, ATSG and UVV as in force, article by article",
+        "voice": "The statutes are built in too: UVG, ATSG and UVV as in force, article by "
+        "article.",
+        "action": "Gesetze in the sidebar (UVG); type 6 in the article filter: Art. 6 UVG.",
+    },
+    {
+        "n": 11,
+        "seconds": 12.5,
+        "parts": ["11a", "11b"],
         "split": 0.62,
         "caption": "Legal assistant: searches the knowledge base, cites rulings and statutes",
         "cut_caption": "Apertus 70B - cut",
