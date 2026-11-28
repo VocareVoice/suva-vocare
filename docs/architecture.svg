@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 740" width="1000" height="740" font-family="Helvetica, Arial, sans-serif">
   <title>suva-vocare architecture: build-time inputs, batch pipeline, serving, Apertus API</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -24,7 +24,7 @@
     .apiend { stroke: #d9480f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-llm); }
     .in { stroke: #4b5563; stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow); }
   </style>
-  <rect x="0" y="0" width="1000" height="640" fill="#ffffff"/>
+  <rect x="0" y="0" width="1000" height="740" fill="#ffffff"/>
 
   <!-- Build time -->
   <rect x="10" y="10" width="980" height="110" rx="8" fill="#fafafa" stroke="#9ca3af" stroke-dasharray="6 4"/>
@@ -94,7 +94,7 @@
   <path d="M745 244 H762" class="api"/>
   <path d="M745 324 H762" class="api"/>
   <path d="M745 404 H762" class="api"/>
-  <path d="M762 244 V488 H747" class="apiend"/>
+  <path d="M762 244 V690 H747" class="apiend"/>
 
   <path d="M190 228 H213" class="edge"/>
   <path d="M190 308 H240 V258" class="edge"/>
@@ -118,10 +118,6 @@
   <rect x="380" y="460" width="150" height="56" rx="6" class="llm"/>
   <text x="455" y="483" class="t">Apertus agent</text>
   <text x="455" y="501" class="s">tools: laws, rulings</text>
-  <rect x="555" y="450" width="190" height="76" rx="6" fill="#fde3cf" stroke="#d9480f" stroke-width="1.8"/>
-  <text x="650" y="474" class="t">Apertus API</text>
-  <text x="650" y="492" class="s">Apertus v1.5 70B, OpenAI-</text>
-  <text x="650" y="507" class="s">compatible (LLM_BASE_URL)</text>
   <rect x="780" y="460" width="190" height="56" rx="6" class="app"/>
   <text x="875" y="483" class="t">FastAPI + web UI</text>
   <text x="875" y="501" class="s">static files, no CDN, DE / FR</text>
@@ -130,10 +126,19 @@
   <text x="875" y="601" class="s">inside the organisation</text>
 
   <path d="M190 488 H378" class="edge"/>
-  <path d="M530 488 H553" class="apiend"/>
+  <path d="M420 518 V690 H553" class="apiend"/>
   <path d="M875 418 V458" class="edge" style="marker-start: url(#arrow)"/>
+  <path d="M752 540 H772" class="halo"/>
   <path d="M830 518 V540 H455 V518" class="edge" style="marker-start: url(#arrow)"/>
   <path d="M920 518 V558" class="edge" style="marker-start: url(#arrow)"/>
+
+  <!-- External Apertus API, outside the runtime -->
+  <rect x="555" y="655" width="190" height="70" rx="6" fill="#fde3cf" stroke="#d9480f" stroke-width="1.8"/>
+  <text x="650" y="677" class="t">Apertus API</text>
+  <text x="650" y="695" class="s">Apertus v1.5 70B, OpenAI-</text>
+  <text x="650" y="710" class="s">compatible (LLM_BASE_URL)</text>
+  <text x="780" y="680" class="lbl">external service: hackathon gateway,</text>
+  <text x="780" y="696" class="lbl">or the organisation's own GPU server</text>
 
   <!-- Legend -->
   <rect x="30" y="548" width="14" height="14" rx="3" class="rule"/>
