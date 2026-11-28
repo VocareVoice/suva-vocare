@@ -39,7 +39,7 @@ def main() -> None:
         "first, as one comma-separated line of dockets (PATH.txt) and as a table (PATH.csv)",
     )
     export_rel.add_argument("path", type=Path, help="output path; .txt and .csv are added")
-    export_rel.add_argument("--min-score", type=int, default=triage.LIST_MIN_SCORE)
+    export_rel.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
     export_rel.add_argument("--from", dest="date_from", help="first date, YYYY-MM-DD")
     export_rel.add_argument("--to", dest="date_to", help="last date, YYYY-MM-DD")
     export_rel.add_argument(

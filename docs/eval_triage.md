@@ -50,8 +50,9 @@ April-June 2026 (`data/results/triage_2026q2.jsonl`).
 6. **Score.** The level is read from the token logprobs as an expected value (for example 7.4
    instead of 7), which breaks the ties that a generated number produces: the first prompt
    asked for a 0-100 score, and the model gave 85 to almost every accident insurance ruling.
-   Final score = 70 % level + 30 % prior (with the substance adjustment). Score 50 or more is
-   labelled relevant.
+   Final score = 70 % level + 30 % prior (with the substance adjustment). Score 28 or more is
+   labelled relevant, a cut-off chosen for F2 on the labelled period (`deliverables/README.md`).
+   Earlier runs used 50.
 
 v4 fixes a bug in step 6: the full-width digit "９" among the alternative tokens overwrote the
 probability of "9", so a confident level 9 could count as about 2. Fixing it changed 78 of the
@@ -99,6 +100,13 @@ scored):
 | rulings with score >= 50 | 117 | 124 | 109 |
 | recall at score >= 50 | 0.85 | 0.83 | 0.85 |
 | precision at score >= 50 | 0.43 | 0.40 | 0.46 |
+| rulings with score >= 28 (label) | | | 168 |
+| recall at score >= 28 | | | 1.00 |
+| precision at score >= 28 | | | 0.35 |
+
+At the label threshold of 28, v5 keeps all 59 listed rulings (F2 0.73, in-sample; per quarter
+0.757 and 0.708, `python -m suva.eval.cutoff`), against recall 0.85 and F2 0.72 at the earlier
+threshold of 50. The versions were compared at 50.
 
 Pooled over both quarters, the top 10 holds more thorough accident insurance rulings that Suva
 did not list: with the fixed level, Apertus rates them 9 and they score 96-99.
@@ -194,8 +202,9 @@ models.
   with it). It stays because it is a general legal signal (Art. 20 Abs. 2 BGG, style guide
   section 9.4), not a fitted one.
 - The scores cluster, so thresholds from 45 to 60 change the number labelled relevant by at
-  most three per quarter. At 50: Q4 49 (recall 0.86), Q1 75 (recall 0.81). The threshold stays
-  at 50.
+  most three per quarter. At 50: Q4 49 (recall 0.86), Q1 75 (recall 0.81). The label threshold
+  was later lowered to 28, the cut-off with the best F2 on Q1 2026 and recall 1.00 on the
+  held-out Q4 2025 (`deliverables/README.md`).
 - The differences between versions are one to three rulings per quarter, while a rewording of
   the prompt moves single levels by several steps. Treat the per-quarter numbers as accurate to
   about ±0.05.
@@ -290,8 +299,9 @@ of answer, so it adds nothing here.
 ## April-June 2026
 
 `data/results/triage_2026q2.jsonl` holds 2,096 rulings decided 2026-04-01 to 2026-06-30: 1,908
-ruled out by the pre-filter, 57 by the gate, 131 rated by `apertus-v1-5-70b`, 68 labelled
-relevant (v4: 70). All are prompt version `v5`, with the explanation in German and in French.
+ruled out by the pre-filter, 57 by the gate, 131 rated by `apertus-v1-5-70b`, 100 labelled
+relevant at score 28 or more (68 at 50 or more; v4: 70 at 50). All are prompt version `v5`,
+with the explanation in German and in French.
 All of the top 30 are accident insurance rulings; 28 of them were also in v4's top 30
 (8C_739/2025 and 8C_580/2025 replace 8C_27/2026 and the invalidity insurance ruling
 8C_526/2025, now ranks 31 and 35), and the top 5 are the same five rulings.
@@ -306,7 +316,7 @@ rulings, 224 rated by Apertus, 82 gated), so the UI shows the triage for that pe
 uv run suva load
 uv run suva triage --from 2025-10-01 --to 2026-03-31 --workers 12
 uv run suva export-triage data/results/triage_2025q4_2026q1.jsonl --from 2025-10-01 --to 2026-03-31
-uv run python -m suva.eval.score_triage data/results/triage_2025q4_2026q1.jsonl --threshold 50
+uv run python -m suva.eval.score_triage data/results/triage_2025q4_2026q1.jsonl --threshold 28
 uv run suva triage --from 2026-04-01 --to 2026-06-30
 uv run suva export-triage data/results/triage_2026q2.jsonl --from 2026-04-01 --to 2026-06-30
 ```

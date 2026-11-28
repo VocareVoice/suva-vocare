@@ -82,7 +82,9 @@ Pooled over both quarters (`score_triage --threshold 50`):
 | precision at score >= 50 | 0.44 | 0.44 | 0.59 |
 
 Gemini is stricter: it gives lower levels, labels a third fewer rulings relevant, and is more
-precise and less complete at the threshold. The threshold of 50 was set for Apertus.
+precise and less complete at the threshold. The threshold of 50 was the label threshold for
+Apertus at the time; the app now labels 28 or more relevant, a cut-off chosen for F2
+(`deliverables/README.md`).
 
 Listed rulings outside the top 60 (generated level):
 

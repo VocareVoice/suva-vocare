@@ -1,7 +1,8 @@
 # Relevance list for Q2 2026
 
-Suva scores the delivered list of Q2 2026 rulings by recall and F2, so the list is longer than
-the rulings the app labels relevant (score 50 or more).
+Suva scores the delivered list of Q2 2026 rulings by recall and F2, so the cut-off is chosen
+for F2. The app uses the same threshold (`triage.RELEVANCE_THRESHOLD`): the list holds exactly
+the rulings it labels relevant.
 
 | File | What it holds |
 |---|---|
@@ -9,8 +10,9 @@ the rulings the app labels relevant (score 50 or more).
 | `relevant_q2_2026.csv` | The same rulings with `docket, decision_date, publication_date, score, headline_de` |
 | `relevant_q2_2026_by_publication.txt` / `.csv` | Variant: the 100 rulings bger.ch *published* 1 April - 30 June 2026 with a score of 28 or more |
 
-`headline_de` is filled for rulings with a score of 50 or more, the ones that get summaries and
-headlines. `publication_date` is empty for rulings the mirror added after 3 July (see below).
+`headline_de` is filled for the rulings that have a headline (those with a score of 50 or
+more, from before the threshold was lowered to 28). `publication_date` is empty for rulings the
+mirror added after 3 July (see below).
 
 ## How the list is made
 
@@ -36,11 +38,11 @@ Per quarter of the labelled period (quarters by decision date; Q4 2025: 28 liste
 |---|---|---|---|---|---|---|---|---|
 | 20 | 86 | 1.00 | 0.33 | 0.707 | 106 | 1.00 | 0.29 | 0.674 |
 | 25 | 78 | 1.00 | 0.36 | 0.737 | 102 | 1.00 | 0.30 | 0.686 |
-| **28** | **73** | **1.00** | **0.38** | **0.757** | **95** | **1.00** | **0.33** | **0.708** |
+| **28** (label) | **73** | **1.00** | **0.38** | **0.757** | **95** | **1.00** | **0.33** | **0.708** |
 | 30 | 69 | 1.00 | 0.41 | 0.773 | 90 | 0.94 | 0.32 | 0.678 |
 | 35 | 56 | 0.96 | 0.48 | 0.804 | 78 | 0.87 | 0.35 | 0.668 |
 | 40 | 44 | 0.86 | 0.55 | 0.769 | 67 | 0.84 | 0.39 | 0.681 |
-| 50 (label) | 42 | 0.86 | 0.57 | 0.779 | 67 | 0.84 | 0.39 | 0.681 |
+| 50 | 42 | 0.86 | 0.57 | 0.779 | 67 | 0.84 | 0.39 | 0.681 |
 | 72 | 27 | 0.75 | 0.78 | 0.755 | 42 | 0.71 | 0.52 | 0.663 |
 
 Tuned on one quarter, checked on the other:
@@ -57,7 +59,7 @@ Tuned on one quarter, checked on the other:
   28 is the better rule in the held-out direction and in the worse quarter.
 - A fixed list length transfers worse (0.676-0.678): the quarters have 73 and 95 rulings at 28
   or more, so the right length depends on the quarter, while the score scale does not.
-- Against the app's label threshold of 50, 28 keeps about the same F2 (0.757 / 0.708 against
+- Against the earlier label threshold of 50, 28 keeps about the same F2 (0.757 / 0.708 against
   0.779 / 0.681) and raises recall from 0.86 / 0.84 to 1.00 / 1.00. The deck says that missing
   a relevant ruling is worse than flagging an extra one.
 - The F2 curve is flat between 25 and 40 (0.67-0.80), so the choice costs little if Q2 differs.

@@ -746,8 +746,9 @@ def export_relevant(
 
 
 def import_triage(conn: sqlite3.Connection, path: Path | str) -> int:
-    """Load results written by `export_triage`. Rows for unknown rulings, or rulings that
-    already have a result of the same prompt version, are skipped. Files from before the French
+    """Load results written by `export_triage`. Rows for unknown rulings are skipped; for
+    rulings that already have a result of the same prompt version and model only the label is
+    taken over (so a changed threshold reaches existing databases). Files from before the French
     explanation carry the German one as `reasoning`."""
     count = 0
     with conn, open(path, encoding="utf-8") as f:
@@ -757,6 +758,11 @@ def import_triage(conn: sqlite3.Connection, path: Path | str) -> int:
             record = json.loads(line)
             record.setdefault("reasoning_de", record.get("reasoning"))
             row = {field: record.get(field) for field in TRIAGE_FIELDS}
+            conn.execute(
+                "UPDATE triage SET label = :label WHERE docket = :docket "
+                "AND prompt_version IS :prompt_version AND model IS :model AND label != :label",
+                row,
+            )
             cursor = conn.execute(
                 f"INSERT INTO triage ({', '.join(TRIAGE_FIELDS)}) "
                 "SELECT :docket, :score, :label, :reasoning_de, :reasoning_fr, :model, "
