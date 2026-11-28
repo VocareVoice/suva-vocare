@@ -42,7 +42,7 @@ The whole loop is in `docs/feedback_loop.md`; an example report is
    (default `data/results/summaries_*.jsonl`); the database itself keeps no summary history.
 
 2. The file holds:
-   - `prompt_versions`, `relevance_threshold` (50), `counts`;
+   - `prompt_versions`, `relevance_threshold` (28), `counts`;
    - `score_corrections`, oldest first: the ruling (docket, date, language, title, headline,
      branch and primary category of the classification), the model's result (`model`,
      `model_score`, `model_label`, `model_prompt_version`, `model_reasoning_de`), the expert's
@@ -92,9 +92,9 @@ the model's score and assign one cause:
 | Pre-filter or gate | `model` is `prefilter` or `gate` | `prior()` weights or patterns, `gate()` in `triage.py` |
 | Prompt criterion | the reasoning follows a rule of `SYSTEM_PROMPT` that the expert rejects (quote the rule) | that sentence of `SYSTEM_PROMPT` or the level scale |
 | Missing criterion | the expert's reason is a consideration the prompt does not mention | a new, narrow sentence in `SYSTEM_PROMPT` |
-| Prior weight | level and reasoning agree with the expert, the prior pulls the score across 50 | `prior()` (70 % level + 30 % prior) |
+| Prior weight | level and reasoning agree with the expert, the prior pulls the score across the threshold (28) | `prior()` (70 % level + 30 % prior) |
 | Model error | the reasoning misreads the ruling (wrong branch, wrong party, wrong holding) | usually none; note it, check if it repeats |
-| Threshold noise | model and expert scores within about 10 points of 50 | none; one prompt rewording moves levels by several steps |
+| Threshold noise | model and expert scores within about 10 points of the threshold (28) | none; one prompt rewording moves levels by several steps |
 | Policy question | the expert's reason is a choice about what Suva wants, not a reading error | a decision for the legal team before any prompt change |
 
 When the expert gave no reason, infer it only as a hypothesis and mark it as such.
@@ -165,7 +165,7 @@ questions** the legal team should answer first.
   score it with `uv run python -m suva.eval.score_triage`. Keep the change only under the
   cross-quarter rule of `docs/eval_triage.md`: neither quarter worse on P@10, P@30, R@30 or
   R@60. Also check the corrected rulings themselves: do they now land on the expert's side of
-  50? A change that fixes the corrections and fails the rule is rejected.
+  the threshold (28)? A change that fixes the corrections and fails the rule is rejected.
 - **Summary prompts.** Bump `PROMPT_VERSION` in `summarize.py`, regenerate the hold-out
   (`data/eval/split.json`) and the edited rulings on a copy, score the hold-out with
   `uv run python -m suva.eval.score_summaries generated.jsonl --judge` against the previous

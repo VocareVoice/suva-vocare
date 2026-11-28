@@ -69,8 +69,8 @@ make lint      # ruff
 
 `uv run suva summarize 8C_129/2025` summarises a single ruling in German and French;
 `uv run suva summarize-relevant [--from ... --to ...] [--limit 10]` summarises every ruling with a
-triage score of at least 50 that has no summary of the current prompt version, highest score
-first; `--limit N` takes the N highest-scored rulings and skips those already summarised, so after
+triage score of at least 28 (`triage.RELEVANCE_THRESHOLD`) that has no summary of the current
+prompt version, highest score first; `--limit N` takes the N highest-scored rulings and skips those already summarised, so after
 a new triage `uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --limit 30`
 writes only what the new top 30 lacks. Each summary run also
 writes a one-line headline per language (`headline_de` / `headline_fr` in the API), and

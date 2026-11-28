@@ -74,7 +74,8 @@ HTML file per decision. The committed corpus holds all 6,030 rulings decided fro
    each language, each written in its own legal language and checked for it.
 4. The level is read from the token logprobs as an expected value (7.4, not 7): asked for a
    0-100 score, Apertus gave 85 to almost every accident insurance ruling. Final score = 70 %
-   level + 30 % prior; 50 or more is labelled relevant.
+   level + 30 % prior; 28 or more is labelled relevant, the cut-off with the best F2 on the
+   labelled period (section 4).
 
 **Classification** (prompt `v4`, `docs/eval_classification.md`). Statutes, precedents
 (BGE/ATF/DTF), the outcome and flags (five-judge panel, public deliberation, intended for
@@ -230,11 +231,13 @@ We stay on Apertus because rulings, drafts and internal notes must not leave Suv
 
 **Recall and F2 on the delivered list.** Suva scores the list of April-June 2026 rulings we
 call relevant by recall and F2, which weighs a missed ruling four times as much as an extra
-one. The triage threshold of 50 was set for the labelled half-year; there it gives recall 0.85
-and precision 0.46 (109 rulings), F2 0.72, in-sample. April-June 2026 has 68 rulings at 50 or
-more (38 accident, 29 invalidity, 1 military insurance). The delivered list
-(`deliverables/`) chooses its cut-off for F2 rather than for a readable top 30.
-<!-- TODO(final): delivered list, its cut-off and its F2 / recall on the labelled half-year. -->
+one. The triage threshold of 28 was chosen for F2 on the labelled half-year: it is the best
+cut-off on Q1 2026 (F2 0.708) and keeps recall 1.00 on the held-out Q4 2025 (F2 0.757). Pooled
+it gives recall 1.00 and precision 0.35 (168 rulings), F2 0.73, against recall 0.85 and
+precision 0.46 (109 rulings), F2 0.72, at the earlier threshold of 50. The same threshold labels
+rulings relevant in the app, fills the knowledge base and cuts the delivered list
+(`deliverables/`): April-June 2026 has 100 rulings at 28 or more (61 invalidity, 38 accident,
+1 military insurance), 68 of them at 50 or more.
 
 **Top 5 summaries of June 2026.** Suva checks our summaries of rulings it summarised in June
 2026 against its own. The five highest-ranked rulings decided in June 2026 are 8C_254/2025
@@ -326,7 +329,7 @@ make install load                                   # results as submitted, no L
 uv run suva triage --from 2026-04-01 --to 2026-06-30
 uv run suva classify --from 2026-04-01 --to 2026-06-30
 uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --limit 30
-uv run python -m suva.eval.score_triage data/results/triage_2025q4_2026q1.jsonl --threshold 50
+uv run python -m suva.eval.score_triage data/results/triage_2025q4_2026q1.jsonl --threshold 28
 uv run python -m suva.eval.score_classification
 uv run python -m suva.eval.score_summaries generated.jsonl   # hold-out, see docs/eval_summaries.md
 ```
@@ -337,8 +340,8 @@ uv run python -m suva.eval.score_summaries generated.jsonl   # hold-out, see doc
 |---|---|---|
 | Triage v5, Q4 2025 | P@10 / P@30 / R@30 / R@60 | 0.90 / 0.70 / 0.75 / 0.96 |
 | Triage v5, Q1 2026 | P@10 / P@30 / R@30 / R@60 | 0.60 / 0.60 / 0.58 / 0.77 |
-| Triage v5, both quarters | recall / precision / F2 at score ≥ 50 | 0.85 / 0.46 / 0.72 (109 rulings) |
-| Triage, April-June 2026 | 2,096 rulings: pre-filter / gate / Apertus / relevant | 1,908 / 57 / 131 / 68; all top 30 accident insurance |
+| Triage v5, both quarters | recall / precision / F2 at score ≥ 28 | 1.00 / 0.35 / 0.73 (168 rulings) |
+| Triage, April-June 2026 | 2,096 rulings: pre-filter / gate / Apertus / relevant | 1,908 / 57 / 131 / 100; all top 30 accident insurance |
 | Classification v4, 55 examples | primary category / branch | 0.75 / 0.98 (44 of 45) |
 | Summaries v7, 10 hold-out × DE/FR | blind reading: outcome right / factual errors / error-free (v6) | 20 of 20 / 31 (43) / 3 (0) |
 | | ROUGE-L / chrF / glossary recall, DE · FR | 0.19 / 43.1 / 0.63 · 0.25 / 41.1 / 0.69 |

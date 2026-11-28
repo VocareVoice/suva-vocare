@@ -15,7 +15,7 @@ from pathlib import Path
 from suva.config import get_settings
 from suva.db import open_corpus
 from suva.eval.score_triage import load_relevant, load_triage, rank
-from suva.triage import LIST_MIN_SCORE
+from suva.triage import RELEVANCE_THRESHOLD
 
 QUARTERS = {"Q4 2025": ("2025-10-01", "2025-12-31"), "Q1 2026": ("2026-01-01", "2026-03-31")}
 CUTOFFS = range(20, 81)
@@ -93,9 +93,9 @@ def render(split: dict[str, tuple[dict, set]]) -> str:
                 f"| {label} | {tuned} | {value} | {there:.3f} | {held} | "
                 f"{cell(rule(*split[held], value))} |"
             )
-    lines += ["", f"## Shipped cut-off: score >= {LIST_MIN_SCORE}", ""]
+    lines += ["", f"## Shipped cut-off: score >= {RELEVANCE_THRESHOLD}", ""]
     for q in names:
-        lines.append(f"- {q}: n | R | P | F2 = {cell(at_cutoff(*split[q], LIST_MIN_SCORE))}")
+        lines.append(f"- {q}: n | R | P | F2 = {cell(at_cutoff(*split[q], RELEVANCE_THRESHOLD))}")
     return "\n".join(lines) + "\n"
 
 

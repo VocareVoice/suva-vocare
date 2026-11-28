@@ -8,7 +8,7 @@
 > summary and all counts from the labelled period are real; the experts' scores, comments and
 > edit are not Suva's. The corrections were chosen to agree with Suva's real Q4 2025 / Q1 2026
 > list, and every comment was checked against its ruling. **Nothing in this report has been
-> applied.**
+> applied.** It was made when the relevance threshold was 50; it is now 28.
 
 ## 1. Summary
 
