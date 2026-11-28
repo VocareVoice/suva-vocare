@@ -3,11 +3,13 @@
 Drives headless Chromium at 1920x1080 through the shots of docs/demo_video_script.md and
 writes one clip per shot part to OUT/clips/<part>.mp4, captured frame by frame with the
 DevTools screencast (sharper than Playwright's built-in video). The long waits (live summary,
-added ruling, agent answer) happen between two clips, so they never reach the video. A drawn cursor stands
-in for the mouse, which headless Chromium does not render.
+added ruling, agent answer) happen between two clips, so they never reach the video. A drawn
+cursor stands in for the mouse, which headless Chromium does not render.
 
 Run against a freshly loaded database with the summary of 9C_197/2026 and the add of
-8C_700/2024 pre-warmed (see the preparation checklist of the script):
+8C_700/2024 pre-warmed (see the preparation checklist of the script). With --only, the shots
+that change the database (6, 7, 9) run only when one of their parts is asked for, so shots 8
+and 10 can be recorded on a database that already holds the correction of shot 7:
 
     uv run --with playwright python scripts/demo_video/record.py \
         --base-url http://127.0.0.1:8090 OUT
@@ -24,7 +26,7 @@ from playwright.sync_api import Page, sync_playwright
 from shots import ADD_DOCKET, AGENT_QUESTION, EXPERT_COMMENT
 
 W, H = 1920, 1080
-PARTS = ["1", "2", "3", "4", "5", "6a", "6b", "7", "8a", "8b", "9a", "9b"]
+PARTS = ["1", "2", "3", "4", "5", "6a", "6b", "7", "8", "9a", "9b", "10", "11a", "11b"]
 
 CURSOR_JS = """
 (() => {
@@ -315,97 +317,126 @@ def record(base: str, out: Path, only: set[str] | None, agent_timeout_s: float):
             return browser.close()
 
         # 6: a ruling the triage did not flag, summarised on demand
-        cam.start("6a") if wanted("6a") else None
-        page.evaluate("scrollTo({top: 0, behavior: 'smooth'})")
-        d.wait(700)
-        d.click(page.locator(".dback"), 700)
-        notrel = page.locator("button[data-label=not_relevant]")
-        notrel.wait_for()
-        d.wait(500)
-        d.click(notrel, 800)
-        row = page.locator("tbody tr").first
-        page.locator("tbody tr", has_text="9C_197/2026").first.wait_for()
-        d.wait(900)
-        d.click(row.locator("a.docket"), 800)
-        gen = page.locator("#genBtn")
-        gen.wait_for()
-        d.wait(1300)
-        d.click(gen, 800)
-        page.locator(".progress").first.wait_for()
-        d.wait(2200)
-        cam.stop() if wanted("6a") else None
-        page.locator("#summaryCard .summaries").wait_for(timeout=40 * 60_000)
-        page.locator("#toast").wait_for()
-        if wanted("6b"):
-            cam.start("6b")
-        page.locator("#summaryCard").evaluate(
-            "e => scrollTo({top: e.getBoundingClientRect().top + scrollY - 24})"
-        )
-        d.glide(W * 0.4, H * 0.5, 900)
-        d.wait(3500)
-        cam.stop() if wanted("6b") else None
+        if wanted("6a") or wanted("6b"):
+            cam.start("6a") if wanted("6a") else None
+            page.evaluate("scrollTo({top: 0, behavior: 'smooth'})")
+            d.wait(700)
+            d.click(page.locator(".dback"), 700)
+            notrel = page.locator("button[data-label=not_relevant]")
+            notrel.wait_for()
+            d.wait(500)
+            d.click(notrel, 800)
+            row = page.locator("tbody tr").first
+            page.locator("tbody tr", has_text="9C_197/2026").first.wait_for()
+            d.wait(900)
+            d.click(row.locator("a.docket"), 800)
+            gen = page.locator("#genBtn")
+            gen.wait_for()
+            d.wait(1300)
+            d.click(gen, 800)
+            page.locator(".progress").first.wait_for()
+            d.wait(2200)
+            cam.stop() if wanted("6a") else None
+            page.locator("#summaryCard .summaries").wait_for(timeout=40 * 60_000)
+            page.locator("#toast").wait_for()
+            if wanted("6b"):
+                cam.start("6b")
+            page.locator("#summaryCard").evaluate(
+                "e => scrollTo({top: e.getBoundingClientRect().top + scrollY - 24})"
+            )
+            d.glide(W * 0.4, H * 0.5, 900)
+            d.wait(3500)
+            cam.stop() if wanted("6b") else None
 
         if done_after("6b"):
             return browser.close()
 
         # 7: an expert raises the score of 9C_197/2026 above the threshold
-        cam.start("7") if wanted("7") else None
-        card = page.locator("#relevanceCard")
-        d.scroll_to(card, "center", 900)
-        d.click(page.locator("#scoreEdit"), 800)
-        rng = page.locator("[data-score-range]")
-        rng.wait_for()
-        d.wait(700)
-        d.point(rng, 700, dx=0.27)
-        d.wait(250)
-        page.mouse.down()
-        d.glide(d.x + rng.bounding_box()["width"] * 0.19, d.y, 1400)
-        page.mouse.up()
+        if wanted("7"):
+            cam.start("7")
+            card = page.locator("#relevanceCard")
+            d.scroll_to(card, "center", 900)
+            d.click(page.locator("#scoreEdit"), 800)
+            rng = page.locator("[data-score-range]")
+            rng.wait_for()
+            d.wait(700)
+            d.point(rng, 700, dx=0.27)
+            d.wait(250)
+            page.mouse.down()
+            d.glide(d.x + rng.bounding_box()["width"] * 0.19, d.y, 1400)
+            page.mouse.up()
+            d.wait(900)
+            d.click(page.locator("[data-score-comment]"), 600)
+            page.keyboard.type(EXPERT_COMMENT, delay=14)
+            d.wait(400)
+            d.click(page.locator("[data-score-save]"), 700)
+            page.locator("#relevanceCard .relevance__expert").wait_for()
+            d.glide(W * 0.62, H * 0.42, 700)
+            d.wait(2600)
+            cam.stop()
+            print("expert score:", page.locator("#relevanceCard .score-lg").first.inner_text())
+
+        # 8: the expert corrections next to the model's scores (the clip starts on the page)
+        d.click(page.locator("a.navlink[data-nav=adjust]"), 900)
+        adj = page.locator('.adjtable tr[data-docket="9C_197/2026"]')
+        adj.wait_for()
+        cam.start("8") if wanted("8") else None
         d.wait(900)
-        d.click(page.locator("[data-score-comment]"), 600)
-        page.keyboard.type(EXPERT_COMMENT, delay=14)
-        d.wait(400)
-        d.click(page.locator("[data-score-save]"), 700)
-        page.locator("#relevanceCard .relevance__expert").wait_for()
-        d.glide(W * 0.62, H * 0.42, 700)
-        d.wait(2600)
-        cam.stop() if wanted("7") else None
-        print("expert score:", page.locator("#relevanceCard .score-lg").first.inner_text())
-
-        # 8: add a ruling that is not in the database by its number
-        cam.start("8a") if wanted("8a") else None
-        d.click(page.locator("a.navlink[data-nav=all]"), 900)
-        add = page.locator("#addBtn")
-        add.wait_for()
-        d.wait(700)
-        d.click(add, 700)
-        d.click(page.locator("#addDocket"), 500)
-        page.keyboard.type(ADD_DOCKET, delay=70)
-        d.wait(400)
-        page.evaluate(HOLD_ADD_JS, 4000)
-        d.click(page.locator("#addForm button[type=submit]"), 600)
-        page.locator("#addStatus .progress").wait_for()
-        d.wait(2200)
-        cam.stop() if wanted("8a") else None
-        page.wait_for_function(f"decodeURIComponent(location.hash).includes({ADD_DOCKET!r})")
-        page.locator("#relevanceCard").wait_for()
-        page.locator("#toast.is-on").wait_for()
-        cam.start("8b") if wanted("8b") else None
-        d.point(page.locator("#relevanceCard .score-lg").first, 900)
+        d.point(adj.locator(".adjchange"), 900)
         d.wait(1300)
-        d.point(page.locator("#relevanceCard .reasoning"), 800, dx=0.3)
-        d.wait(2500)
-        cam.stop() if wanted("8b") else None
+        d.point(adj.locator(".adjreason"), 800, dx=0.3)
+        d.wait(1800)
+        cam.stop() if wanted("8") else None
 
-        if done_after("8b"):
+        # 9: add a ruling that is not in the database by its number
+        if wanted("9a") or wanted("9b"):
+            d.click(page.locator("a.navlink[data-nav=all]"), 900)
+            add = page.locator("#addBtn")
+            add.wait_for()
+            cam.start("9a") if wanted("9a") else None
+            d.wait(700)
+            d.click(add, 700)
+            d.click(page.locator("#addDocket"), 500)
+            page.keyboard.type(ADD_DOCKET, delay=70)
+            d.wait(400)
+            page.evaluate(HOLD_ADD_JS, 4000)
+            d.click(page.locator("#addForm button[type=submit]"), 600)
+            page.locator("#addStatus .progress").wait_for()
+            d.wait(2200)
+            cam.stop() if wanted("9a") else None
+            page.wait_for_function(f"decodeURIComponent(location.hash).includes({ADD_DOCKET!r})")
+            page.locator("#relevanceCard").wait_for()
+            page.locator("#toast.is-on").wait_for()
+            cam.start("9b") if wanted("9b") else None
+            d.point(page.locator("#relevanceCard .score-lg").first, 900)
+            d.wait(1300)
+            d.point(page.locator("#relevanceCard .reasoning"), 800, dx=0.3)
+            d.wait(2500)
+            cam.stop() if wanted("9b") else None
+
+        # 10: the statutes, Art. 6 UVG through the article filter
+        d.click(page.locator("a.navlink[data-nav=law]"), 900)
+        q = page.locator("#lawQ")
+        q.wait_for()
+        cam.start("10") if wanted("10") else None
+        d.wait(1000)
+        d.click(q, 700)
+        page.keyboard.type("6", delay=120)
+        page.locator("#art-6").wait_for()
+        d.wait(600)
+        d.point(page.locator("#art-6 .lawart__text"), 900, dx=0.3)
+        d.wait(2000)
+        cam.stop() if wanted("10") else None
+
+        if done_after("10"):
             return browser.close()
 
-        # 9: the agent, asked from the category view of shot 2
-        if wanted("9a") or wanted("9b"):
-            cam.start("9a") if wanted("9a") else None
+        # 11: the agent, asked from the category view of shot 2
+        if wanted("11a") or wanted("11b"):
             d.click(page.locator("#navKb a[data-navbranch=uv]"), 900)
             cat = page.locator('.entry[data-docket="8C_686/2025"] .entry__cat')
             cat.wait_for()
+            cam.start("11a") if wanted("11a") else None
             d.wait(600)
             d.click(cat, 800)
             page.wait_for_function("location.hash.includes('cat=unfallbegriff')")
@@ -418,12 +449,12 @@ def record(base: str, out: Path, only: set[str] | None, agent_timeout_s: float):
             d.click(page.locator("#agentSend"), 500)
             page.locator(".msg--busy").wait_for()
             d.wait(1800)
-            cam.stop() if wanted("9a") else None
+            cam.stop() if wanted("11a") else None
             page.locator(".msg--busy").wait_for(state="detached", timeout=agent_timeout_s * 1000)
             answer = page.locator("#agentLog .msg--agent").last
             print("agent answer:\n" + answer.inner_text())
             (out / "agent_answer.txt").write_text(answer.inner_text())
-            cam.start("9b") if wanted("9b") else None
+            cam.start("11b") if wanted("11b") else None
             # Scroll only the chat log: scrollIntoView would also scroll the list beside it.
             heading = answer.get_by_text("Relevante Normen").first
             if heading.count():
@@ -437,7 +468,7 @@ def record(base: str, out: Path, only: set[str] | None, agent_timeout_s: float):
             if link.count():
                 d.point(link, 1000)
             d.wait(3000)
-            cam.stop() if wanted("9b") else None
+            cam.stop() if wanted("11b") else None
 
         browser.close()
 
