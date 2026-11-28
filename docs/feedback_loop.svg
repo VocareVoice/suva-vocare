@@ -56,7 +56,7 @@
   <rect x="520" y="190" width="210" height="72" rx="6" class="human"/>
   <text x="625" y="214" class="t">6 Developer applies</text>
   <text x="625" y="232" class="s">one change per branch,</text>
-  <text x="625" y="247" class="s">new PROMPT_VERSION</text>
+  <text x="625" y="247" class="s">prompt or rule change</text>
 
   <rect x="270" y="190" width="210" height="72" rx="6" class="rule"/>
   <text x="375" y="214" class="t">7 Evaluation</text>
