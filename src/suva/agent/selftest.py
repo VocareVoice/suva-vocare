@@ -136,6 +136,8 @@ NOT_ANSWERS = [
     'Die Werte {"a": 1} sind Beispiele.',
     '```json\n{"content": "Merk dir das"}\n```',  # update_memory is never inferred
     "```json\n[1, 2]\n```",
+    # the template's declaration of a tool, echoed with the arguments filled in
+    '```text\ntype search_rulings = (_: {\n  query: "Ungeschick",\n  limit: 5\n}) => any;\n```',
 ]
 
 

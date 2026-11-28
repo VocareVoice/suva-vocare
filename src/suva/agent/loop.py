@@ -211,7 +211,7 @@ def looks_like_call(reply: str) -> bool:
     if TOOL_NAME.match(head):
         return True
     return any(
-        re.match(r"\s*(?:\(|\{|with\b|mit\b|avec\b|:)", reply[m.end() : m.end() + 12])
+        re.match(r"\s*(?:\(|\{|=|with\b|mit\b|avec\b|:)", reply[m.end() : m.end() + 12])
         and KV_ARG.search(reply[m.end() : m.end() + 200])
         for m in TOOL_NAME.finditer(reply)
     )
@@ -328,6 +328,7 @@ def is_call_text(reply: str) -> bool:
         bool(parse_calls(reply))
         or looks_like_call(reply)
         or "```json" in reply
+        or ("```" in reply and bool(TOOL_NAME.search(reply)))  # a tool's declaration, echoed
         or any(_json_objects(reply))
     )
 
