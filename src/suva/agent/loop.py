@@ -78,16 +78,17 @@ NOTES = {
         "en français.",
     },
 }
-# Words that mark English prose: Apertus sometimes slips into English, mostly when it answers
-# with the reasoning it writes next to its tool calls.
-ENGLISH = re.compile(r"\b(?:the|and|of|to|is|are|for|with|this|that|which|be|by|it|let|we)\b", re.I)
-NATIVE = {
+# Words that mark a language, none shared between them: Apertus sometimes slips into English
+# (mostly when it answers with the reasoning it writes next to its tool calls) or, for a French
+# user, into the German of the prompt.
+MARKERS = {
+    "en": re.compile(
+        r"\b(?:the|and|of|to|is|are|for|with|this|that|which|be|by|it|let|we)\b", re.I
+    ),
     "de": re.compile(
         r"\b(?:der|die|das|und|ist|nicht|mit|ein|eine|zu|den|von|für|auf|dass|sich|im)\b", re.I
     ),
-    "fr": re.compile(
-        r"\b(?:le|la|les|et|est|des|une|un|du|pour|que|dans|pas|au|qui|sur|en)\b", re.I
-    ),
+    "fr": re.compile(r"\b(?:le|la|les|et|est|une|un|pour|que|dans|pas|au|qui|sur|en)\b", re.I),
 }
 
 
@@ -332,9 +333,10 @@ def is_call_text(reply: str) -> bool:
 
 
 def wrong_language(reply: str, lang: str) -> bool:
-    """The reply is mostly English although the user writes German or French."""
-    english = len(ENGLISH.findall(reply))
-    return english >= 5 and english > len(NATIVE[lang].findall(reply))
+    """The reply is mostly in another language than the user's."""
+    counts = {code: len(words.findall(reply)) for code, words in MARKERS.items()}
+    own = counts.pop(lang)
+    return any(count >= 5 and count > own for count in counts.values())
 
 
 def consulted(lang: str, steps: list[tuple[str, dict[str, Any], list[str]]]) -> str:

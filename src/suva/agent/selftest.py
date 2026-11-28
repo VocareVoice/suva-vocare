@@ -13,6 +13,11 @@ ANSWER_DE = (
     "Kausalzusammenhang gegeben ist. Das Verschulden eines anderen Mitarbeiters ändert an der "
     "Leistungspflicht der Unfallversicherung grundsätzlich nichts."
 )
+ANSWER_FR = (
+    "La question est de savoir si l'événement constitue un accident au sens de l'[[art. 4 LPGA]] "
+    "et si le lien de causalité naturelle et adéquate est établi. La maladresse d'un collègue "
+    "ne change en principe rien à l'obligation de prester de l'assurance-accidents."
+)
 ANSWER_EN = (
     "Let me search more specifically for cases involving another employee's carelessness "
     "causing injury, focusing on causation and benefit reduction. This is the answer and it "
@@ -216,6 +221,8 @@ def check_loop() -> list[str]:
     expect("language correction", steps(events) == ["correction:language"], steps(events))
     expect("language: German answer", answer(events).startswith("Es stellt"), answer(events))
     expect("German not flagged", not loop.wrong_language(ANSWER_DE, "de"), ANSWER_DE)
+    expect("German flagged for French", loop.wrong_language(ANSWER_DE, "fr"), ANSWER_DE)
+    expect("French not flagged", not loop.wrong_language(ANSWER_FR, "fr"), ANSWER_FR)
 
     # A stuck answer stored earlier is not replayed: the follow-up sees the no-answer note.
     conn = db.connect(":memory:")
