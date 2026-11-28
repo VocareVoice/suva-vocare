@@ -105,6 +105,16 @@ def main() -> None:
     export_summ.add_argument("--from", dest="date_from")
     export_summ.add_argument("--to", dest="date_to")
 
+    export_files = commands.add_parser(
+        "export-summary-files",
+        help="write the latest summary of every ruling with a triage score of at least "
+        "--min-score as one Markdown file per ruling and language, plus index.md",
+    )
+    export_files.add_argument("--out", type=Path, required=True, help="output directory")
+    export_files.add_argument("--min-score", type=int, default=triage.RELEVANCE_THRESHOLD)
+    export_files.add_argument("--from", dest="date_from", help="first decision date, YYYY-MM-DD")
+    export_files.add_argument("--to", dest="date_to", help="last decision date, YYYY-MM-DD")
+
     imp_summ = commands.add_parser(
         "import-summaries", help="load summaries and headlines from export-summaries"
     )
@@ -237,6 +247,15 @@ def main() -> None:
     elif args.command == "export-summaries":
         count = db.export_summaries(conn, args.path, date_from=args.date_from, date_to=args.date_to)
         print(f"Wrote summaries and headlines of {count} rulings to {args.path}")
+    elif args.command == "export-summary-files":
+        rulings, files = db.export_summary_files(
+            conn,
+            args.out,
+            min_score=args.min_score,
+            date_from=args.date_from,
+            date_to=args.date_to,
+        )
+        print(f"Wrote {files} summary files of {rulings} rulings and index.md to {args.out}")
     elif args.command == "import-summaries":
         count = db.import_summaries(conn, args.path)
         print(f"Loaded {count} summaries and headlines from {args.path}")

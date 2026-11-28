@@ -958,6 +958,86 @@ def export_summaries(
     return len(dockets)
 
 
+_SUMMARY_FILE_LABELS = {
+    "de": ("Urteil", "Entscheiddatum", "Relevanz-Score", "Zusammenfassung erstellt mit Apertus"),
+    "fr": ("Arrêt", "Date de décision", "Score de pertinence", "Résumé généré avec Apertus"),
+}
+
+
+def export_summary_files(
+    conn: sqlite3.Connection,
+    out: Path | str,
+    *,
+    min_score: int,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> tuple[int, int]:
+    """Write the latest summary of every ruling with a triage score of at least `min_score`
+    decided in the range, one Markdown file per ruling and language (`8C_123_2025_de.md`), with
+    a header and the text exactly as stored, plus `index.md` listing them by score. Returns the
+    number of rulings and of files."""
+    where, params = ["t.score >= ?"], [min_score]
+    if date_from:
+        where.append(f"{_DATE} >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append(f"{_DATE} <= ?")
+        params.append(date_to)
+    rulings = conn.execute(
+        f"SELECT r.docket, r.decision_date, r.url, t.score FROM rulings r "
+        f"JOIN triage t ON {_LATEST_TRIAGE} WHERE {' AND '.join(where)} "
+        f"ORDER BY t.score DESC, {_DOCKET_ORDER.format(d='')}",
+        params,
+    ).fetchall()
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    index = [
+        "# Zusammenfassungen / Résumés",
+        "",
+        "| Urteil | Entscheiddatum | Score | DE | FR |",
+        "|---|---|---|---|---|",
+    ]
+    files = 0
+    for ruling in rulings:
+        stem = ruling["docket"].replace("/", "_")
+        links = {}
+        for lang, (case, date, score, made) in _SUMMARY_FILE_LABELS.items():
+            summary = conn.execute(
+                "SELECT text, model, prompt_version FROM summaries WHERE docket = ? AND lang = ? "
+                "ORDER BY id DESC LIMIT 1",
+                (ruling["docket"], lang),
+            ).fetchone()
+            if summary is None:
+                links[lang] = "-"
+                continue
+            headline = conn.execute(
+                "SELECT text FROM headlines WHERE docket = ? AND lang = ? ORDER BY id DESC LIMIT 1",
+                (ruling["docket"], lang),
+            ).fetchone()
+            header = [f"# {case} {ruling['docket']}", ""]
+            if headline:
+                header += [f"**{headline['text']}**", ""]
+            header += [
+                f"- {date}: {ruling['decision_date']}",
+                f"- bger.ch: {ruling['url']}",
+                f"- {score}: {ruling['score']}",
+                f"- {made} ({summary['model']}), Prompt-Version {summary['prompt_version']}",
+                "",
+                "---",
+                "",
+            ]
+            name = f"{stem}_{lang}.md"
+            (out / name).write_text("\n".join(header) + summary["text"] + "\n", encoding="utf-8")
+            links[lang] = f"[{name}]({name})"
+            files += 1
+        index.append(
+            f"| [{ruling['docket']}]({ruling['url']}) | {ruling['decision_date']} | "
+            f"{ruling['score']} | {links['de']} | {links['fr']} |"
+        )
+    (out / "index.md").write_text("\n".join(index) + "\n", encoding="utf-8")
+    return len(rulings), files
+
+
 def import_summaries(conn: sqlite3.Connection, path: Path | str) -> int:
     """Load summaries and headlines written by `export_summaries`, replacing older ones; returns
     the number of texts stored. Texts for unknown rulings, or for a ruling and language that
