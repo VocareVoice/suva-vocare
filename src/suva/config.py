@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     llm_name: str = ""
     llm_base_url: str = ""
     llm_api_key: str = ""
-    llm_timeout: float = 120.0
+    # Not streamed: a 3000-token reply at the 10 tokens/s of a busy gateway takes over 5 minutes.
+    llm_timeout: float = 600.0
     llm_max_retries: int = 5
 
     agent_model: str = ""  # the side-panel agent; empty uses `model`
