@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="Helvetica, Arial, sans-serif">
-  <title>suva-vocare architecture: build-time inputs, batch pipeline, serving, Apertus endpoint</title>
+  <title>suva-vocare architecture: build-time inputs, batch pipeline, serving, Apertus API</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+    <marker id="arrow-llm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d9480f"/>
     </marker>
   </defs>
   <style>
@@ -16,6 +19,9 @@
     .app { fill: #e6f6f4; stroke: #0f766e; stroke-width: 1.2; }
     .ext { fill: #ffffff; stroke: #9ca3af; stroke-width: 1.2; }
     .edge { stroke: #4b5563; stroke-width: 1.3; fill: none; marker-end: url(#arrow); }
+    .halo { stroke: #ffffff; stroke-width: 6; fill: none; }
+    .api { stroke: #d9480f; stroke-width: 1.5; fill: none; }
+    .apiend { stroke: #d9480f; stroke-width: 1.5; fill: none; marker-end: url(#arrow-llm); }
     .in { stroke: #4b5563; stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow); }
   </style>
   <rect x="0" y="0" width="1000" height="640" fill="#ffffff"/>
@@ -26,28 +32,23 @@
   <rect x="30" y="42" width="220" height="56" rx="6" class="ext"/>
   <text x="140" y="65" class="t">entscheidsuche.ch</text>
   <text x="140" y="83" class="s">open mirror of bger.ch</text>
-  <rect x="270" y="42" width="220" height="56" rx="6" class="ext"/>
-  <text x="380" y="65" class="t">Fedlex</text>
-  <text x="380" y="83" class="s">SPARQL + HTML of UVG, ATSG, UVV</text>
-  <rect x="510" y="42" width="220" height="56" rx="6" class="ext"/>
-  <text x="620" y="65" class="t">Hugging Face</text>
-  <text x="620" y="83" class="s">swiss-ai/Apertus-v1.5-70B</text>
+  <rect x="390" y="42" width="220" height="56" rx="6" class="ext"/>
+  <text x="500" y="65" class="t">Fedlex</text>
+  <text x="500" y="83" class="s">SPARQL + HTML of UVG, ATSG, UVV</text>
   <rect x="750" y="42" width="220" height="56" rx="6" class="ext"/>
   <text x="860" y="65" class="t">Package registries</text>
   <text x="860" y="83" class="s">PyPI, Docker Hub, ghcr.io</text>
 
   <path d="M140 98 V158" class="in"/>
   <text x="147" y="140" class="lbl">corpus (suva.fetch)</text>
-  <path d="M380 98 V158" class="in"/>
-  <text x="387" y="140" class="lbl">law snapshots (suva.laws)</text>
-  <path d="M620 98 V158" class="in"/>
-  <text x="627" y="140" class="lbl">weights, once</text>
+  <path d="M500 98 V158" class="in"/>
+  <text x="507" y="140" class="lbl">law snapshots (suva.laws)</text>
   <path d="M860 98 V158" class="in"/>
   <text x="867" y="140" class="lbl">image (uv.lock)</text>
 
   <!-- Runtime perimeter -->
   <rect x="10" y="160" width="980" height="470" rx="8" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
-  <text x="24" y="182" class="group">Runtime: on-premise or air-gapped, Docker Compose; no outbound connection except adding one ruling by number</text>
+  <text x="24" y="182" class="group">Runtime: Docker Compose; outbound only to the Apertus API and to add one ruling by number</text>
 
   <!-- Batch pipeline -->
   <rect x="30" y="200" width="160" height="56" rx="6" class="store"/>
@@ -80,7 +81,7 @@
   <text x="650" y="321" class="s">two-level taxonomy, JSON enums</text>
   <rect x="555" y="360" width="190" height="56" rx="6" class="llm"/>
   <text x="650" y="383" class="t">Apertus summaries</text>
-  <text x="650" y="401" class="s">DE + FR, per-sentence check</text>
+  <text x="650" y="401" class="s">DE + FR, headlines, fact check</text>
 
   <rect x="780" y="200" width="190" height="216" rx="6" class="store"/>
   <text x="875" y="282" class="t">SQLite + FTS5</text>
@@ -88,6 +89,12 @@
   <text x="875" y="322" class="s">scores, explanations,</text>
   <text x="875" y="338" class="s">categories, summaries,</text>
   <text x="875" y="354" class="s">headlines, full text</text>
+
+  <!-- Apertus steps to the API: one bus right of the orange column -->
+  <path d="M745 244 H762" class="api"/>
+  <path d="M745 324 H762" class="api"/>
+  <path d="M745 404 H762" class="api"/>
+  <path d="M762 244 V488 H747" class="apiend"/>
 
   <path d="M190 228 H213" class="edge"/>
   <path d="M190 308 H240 V258" class="edge"/>
@@ -99,7 +106,9 @@
   <path d="M555 378 H532" class="edge"/>
   <path d="M530 398 H553" class="edge"/>
   <path d="M745 228 H778" class="edge"/>
+  <path d="M752 308 H772" class="halo"/>
   <path d="M745 308 H778" class="edge"/>
+  <path d="M752 388 H772" class="halo"/>
   <path d="M745 388 H778" class="edge"/>
 
   <!-- Serving -->
@@ -109,23 +118,22 @@
   <rect x="380" y="460" width="150" height="56" rx="6" class="llm"/>
   <text x="455" y="483" class="t">Apertus agent</text>
   <text x="455" y="501" class="s">tools: laws, rulings</text>
-  <rect x="555" y="460" width="190" height="56" rx="6" class="app"/>
-  <text x="650" y="483" class="t">FastAPI + web UI</text>
-  <text x="650" y="501" class="s">static files, no CDN, DE / FR</text>
-  <rect x="780" y="460" width="190" height="56" rx="6" class="ext"/>
-  <text x="875" y="483" class="t">Lawyer's browser</text>
-  <text x="875" y="501" class="s">inside the organisation</text>
+  <rect x="555" y="450" width="190" height="76" rx="6" fill="#fde3cf" stroke="#d9480f" stroke-width="1.8"/>
+  <text x="650" y="474" class="t">Apertus API</text>
+  <text x="650" y="492" class="s">Apertus v1.5 70B, OpenAI-</text>
+  <text x="650" y="507" class="s">compatible (LLM_BASE_URL)</text>
+  <rect x="780" y="460" width="190" height="56" rx="6" class="app"/>
+  <text x="875" y="483" class="t">FastAPI + web UI</text>
+  <text x="875" y="501" class="s">static files, no CDN, DE / FR</text>
+  <rect x="780" y="560" width="190" height="56" rx="6" class="ext"/>
+  <text x="875" y="583" class="t">Lawyer's browser</text>
+  <text x="875" y="601" class="s">inside the organisation</text>
 
   <path d="M190 488 H378" class="edge"/>
-  <path d="M532 488 H553" class="edge" style="marker-start: url(#arrow)"/>
-  <path d="M747 488 H778" class="edge" style="marker-start: url(#arrow)"/>
-  <path d="M875 416 V438 H690 V458" class="edge" style="marker-start: url(#arrow)"/>
-
-  <!-- Apertus endpoint -->
-  <rect x="380" y="548" width="590" height="62" rx="6" fill="#fde3cf" stroke="#d9480f" stroke-width="1.8"/>
-  <text x="675" y="572" class="t">Apertus v1.5 70B behind an OpenAI-compatible endpoint (LLM_BASE_URL)</text>
-  <text x="675" y="592" class="s">own GPUs, e.g. vLLM; every orange step calls it, with temperature 0 and an on-disk response cache</text>
-  <path d="M455 516 V546" class="edge" style="marker-start: url(#arrow)"/>
+  <path d="M530 488 H553" class="apiend"/>
+  <path d="M875 418 V458" class="edge" style="marker-start: url(#arrow)"/>
+  <path d="M830 518 V540 H455 V518" class="edge" style="marker-start: url(#arrow)"/>
+  <path d="M920 518 V558" class="edge" style="marker-start: url(#arrow)"/>
 
   <!-- Legend -->
   <rect x="30" y="548" width="14" height="14" rx="3" class="rule"/>
@@ -138,4 +146,6 @@
   <text x="222" y="581" class="lbl">app server</text>
   <path d="M30 600 H60" class="in"/>
   <text x="68" y="604" class="lbl">network only at build time</text>
+  <path d="M200 600 H230" class="apiend"/>
+  <text x="238" y="604" class="lbl">request to the Apertus API</text>
 </svg>
