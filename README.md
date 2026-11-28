@@ -4,7 +4,7 @@
 
 ### Identification of relevant Federal Court judgements and preparation of a legal summary
 
-`Add your team name`
+**Praecedens** - Team Vocare (Lucas Bernoulli, Thomas Frei)
 <br>
 <br>
 
