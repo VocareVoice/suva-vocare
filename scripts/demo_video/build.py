@@ -115,6 +115,7 @@ def render_cards(work: Path):
         "title": TITLE_HTML.format(font=FONT, logo=logo),
         "closing": CLOSING_HTML.format(font=FONT, blocks=blocks),
     }
+    cards["blank"] = ""
     for s in SHOTS:
         if s.get("caption"):
             cards[f"caption_{s['n']}"] = CAPTION_HTML.format(
@@ -248,7 +249,9 @@ def build_segments(out: Path, work: Path, slots: list[float]) -> list[Path]:
                 "-t",
                 f"{t:.3f}",
                 "-i",
-                str(work / f"caption_{n}.png"),
+                str(
+                    work / ("blank.png" if part in s.get("uncaptioned", []) else f"caption_{n}.png")
+                ),
             ]
             if i == 1 and s.get("cut_caption"):
                 inputs += ["-loop", "1", "-t", "1.8", "-i", str(work / f"cut_{n}.png")]

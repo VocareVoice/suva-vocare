@@ -2,7 +2,8 @@
 
 `parts` names the clips record.py writes for a shot; a shot with two parts has a cut between
 them (the live summary and the agent answer take minutes). `split` is the share of the shot's
-time the first part gets.
+time the first part gets. `uncaptioned` parts show no caption (it would hide the
+"Zusammenfassung erstellt" toast).
 """
 
 SHOTS = [
@@ -65,6 +66,7 @@ SHOTS = [
         "seconds": 14,
         "parts": ["6a", "6b"],
         "split": 0.65,
+        "uncaptioned": ["6b"],
         "caption": "Summarise on demand",
         "cut_caption": "Apertus 70B - cut",
         "voice": "And the rulings the triage did not flag? This invalidity insurance ruling scored "
