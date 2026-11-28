@@ -98,8 +98,29 @@ PARSE_CASES: list[tuple[str, str, list[tuple[str, dict[str, Any]]]]] = [
         'read_article with law="UVV", art="25"',
         [("read_article", {"law": "UVV", "art": "25"})],
     ),
+    (
+        "arguments only, after English prose",
+        'Let me try a broader search without category first:\n\n```json\n{\n  "query": '
+        '"Ungeschick Arbeitsunfall Kollege Verletzung",\n  "limit": 10\n}\n```',
+        [("search_rulings", {"query": "Ungeschick Arbeitsunfall Kollege Verletzung", "limit": 10})],
+    ),
+    (
+        "arguments only, a docket",
+        '{"docket": "8C_4/2025"}',
+        [("read_ruling", {"docket": "8C_4/2025"})],
+    ),
+    (
+        "arguments only, a category",
+        '{"category": "kausalitaet"}',
+        [("list_rulings", {"category": "kausalitaet"})],
+    ),
     ("a plain answer", ANSWER_DE, []),
-    ("JSON that is no call", 'Die Werte {"a": 1} sind Beispiele.', []),
+]
+# Replies that hold no call to run but must not be shown as the answer either.
+NOT_ANSWERS = [
+    'Die Werte {"a": 1} sind Beispiele.',
+    '```json\n{"content": "Merk dir das"}\n```',  # update_memory is never inferred
+    "```json\n[1, 2]\n```",
 ]
 
 
@@ -204,6 +225,9 @@ def main() -> int:
             failures.append(f"parse {name}: got {got}, expected {expected}")
         if bool(expected) != loop.is_call_text(reply):
             failures.append(f"is_call_text {name}: {loop.is_call_text(reply)}")
+    for reply in NOT_ANSWERS:
+        if loop.parse_calls(reply) or not loop.is_call_text(reply):
+            failures.append(f"not an answer: {reply!r}: {loop.parse_calls(reply)}")
     failures += check_loop()
     for failure in failures:
         print("FAIL", failure)

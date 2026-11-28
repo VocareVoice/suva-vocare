@@ -80,7 +80,7 @@ NOTES = {
 }
 # Words that mark English prose: Apertus sometimes slips into English, mostly when it answers
 # with the reasoning it writes next to its tool calls.
-ENGLISH = re.compile(r"\b(?:the|and|of|to|is|are|for|with|this|that|which|be|by|it|let|I|we)\b")
+ENGLISH = re.compile(r"\b(?:the|and|of|to|is|are|for|with|this|that|which|be|by|it|let|we)\b", re.I)
 NATIVE = {
     "de": re.compile(
         r"\b(?:der|die|das|und|ist|nicht|mit|ein|eine|zu|den|von|für|auf|dass|sich|im)\b", re.I
@@ -269,12 +269,59 @@ def parse_calls(reply: str) -> list[tuple[str, dict[str, Any]]]:
         calls.append(bare)
     if not calls and looks_like_call(reply) and (kv := _kv_call(reply)):
         calls.append(kv)
+    if not calls:
+        calls = _args_only_calls(reply)
+    return calls
+
+
+# Tools a call may be inferred for from its arguments alone: the ones that only read.
+READ_ONLY = ("read_article", "list_rulings", "search_rulings", "read_ruling")
+
+
+def _json_objects(reply: str) -> Iterator[dict[str, Any]]:
+    """The top-level JSON objects in `reply`."""
+    decoder = json.JSONDecoder(strict=False)
+    brace = reply.find("{")
+    while brace != -1:
+        try:
+            obj, end = decoder.raw_decode(reply, brace)
+        except json.JSONDecodeError:
+            brace = reply.find("{", brace + 1)
+            continue
+        if isinstance(obj, dict):
+            yield obj
+        brace = reply.find("{", end)
+
+
+def _args_only_calls(reply: str) -> list[tuple[str, dict[str, Any]]]:
+    """Calls written as their arguments only, without the tool's name (`{"query": "Ungeschick
+    Arbeitsunfall", "limit": 10}`): the read-only tool those arguments fit, preferring the one
+    whose required arguments they fill (search_rulings over list_rulings for a query)."""
+    calls = []
+    for obj in _json_objects(reply):
+        fits = [
+            (len(tool.parameters.get("required", [])), tool.name)
+            for tool in map(tools.TOOLS.get, READ_ONLY)
+            if tool
+            and obj
+            and set(obj) <= set(tool.parameters.get("properties", {}))
+            and set(tool.parameters.get("required", [])) <= set(obj)
+        ]
+        fits.sort(reverse=True)
+        if fits and (len(fits) == 1 or fits[0][0] > fits[1][0]):
+            calls.append((fits[0][1], obj))
     return calls
 
 
 def is_call_text(reply: str) -> bool:
-    """The reply holds a tool call written as text, which must never be shown as the answer."""
-    return bool(parse_calls(reply)) or looks_like_call(reply)
+    """The reply holds a tool call written as text, or any JSON object, neither of which may be
+    shown as the answer."""
+    return (
+        bool(parse_calls(reply))
+        or looks_like_call(reply)
+        or "```json" in reply
+        or any(_json_objects(reply))
+    )
 
 
 def wrong_language(reply: str, lang: str) -> bool:
