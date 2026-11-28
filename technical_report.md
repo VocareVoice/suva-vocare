@@ -298,8 +298,8 @@ the response cache are not committed.
 - **Coverage.** Only Federal Supreme Court rulings from October 2025; cantonal decisions (one is
   on Suva's list) are outside the corpus.
 - **Latency on a shared gateway.** A summary took a median of 268 s with v6; the v7 factual
-  check adds about 25 short calls. Under load some 20,000-token calls exceeded the 120 s client
-  timeout, so batch runs need `LLM_TIMEOUT=600`. The UI therefore pre-computes the top
+  check adds about 25 short calls. Under load some 20,000-token calls exceeded a 120 s client
+  timeout, so the client now waits up to 600 s (`LLM_TIMEOUT`). The UI therefore pre-computes the top
   summaries and runs the rest on demand with a progress state.
 - **Not tested:** the 8B model, quantised weights, a vLLM deployment of our own, and load
   beyond one team.

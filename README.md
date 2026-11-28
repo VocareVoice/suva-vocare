@@ -76,8 +76,8 @@ writes only what the new top 30 lacks. Each summary run also
 writes a one-line headline per language (`headline_de` / `headline_fr` in the API), and
 `uv run suva headline-relevant` writes only the headlines, at a fraction of the cost.
 `export-summaries` / `import-summaries` work like their triage counterparts;
-`data/results/summaries_2026q2.jsonl` holds the summaries of the 30 highest-scored April-June 2026
-rulings and the headlines of every relevant one. How the summary writer works and how it scores:
+`data/results/summaries_2026q2.jsonl` holds the summaries and headlines of every April-June 2026
+ruling with a triage score of at least 50. How the summary writer works and how it scores:
 `docs/eval_summaries.md`; the style it writes: `docs/style_guide.md`, section 11.
 
 For UI work without the corpus or an LLM, `DB_PATH=data/demo.db uv run suva load --demo` loads 14 real
