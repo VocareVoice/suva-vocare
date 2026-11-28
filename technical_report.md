@@ -118,7 +118,10 @@ cloud** with a Swiss-hosted Apertus API.
 
 **Transfer to Azure (bonus).** The image runs on Azure Container Apps with `./data` on Azure
 Files. The `LLM_*` variables point to an Apertus deployment, e.g. vLLM in Switzerland North. No
-code changes are needed. Azure is US-owned, so for Swiss jurisdiction a Swiss provider fits
+code changes are needed. SQLite would be replaced by a managed PostgreSQL database (Azure Database
+for PostgreSQL) with a proper setup: backups and access control. The SQLite full-text search maps
+to PostgreSQL full-text search. Later, the pgvector extension could add semantic (RAG) search over
+rulings and summaries. Azure is US-owned, so for Swiss jurisdiction a Swiss provider fits
 better.
 
 ## 3. Use of Apertus
