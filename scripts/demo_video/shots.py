@@ -1,9 +1,9 @@
 """The shots of docs/demo_video_script.md: cut time, caption, voice-over and on-screen action.
 
 `parts` names the clips record.py writes for a shot; a shot with two parts has a cut between
-them (the live summary and the agent answer take minutes). `split` is the share of the shot's
-time the first part gets. `uncaptioned` parts show no caption (it would hide the
-"Zusammenfassung erstellt" toast).
+them (the live summary, adding a ruling and the agent answer take a while). `split` is the
+share of the shot's time the first part gets. `uncaptioned` parts show no caption (it would
+hide the toast, e.g. "Zusammenfassung erstellt").
 """
 
 SHOTS = [
@@ -78,27 +78,40 @@ SHOTS = [
     },
     {
         "n": 7,
+        "seconds": 11,
+        "parts": ["7"],
+        "caption": "Experts correct the score - the model's own stays visible",
+        "voice": "A lawyer who disagrees corrects the score. Above the threshold, the ruling "
+        "moves into the knowledge base; the model's own score stays visible, and the "
+        "corrections are collected to improve the prompts.",
+        "action": "Still on 9C_197/2026: Anpassen, drag the score above 28 (Relevant), type a "
+        "reason, Speichern; 'Von Fachperson angepasst', 'KI-Score 27'.",
+    },
+    {
+        "n": 8,
+        "seconds": 11,
+        "parts": ["8a", "8b"],
+        "split": 0.6,
+        "uncaptioned": ["8b"],
+        "caption": "Add a ruling by its number",
+        "cut_caption": "cut",
+        "voice": "A ruling that is missing can be added by its number. Praecedens downloads it, "
+        "classifies it, and Apertus rates it - here a Suva case on causation, scored 72.",
+        "action": "Alle Urteile, + Urteil hinzufügen, type 8C_700/2024, Hinzufügen; progress; "
+        "cut; the new ruling with its score and reasoning.",
+    },
+    {
+        "n": 9,
         "seconds": 16,
-        "parts": ["7a", "7b"],
+        "parts": ["9a", "9b"],
         "split": 0.62,
         "caption": "Legal assistant: searches the knowledge base, cites rulings and statutes",
         "cut_caption": "Apertus 70B - cut",
         "voice": "The lawyer can also describe a case. The assistant searches the knowledge base "
-        "and the statutes and answers with links to the rulings - here, straight back to the "
-        "ruling we just read.",
+        "and the statutes and answers with links to the rulings - here, back to the accident "
+        "ruling from the start.",
         "action": "Category view of shot 2, Neuer Chat, ask the question, Senden; cut; the answer "
         "with Relevante Urteile, hover 8C_686/2025.",
-    },
-    {
-        "n": 8,
-        "seconds": 23,
-        "parts": ["8"],
-        "closing_card": True,
-        "voice": "Everything you saw - triage, reasoning, summaries, the assistant - runs on "
-        "Apertus, the Swiss open model, and nothing else: on-premise, air-gapped or in a Swiss "
-        "cloud. On the practice period, our top 60 held 96 percent of Suva's picks for Q4 2025, "
-        "and every hold-out summary got the outcome right.",
-        "action": "Closing card over the dimmed detail page of 8C_686/2025.",
     },
 ]
 
@@ -106,3 +119,9 @@ AGENT_QUESTION = (
     "Eine Versicherte meldet einen Sturz erst, nachdem die Suva Leistungen abgelehnt hat. "
     "Welche Urteile gibt es zu den Aussagen der ersten Stunde?"
 )
+
+EXPERT_COMMENT = (
+    "Beweiswert eines Gutachtens gegenüber den behandelnden Ärzten: auch für die UV zentral."
+)
+
+ADD_DOCKET = "8C_700/2024"
