@@ -114,6 +114,16 @@ PARSE_CASES: list[tuple[str, str, list[tuple[str, dict[str, Any]]]]] = [
         '{"category": "kausalitaet"}',
         [("list_rulings", {"category": "kausalitaet"})],
     ),
+    (
+        "label, name, key and quoted value",
+        'Tool call: search_rulings with query "Ungeschick anderer Arbeitnehmer Unfallbegriff"',
+        [("search_rulings", {"query": "Ungeschick anderer Arbeitnehmer Unfallbegriff"})],
+    ),
+    (
+        "label, two quoted values",
+        'Tool call: list_rulings with category "unfallbegriff" and query "Ungeschick"',
+        [("list_rulings", {"category": "unfallbegriff", "query": "Ungeschick"})],
+    ),
     ("a plain answer", ANSWER_DE, []),
 ]
 # Replies that hold no call to run but must not be shown as the answer either.

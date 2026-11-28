@@ -167,7 +167,14 @@ def _bare_args_call(reply: str) -> tuple[str, dict[str, Any]] | None:
     return None
 
 
-KV_ARG = re.compile(r"""(\w+)\s*[=:]\s*(?:"([^"]*)"|'([^']*)'|([\w./-]+))""")
+# key="value", key: value, or key "value" (`search_rulings with query "Sturz"`).
+KV_ARG = re.compile(
+    r"""(\w+)(?:\s*[=:]\s*(?:"([^"]*)"|'([^']*)'|([\w./-]+))|\s+(?:"([^"]*)"|'([^']*)'))"""
+)
+# A label Apertus puts before a call it writes out ("Tool call 6: search_rulings ...").
+CALL_LABEL = re.compile(
+    r"^(?:tool[ -]?call|tool-aufruf|aufruf|appel d'outil)[^:\n]{0,40}:\s*", re.I
+)
 
 
 def _kv_call(reply: str) -> tuple[str, dict[str, Any]] | None:
@@ -199,7 +206,7 @@ def _kv_call(reply: str) -> tuple[str, dict[str, Any]] | None:
 def looks_like_call(reply: str) -> bool:
     """The reply is a tool call written as text rather than an answer: it opens with a tool's
     name, or names one followed by arguments (`read_article with law="UVV"`, `read_ruling(`)."""
-    head = reply.lstrip(" \t\n`*>-[").split("\n", 1)[0]
+    head = CALL_LABEL.sub("", reply.lstrip(" \t\n`*>-[").split("\n", 1)[0])
     if TOOL_NAME.match(head):
         return True
     return any(
