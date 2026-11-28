@@ -26,10 +26,10 @@ summary-files:
 		--out deliverables/summaries_june_2026
 
 submission:
-	@test -f Vocare_Pitch.pdf || { echo "Vocare_Pitch.pdf is missing: export the pitch deck to PDF in the repo root first" >&2; exit 1; }
+	@test -f deliverables/Vocare_Praecedens_vf.pdf || { echo "deliverables/Vocare_Praecedens_vf.pdf is missing: export the pitch deck to PDF first" >&2; exit 1; }
 	@test -f Vocare_Report.pdf || { echo "Vocare_Report.pdf is missing" >&2; exit 1; }
 	rm -f deliverables/Vocare_Submission.zip
-	zip -j deliverables/Vocare_Submission.zip Vocare_Report.pdf Vocare_Pitch.pdf
+	zip -j deliverables/Vocare_Submission.zip Vocare_Report.pdf deliverables/Vocare_Praecedens_vf.pdf
 
 lint:
 	uv run ruff check .

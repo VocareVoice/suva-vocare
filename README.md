@@ -119,7 +119,7 @@ The judged summaries are those of the listed rulings decided in June 2026: `make
 (`suva export-summary-files`, no LLM) writes one Markdown file per ruling and language
 (`deliverables/summaries_june_2026/8C_254_2025_de.md`) with a short header and the Apertus
 summary exactly as stored, plus `index.md`. `make submission` zips `Vocare_Report.pdf` and
-`Vocare_Pitch.pdf` into `deliverables/Vocare_Submission.zip` and fails if either PDF is missing;
+`deliverables/Vocare_Praecedens_vf.pdf` (the pitch deck) into `deliverables/Vocare_Submission.zip` and fails if either PDF is missing;
 the video link is submitted separately.
 
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
