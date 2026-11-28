@@ -115,6 +115,13 @@ labelled period, `python -m suva.eval.cutoff`), highest score first, as one comm
 (`.txt`) and as a table (`.csv`); `--by publication` selects by publication date instead.
 `deliverables/README.md` explains the cut-off, the expected F2 and both variants.
 
+The judged summaries are those of the listed rulings decided in June 2026: `make summary-files`
+(`suva export-summary-files`, no LLM) writes one Markdown file per ruling and language
+(`deliverables/summaries_june_2026/8C_254_2025_de.md`) with a short header and the Apertus
+summary exactly as stored, plus `index.md`. `make submission` zips `Vocare_Report.pdf` and
+`Vocare_Pitch.pdf` into `deliverables/Vocare_Submission.zip` and fails if either PDF is missing;
+the video link is submitted separately.
+
 `data/corpus/rulings.jsonl.gz` holds every Federal Supreme Court ruling decided 2025-10-01 to
 2026-06-30, fetched from the [entscheidsuche.ch](https://entscheidsuche.ch) mirror of bger.ch.
 Refresh or extend it with `uv run python -m suva.fetch --from 2026-04-01 --to 2026-06-30`, which

@@ -9,6 +9,21 @@ the rulings it labels relevant.
 | `relevant_q2_2026.txt` | **The list to submit**: the 100 rulings decided 1 April - 30 June 2026 with a triage score of 28 or more, highest score first, on one comma-separated line (`8C_254/2025, 8C_256/2025, ...`) |
 | `relevant_q2_2026.csv` | The same rulings with `docket, decision_date, publication_date, score, headline_de` |
 | `relevant_q2_2026_by_publication.txt` / `.csv` | Variant: the 100 rulings bger.ch *published* 1 April - 30 June 2026 with a score of 28 or more |
+| `summaries_june_2026/` | The summaries to submit: one file per ruling and language (`8C_254_2025_de.md`, `8C_254_2025_fr.md`) for the 27 listed rulings decided in June 2026, 54 files, and `index.md` listing them by score |
+| `Vocare_Submission.zip` | Built by `make submission`: `Vocare_Report.pdf` and `Vocare_Pitch.pdf` (fails if `Vocare_Pitch.pdf` is not in the repo root yet) |
+
+## Summaries and submission zip
+
+The judged summaries are those of rulings decided in June 2026. Each file has a header (docket,
+decision date, bger.ch link, relevance score, headline in that language, model and prompt
+version) and then the Apertus summary exactly as stored; nothing is generated or edited by the
+export.
+
+```sh
+make load
+make summary-files   # uv run suva export-summary-files --from 2026-06-01 --to 2026-06-30 --out deliverables/summaries_june_2026
+make submission      # deliverables/Vocare_Submission.zip with Vocare_Report.pdf and Vocare_Pitch.pdf
+```
 
 `headline_de` is filled for the rulings that have a headline (those with a score of 50 or
 more, from before the threshold was lowered to 28). `publication_date` is empty for rulings the
