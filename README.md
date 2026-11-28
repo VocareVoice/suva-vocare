@@ -65,6 +65,7 @@ make triage    # score every ruling not triaged with the current prompt yet (Ape
 make classify  # classify every ruling not classified with the current prompt yet (Apertus)
 make summarize # DE + FR summaries and headlines of every relevant ruling without one yet, best first (Apertus)
 make run       # API + UI on http://127.0.0.1:8000 (API docs at /docs)
+make test      # agent self-test: tool calls written as text are parsed and never shown (no endpoint)
 make lint      # ruff
 ```
 
