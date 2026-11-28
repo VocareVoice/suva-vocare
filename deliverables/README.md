@@ -10,7 +10,8 @@ the rulings it labels relevant.
 | `relevant_q2_2026.csv` | The same rulings with `docket, decision_date, publication_date, score, headline_de` |
 | `relevant_q2_2026_by_publication.txt` / `.csv` | Variant: the 100 rulings bger.ch *published* 1 April - 30 June 2026 with a score of 28 or more |
 | `summaries_june_2026/` | The summaries to submit: one file per ruling and language (`8C_254_2025_de.md`, `8C_254_2025_fr.md`) for the 27 listed rulings decided in June 2026, 54 files, and `index.md` listing them by score |
-| `Vocare_Submission.zip` | Built by `make submission`: `Vocare_Report.pdf` and `Vocare_Pitch.pdf` (fails if `Vocare_Pitch.pdf` is not in the repo root yet) |
+| `Vocare_Praecedens_vf.pptx` / `.pdf` | The final pitch deck, editable and as PDF |
+| `Vocare_Submission.zip` | Built by `make submission`: `Vocare_Report.pdf` and `Vocare_Praecedens_vf.pdf` (fails if either PDF is missing) |
 
 ## Summaries and submission zip
 
@@ -22,7 +23,7 @@ export.
 ```sh
 make load
 make summary-files   # uv run suva export-summary-files --from 2026-06-01 --to 2026-06-30 --out deliverables/summaries_june_2026
-make submission      # deliverables/Vocare_Submission.zip with Vocare_Report.pdf and Vocare_Pitch.pdf
+make submission      # deliverables/Vocare_Submission.zip with Vocare_Report.pdf and Vocare_Praecedens_vf.pdf
 ```
 
 `headline_de` is filled for the rulings that have a headline (those with a score of 50 or
