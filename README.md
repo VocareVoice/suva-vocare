@@ -117,7 +117,7 @@ The relevance list for the challenge's recall / F2 evaluation is in `deliverable
 writes every ruling with a triage score of at least 28 (the cut-off that maximises F2 on the
 labelled period, `python -m suva.eval.cutoff`), highest score first, as one comma-separated line
 (`.txt`) and as a table (`.csv`); `--by publication` selects by publication date instead.
-`deliverables/README.md` explains the cut-off, the expected F2 and both variants.
+`deliverables/README.md` explains the cut-off, the expected F2 and the choice of the decision date.
 
 The judged summaries are those of the listed rulings decided in June 2026: `make summary-files`
 (`suva export-summary-files`, no LLM) writes one Markdown file per ruling and language
