@@ -1,4 +1,4 @@
-# Technical report - `[TODO(final): project name]`, Vocare
+# Technical report - Praecedens, Vocare
 
 A deeper write-up than the README: what we built, how it works, and what the
 numbers say.
@@ -7,13 +7,14 @@ numbers say.
 - **Challenge:** Identification of relevant Federal Court judgements and preparation of a legal summary
 - **Event:** On-site Zurich
 - **Team:** Vocare - Lucas Bernoulli, Thomas Frei
-- **Demo:** `[TODO(final): link to video]`
+- **Project:** Praecedens
+- **Demo:** `[PLACEHOLDER: link to the demo video, added before submission]`
 
 ## 1. Summary
 
 Suva's lawyers search the Federal Supreme Court's publications by hand, pick the rulings that
 matter for accident insurance and write a short summary of each in German and in French. We
-built a pipeline and a web application that do the first pass for them. It loads every ruling
+built Praecedens, a pipeline and a web application that do the first pass for them. It loads every ruling
 of a period (about 2,000 per quarter), ranks them by relevance to Suva and explains each rating
 in German and French. It sorts every social-law ruling into a two-level legal taxonomy, writes a
 German and a French summary in Suva's house style for the top-ranked rulings, and stores all of
@@ -242,7 +243,7 @@ rulings relevant in the app, fills the knowledge base and cuts the delivered lis
 **Top 5 summaries of June 2026.** Suva checks our summaries of rulings it summarised in June
 2026 against its own. The five highest-ranked rulings decided in June 2026 are 8C_254/2025
 (rank 1, five-judge), 8C_17/2026, 8C_343/2025, 8C_184/2026 and 8C_365/2025; all have v7 summaries
-in both languages. The 30 v7 summaries of the quarter's top 30 average about 168 words in German
+in both languages. Every April-June ruling scored 50 or more (68) has a v7 summary; they average about 168 words in German
 and 195 in French, none over the limit. No measure we have predicts Suva's verdict on these
 texts: the hold-out reading above is our closest proxy.
 
@@ -260,7 +261,26 @@ reflect Suva's capacity as much as relevance, one quarter holds only about 30 li
 and our own tuning showed that a rule that helps one quarter can hurt the other. A proposed
 change is adopted only after a person has reviewed it and the cross-quarter check holds
 (`docs/feedback_loop.md`).
-<!-- TODO(final): describe the feedback-review skill and its first results. -->
+
+![Feedback loop: lawyers correct in the UI, export, feedback-review report, human decision, developer applies, evaluation, release](docs/feedback_loop.svg)
+
+*Figure 2 ([`docs/feedback_loop.svg`](docs/feedback_loop.svg)): purple, people decide; grey,
+deterministic; orange, Apertus. The dashed box is a coding agent that only writes a report.*
+
+**The feedback-review skill.** `uv run suva feedback-export` writes every correction as JSON
+(no LLM). A quality supervisor then runs the `feedback-review` skill
+(`.claude/skills/feedback-review/SKILL.md`) in a coding agent: it reads the export, the rulings
+and the current prompts, traces each correction to the prompt criterion or rule behind it,
+counts how a candidate rule would act on the labelled period, checks it against changes already
+rejected, and writes a report with minimal suggested changes, evidence, expected effect and a
+validation plan, plus questions for the legal team. It changes no prompt and no output. Its
+first run, on five synthetic score corrections and one edited summary
+(`docs/examples/feedback_review_example.md`), traced three raised IV rulings to a criterion
+the prompt already has, declined a general IV rule because the labelled period does not support
+it (the rejected v4b), proposed one narrow change (the IV helplessness allowance: 3 of 9 listed
+against 1 in 10 for IV overall), found a real UVG/UVV error in a summary that points to the
+factual-check prompt, and passed the two lowered accident insurance rulings to the legal team
+as a policy question.
 
 ## 5. Data
 
@@ -284,7 +304,7 @@ the response cache are not committed.
   any (v6: 0). Still wrong in both versions: the rule of Art. 6 Abs. 2 UVG turned around in
   8C_78/2025, the adequacy criteria in 8C_356/2025, the stages of the procedure in 8C_313/2024
   and 8C_613/2025, and references to a consideration that exists but does not state the point.
-  5 of the 60 April-June texts have no consideration reference. Summaries need a lawyer's
+  7 of the 136 April-June texts have no consideration reference. Summaries need a lawyer's
   review before use.
 - **Invalidity insurance recall.** Suva lists about 8 % of IV rulings, and neither metadata,
   statutes nor Apertus separate them from the unlisted ones. Seven of the 8 listed rulings
@@ -321,14 +341,14 @@ load run`. The committed results make the UI work without calling Apertus.
   is not bit-for-bit deterministic (a fresh triage run differed by one ruling in Q1), but every
   response is cached under `data/cache/llm/`, so a rerun with the same prompt version is exact.
   The committed `data/results/*.jsonl` are the reference outputs.
-- **Commit.** Results and numbers as of `6a440eb` (main, 2026-11-27).
-  <!-- TODO(final): replace with the exact submission commit. -->
+- **Commit.** The submission commit is `621e87d` (main, 2026-11-28): all results and numbers
+  in this report are as of that commit; later commits only add this report and its PDF.
 
 ```sh
 make install load                                   # results as submitted, no LLM needed
 uv run suva triage --from 2026-04-01 --to 2026-06-30
 uv run suva classify --from 2026-04-01 --to 2026-06-30
-uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --limit 30
+uv run suva summarize-relevant --from 2026-04-01 --to 2026-06-30 --min-score 50
 uv run python -m suva.eval.score_triage data/results/triage_2025q4_2026q1.jsonl --threshold 28
 uv run python -m suva.eval.score_classification
 uv run python -m suva.eval.score_summaries generated.jsonl   # hold-out, see docs/eval_summaries.md
